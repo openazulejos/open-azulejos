@@ -8,6 +8,7 @@ const adminAccountLoginStatus = document.querySelector("#adminAccountLoginStatus
 const adminAccountSetup = document.querySelector("#adminAccountSetup");
 const adminSetupEmail = document.querySelector("#adminSetupEmail");
 const adminSetupPassword = document.querySelector("#adminSetupPassword");
+const adminSetupRole = document.querySelector("#adminSetupRole");
 const adminSetupButton = document.querySelector("#adminSetupButton");
 const adminSetupStatus = document.querySelector("#adminSetupStatus");
 const adminTools = document.querySelector("#adminTools");
@@ -80,7 +81,7 @@ async function refreshAdminAccountState() {
   if (!adminAuthenticated) return;
   const response = await fetch("/api/admin-account", { credentials: "same-origin", cache: "no-store" });
   const data = await response.json().catch(() => ({}));
-  adminAccountSetup.hidden = !response.ok || Number(data.namedAccounts) > 0 || data.method === "account";
+  adminAccountSetup.hidden = !response.ok || data.role !== "owner";
 }
 
 function googleMapsUrl(record) {
@@ -871,12 +872,13 @@ adminAccountSetup.addEventListener("submit", async (event) => {
         action: "bootstrap",
         email: adminSetupEmail.value.trim(),
         password: adminSetupPassword.value,
+        role: adminSetupRole.value,
       }),
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || `account creation failed ${response.status}`);
     adminSetupPassword.value = "";
-    adminAccountSetup.hidden = true;
+    adminSetupEmail.value = "";
     adminSetupStatus.textContent = "account created";
   } catch (error) {
     adminSetupStatus.textContent = error.message;

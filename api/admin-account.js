@@ -80,7 +80,10 @@ module.exports = async function handler(request, response) {
       headers: serviceHeaders,
     });
     const existing = await existingProfiles.json();
-    const role = existing.length ? "admin" : "owner";
+    const requestedRole = String(body.role || "admin");
+    const role = existing.length && ["owner", "admin", "moderator"].includes(requestedRole)
+      ? requestedRole
+      : "owner";
     const createResponse = await fetch(`${supabaseUrl}/auth/v1/admin/users`, {
       method: "POST",
       headers: { ...serviceHeaders, "Content-Type": "application/json" },
