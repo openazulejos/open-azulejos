@@ -42,6 +42,7 @@ module.exports = async function handler(request, response) {
     const countResponse = await fetch(`${supabaseUrl}/rest/v1/admin_profiles?select=user_id&active=eq.true&limit=1`, {
       headers: { ...serviceHeaders, Prefer: "count=exact" },
     });
+    if (!countResponse.ok) return json(response, 502, { error: "admin profile lookup failed" });
     const range = countResponse.headers.get("content-range") || "*/0";
     return json(response, 200, {
       authenticated: true,
@@ -79,6 +80,7 @@ module.exports = async function handler(request, response) {
     const existingProfiles = await fetch(`${supabaseUrl}/rest/v1/admin_profiles?select=user_id,role&active=eq.true&limit=1`, {
       headers: serviceHeaders,
     });
+    if (!existingProfiles.ok) return json(response, 502, { error: "admin profile lookup failed" });
     const existing = await existingProfiles.json();
     const requestedRole = String(body.role || "admin");
     const role = existing.length && ["owner", "admin", "moderator"].includes(requestedRole)
@@ -98,7 +100,10 @@ module.exports = async function handler(request, response) {
       headers: { ...serviceHeaders, "Content-Type": "application/json", Prefer: "resolution=merge-duplicates,return=representation" },
       body: JSON.stringify(profile),
     });
-    if (!profileResponse.ok) return json(response, 502, { error: "admin profile creation failed" });
+    if (!profileResponse.ok) {
+      await fetch(`${supabaseUrl}/auth/v1/admin/users/${user.id}`, { method: "DELETE", headers: serviceHeaders }).catch(() => {});
+      return json(response, 502, { error: "admin profile creation failed" });
+    }
     [profile] = await profileResponse.json();
   } else if (action === "sign-in") {
     const signInResponse = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=password`, {
@@ -112,6 +117,7 @@ module.exports = async function handler(request, response) {
     const profileResponse = await fetch(`${supabaseUrl}/rest/v1/admin_profiles?select=*&user_id=eq.${user.id}&active=eq.true&limit=1`, {
       headers: serviceHeaders,
     });
+    if (!profileResponse.ok) return json(response, 502, { error: "admin profile lookup failed" });
     [profile] = await profileResponse.json();
     if (!profile) return json(response, 403, { error: "this account is not an active administrator" });
   } else {
