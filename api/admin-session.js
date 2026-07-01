@@ -56,6 +56,10 @@ module.exports = async function handler(request, response) {
     return respond(response, 401, { error: "invalid admin key" });
   }
 
-  response.setHeader("Set-Cookie", adminSessionCookie(createAdminSession()));
+  response.setHeader("Set-Cookie", adminSessionCookie(createAdminSession({
+    actor: "founder-admin",
+    role: "owner",
+    method: "legacy",
+  })));
   return respond(response, 200, { authenticated: true });
 };

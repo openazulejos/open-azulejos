@@ -333,7 +333,11 @@ module.exports = async function handler(req, res) {
       if (!existingRecord) return json(res, 404, { error: "record not found" });
     }
     const updatePayload = {};
-    if (status) updatePayload.moderation_status = status;
+    if (status) {
+      updatePayload.moderation_status = status;
+      updatePayload.last_admin_actor_id = adminAuthorization.userId;
+      updatePayload.last_admin_actor_label = adminAuthorization.actor;
+    }
     if (editedImage) {
       const editedPath = `captures/${id}-edited.${editedImage.ext}`;
       const upload = await fetch(`${supabaseUrl}/storage/v1/object/${bucket}/${editedPath}`, {

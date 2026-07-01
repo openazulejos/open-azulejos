@@ -6,6 +6,8 @@ frame, GPS quality metadata, moderation history, and a stable geographic record.
 
 Production: [openazulejos.vercel.app](https://openazulejos.vercel.app)
 
+Source: [github.com/orsoneveraert/open-azulejos](https://github.com/orsoneveraert/open-azulejos)
+
 ## Current capabilities
 
 - Mobile camera and photo-library capture with square preview and hidden margin.

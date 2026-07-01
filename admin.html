@@ -12,15 +12,37 @@
       <span>back office</span>
     </header>
     <main class="admin-shell">
-      <form class="admin-login" id="adminLogin">
-        <label>
-          admin key
-          <input id="adminKeyInput" type="password" autocomplete="current-password" />
-        </label>
-        <button id="adminSaveKeyButton" type="submit">open</button>
-        <p id="adminLoginStatus" role="status"></p>
-      </form>
+      <section class="admin-login-shell" id="adminAccessPanel">
+        <form class="admin-login" id="adminAccountLogin">
+          <label>
+            admin email
+            <input id="adminEmailInput" type="email" autocomplete="username" />
+          </label>
+          <label>
+            password
+            <input id="adminPasswordInput" type="password" autocomplete="current-password" minlength="12" />
+          </label>
+          <button id="adminAccountLoginButton" type="submit">open</button>
+          <p id="adminAccountLoginStatus" role="status"></p>
+        </form>
+        <div class="admin-login-divider">temporary access</div>
+        <form class="admin-login" id="adminLogin">
+          <label>
+            admin key
+            <input id="adminKeyInput" type="password" autocomplete="current-password" />
+          </label>
+          <button id="adminSaveKeyButton" type="submit">open</button>
+          <p id="adminLoginStatus" role="status"></p>
+        </form>
+      </section>
       <section class="admin-tools" id="adminTools" hidden>
+        <form class="admin-account-setup" id="adminAccountSetup" hidden>
+          <strong>create named admin account</strong>
+          <label>email<input id="adminSetupEmail" type="email" autocomplete="username" required /></label>
+          <label>new password<input id="adminSetupPassword" type="password" autocomplete="new-password" minlength="12" required /></label>
+          <button id="adminSetupButton" type="submit">create account</button>
+          <p id="adminSetupStatus" role="status"></p>
+        </form>
         <div class="admin-toolbar">
           <button id="adminRefreshButton" type="button">refresh</button>
           <button id="adminForgetKeyButton" type="button">lock</button>
@@ -99,6 +121,6 @@
       </div>
     </section>
     <script src="./admin-image.js?v=20260630-expand-border"></script>
-    <script src="./admin.js?v=20260701-secure-session"></script>
+    <script src="./admin.js?v=20260701-named-admin"></script>
   </body>
 </html>

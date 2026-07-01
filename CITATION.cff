@@ -5,4 +5,5 @@ type: software
 version: 0.2.0
 date-released: 2026-07-01
 license: MIT
+repository-code: "https://github.com/orsoneveraert/open-azulejos"
 url: "https://openazulejos.vercel.app"

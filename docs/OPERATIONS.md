@@ -6,9 +6,10 @@
 server-only. Rotate them after suspected exposure. Production must use a random
 session secret distinct from the human-entered admin password.
 
-Named Supabase Auth administrators are the next authentication migration. The
-password exchange remains only as a compatibility bridge and must be removed
-after the first named administrator account is verified.
+After signing in with the temporary key, the owner creates the first named
+Supabase Auth administrator in the back office. The key exchange remains only as
+a compatibility bridge and must be removed after two named owner accounts are
+verified on separate devices.
 
 ## Monitoring thresholds
 

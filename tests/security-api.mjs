@@ -26,6 +26,9 @@ const token = auth.createAdminSession();
 assert(auth.authorizeAdminRequest({ headers: { cookie: `open_azulejos_admin=${token}` } }).ok, "signed session should authorize");
 assert(!auth.authorizeAdminRequest({ headers: { cookie: `open_azulejos_admin=${token}x` } }).ok, "tampered session should fail");
 assert(auth.authorizeAdminRequest({ headers: { "x-admin-key": process.env.ADMIN_KEY } }).ok, "legacy key should remain available during transition");
+const namedToken = auth.createAdminSession({ actor: "curator", userId: "11111111-1111-4111-8111-111111111111", role: "owner", method: "account" });
+const namedAuthorization = auth.authorizeAdminRequest({ headers: { cookie: `open_azulejos_admin=${namedToken}` } });
+assert(namedAuthorization.userId && namedAuthorization.role === "owner", "named session should retain actor identity and role");
 
 const loginRequest = Readable.from([JSON.stringify({ key: process.env.ADMIN_KEY })]);
 loginRequest.method = "POST";

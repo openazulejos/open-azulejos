@@ -16,10 +16,14 @@ const signatureFor = (payload) => crypto
   .update(payload)
   .digest("base64url");
 
-const createAdminSession = (actor = "founder-admin") => {
+const createAdminSession = (identity = "founder-admin") => {
+  const details = typeof identity === "string" ? { actor: identity } : identity;
   const payload = Buffer.from(JSON.stringify({
     v: 1,
-    actor,
+    actor: details.actor || "admin",
+    userId: details.userId || null,
+    role: details.role || null,
+    method: details.method || "session",
     exp: Math.floor(Date.now() / 1000) + SESSION_SECONDS,
   })).toString("base64url");
   return `${payload}.${signatureFor(payload)}`;
@@ -56,8 +60,14 @@ const authorizeAdminRequest = (request) => {
   }
   const claims = verifyAdminSession(readCookies(request)[COOKIE_NAME]);
   return claims
-    ? { ok: true, actor: claims.actor || "founder-admin", method: "session" }
-    : { ok: false, actor: null, method: null };
+    ? {
+      ok: true,
+      actor: claims.actor || "founder-admin",
+      userId: claims.userId || null,
+      role: claims.role || null,
+      method: claims.method || "session",
+    }
+    : { ok: false, actor: null, userId: null, role: null, method: null };
 };
 
 const adminSessionCookie = (token) => [

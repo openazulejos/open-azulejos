@@ -5,7 +5,7 @@
 - Verified off-provider backups and a documented restore drill.
 - Private original photographs and explicit public derivatives.
 - PostGIS-backed locations and normalized archival entities.
-- Session-based admin access, followed by named Supabase Auth accounts.
+- Named Supabase Auth accounts with a temporary key-based recovery bridge.
 - Public repository, continuous integration, contribution and license policy.
 
 ## Consolidation: three to twelve months

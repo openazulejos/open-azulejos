@@ -1279,11 +1279,17 @@ pre {
   padding: 18px 0 36px;
 }
 
+.admin-login-shell {
+  display: grid;
+  gap: 18px;
+  max-width: 620px;
+}
+
 .admin-login {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
   gap: 8px;
-  max-width: 420px;
+  max-width: 620px;
 }
 
 .admin-login label,
@@ -1327,6 +1333,59 @@ pre {
   margin: 2px 0 0;
   color: #9f1f1f;
   font-size: 11px;
+}
+
+.admin-login-divider {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.admin-account-setup {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 8px;
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.admin-account-setup[hidden] {
+  display: none;
+}
+
+.admin-account-setup strong,
+.admin-account-setup p {
+  grid-column: 1 / -1;
+}
+
+.admin-account-setup input {
+  display: block;
+  width: 100%;
+  height: 36px;
+  margin-top: 6px;
+  border: 1px solid var(--line);
+  padding: 0 8px;
+  background: var(--paper);
+}
+
+.admin-account-setup button {
+  align-self: end;
+  min-height: 36px;
+  border: 1px solid var(--ink);
+  background: var(--paper);
+}
+
+@media (max-width: 620px) {
+  .admin-login,
+  .admin-account-setup {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-login p,
+  .admin-account-setup strong,
+  .admin-account-setup p {
+    grid-column: 1;
+  }
 }
 
 .admin-toolbar {

@@ -1,4 +1,15 @@
 const adminLogin = document.querySelector("#adminLogin");
+const adminAccessPanel = document.querySelector("#adminAccessPanel");
+const adminAccountLogin = document.querySelector("#adminAccountLogin");
+const adminEmailInput = document.querySelector("#adminEmailInput");
+const adminPasswordInput = document.querySelector("#adminPasswordInput");
+const adminAccountLoginButton = document.querySelector("#adminAccountLoginButton");
+const adminAccountLoginStatus = document.querySelector("#adminAccountLoginStatus");
+const adminAccountSetup = document.querySelector("#adminAccountSetup");
+const adminSetupEmail = document.querySelector("#adminSetupEmail");
+const adminSetupPassword = document.querySelector("#adminSetupPassword");
+const adminSetupButton = document.querySelector("#adminSetupButton");
+const adminSetupStatus = document.querySelector("#adminSetupStatus");
 const adminTools = document.querySelector("#adminTools");
 const adminKeyInput = document.querySelector("#adminKeyInput");
 const adminSaveKeyButton = document.querySelector("#adminSaveKeyButton");
@@ -61,8 +72,15 @@ function setAdminStatus(message) {
 }
 
 function showAdminTools() {
-  adminLogin.hidden = adminAuthenticated;
+  adminAccessPanel.hidden = adminAuthenticated;
   adminTools.hidden = !adminAuthenticated;
+}
+
+async function refreshAdminAccountState() {
+  if (!adminAuthenticated) return;
+  const response = await fetch("/api/admin-account", { credentials: "same-origin", cache: "no-store" });
+  const data = await response.json().catch(() => ({}));
+  adminAccountSetup.hidden = !response.ok || Number(data.namedAccounts) > 0 || data.method === "account";
 }
 
 function googleMapsUrl(record) {
@@ -795,6 +813,7 @@ adminLogin.addEventListener("submit", async (event) => {
     adminKeyInput.value = "";
     showAdminTools();
     await loadRecords();
+    await refreshAdminAccountState();
   } catch (error) {
     adminAuthenticated = false;
     showAdminTools();
@@ -802,6 +821,68 @@ adminLogin.addEventListener("submit", async (event) => {
   } finally {
     adminSaveKeyButton.disabled = false;
     adminSaveKeyButton.textContent = "open";
+  }
+});
+
+adminAccountLogin.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  adminAccountLoginButton.disabled = true;
+  adminAccountLoginButton.textContent = "opening...";
+  adminAccountLoginStatus.textContent = "";
+  try {
+    const response = await fetch("/api/admin-account", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify({
+        action: "sign-in",
+        email: adminEmailInput.value.trim(),
+        password: adminPasswordInput.value,
+      }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || `login failed ${response.status}`);
+    adminAuthenticated = true;
+    adminPasswordInput.value = "";
+    showAdminTools();
+    await loadRecords();
+    await refreshAdminAccountState();
+  } catch (error) {
+    adminAuthenticated = false;
+    showAdminTools();
+    adminAccountLoginStatus.textContent = error.message;
+  } finally {
+    adminAccountLoginButton.disabled = false;
+    adminAccountLoginButton.textContent = "open";
+  }
+});
+
+adminAccountSetup.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  adminSetupButton.disabled = true;
+  adminSetupButton.textContent = "creating...";
+  adminSetupStatus.textContent = "";
+  try {
+    const response = await fetch("/api/admin-account", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify({
+        action: "bootstrap",
+        email: adminSetupEmail.value.trim(),
+        password: adminSetupPassword.value,
+      }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || `account creation failed ${response.status}`);
+    adminSetupPassword.value = "";
+    adminAccountSetup.hidden = true;
+    adminSetupStatus.textContent = "account created";
+  } catch (error) {
+    adminSetupStatus.textContent = error.message;
+  } finally {
+    adminSetupButton.disabled = false;
+    adminSetupButton.textContent = "create account";
   }
 });
 
@@ -832,7 +913,7 @@ fetch("/api/admin-session", { credentials: "same-origin", cache: "no-store" })
     if (!response.ok) return;
     adminAuthenticated = true;
     showAdminTools();
-    return loadRecords();
+    return Promise.all([loadRecords(), refreshAdminAccountState()]);
   })
   .catch((error) => {
     adminAuthenticated = false;
