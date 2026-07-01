@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>open azulejos</title>
+    <link rel="preconnect" href="https://unpkg.com" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="./styles-admin-editor.css" />
+  </head>
+  <body>
+    <header class="topbar" aria-label="Navigation principale">
+      <a class="brand" href="./" aria-label="open azulejos">open azulejos</a>
+      <nav class="nav">
+      </nav>
+      <button class="about-trigger" id="aboutOpenButton" type="button">about</button>
+    </header>
+
+    <main class="app-shell">
+      <section class="map-stage" aria-label="Carte mosaïque de Lisbonne">
+        <div id="map"></div>
+        <canvas id="gridCanvas" aria-hidden="true"></canvas>
+        <div class="map-azulejo-count" id="mapAzulejoCount" aria-live="polite">0/0</div>
+        <button class="map-location-control" id="mapLocationButton" type="button" aria-label="show azulejos near me" title="show azulejos near me">
+          <span class="map-location-probe" aria-hidden="true"></span>
+        </button>
+        <div class="coordinates" id="cursorReadout">Lisboa · grille 3 m</div>
+      </section>
+      <button class="record-action" id="recordHistoryButton" type="button">record azulejos now</button>
+      <input class="record-camera-input" id="recordCameraInput" type="file" accept="image/*" />
+
+      <section class="square-camera" id="squareCamera" aria-hidden="true" aria-label="square camera capture">
+        <div class="square-camera-view">
+          <video id="squareCameraVideo" autoplay muted playsinline></video>
+          <div class="square-camera-guide" aria-hidden="true"></div>
+        </div>
+        <div class="square-camera-controls">
+          <button id="squareCameraCancel" type="button">cancel</button>
+          <button id="squareCameraCapture" type="button">capture</button>
+          <button id="squareCameraFallback" type="button">choose photo</button>
+        </div>
+      </section>
+
+      <section class="capture-preview" id="capturePreview" aria-hidden="true" aria-label="capture preview">
+        <div class="capture-preview-frame">
+          <canvas id="captureCropCanvas" width="1200" height="1200"></canvas>
+        </div>
+        <div class="capture-crop-controls" aria-label="crop controls">
+          <label>
+            zoom
+            <input id="captureCropZoom" type="range" min="122" max="260" value="122" />
+          </label>
+          <label>
+            x
+            <input id="captureCropX" type="range" min="-100" max="100" value="0" />
+          </label>
+          <label>
+            y
+            <input id="captureCropY" type="range" min="-100" max="100" value="0" />
+          </label>
+        </div>
+        <div class="capture-preview-controls">
+          <button id="captureRetakeButton" type="button">retake</button>
+          <button id="captureSendButton" type="button">send</button>
+        </div>
+      </section>
+
+      <section class="location-permission-sheet" id="locationPermissionSheet" aria-hidden="true" aria-label="location permission required">
+        <button class="location-permission-close" id="locationPermissionClose" type="button" aria-label="close">×</button>
+        <div class="location-permission-content" role="alert">
+          <p id="locationPermissionMessage">location permission is required to record an azulejo.</p>
+          <p id="locationPermissionInstructions"></p>
+          <a id="locationPermissionHelp" href="#" target="_blank" rel="noopener">open location settings help</a>
+          <button id="locationPermissionRetry" type="button">retry location</button>
+        </div>
+      </section>
+
+      <aside class="panel" id="panel" aria-label="archive">
+        <section class="panel-view is-active" data-view="atlas">
+          <h1>archive urbaine des azulejos</h1>
+          <p>
+            lisbonne est découpée en quartiers et cellules métriques. les fragments
+            apparaissent par niveaux de zoom, jusqu’à la maille fine de 3 m.
+          </p>
+
+          <div class="system-controls" aria-hidden="true">
+          <div class="control-row">
+            <label for="gridToggle">grille</label>
+            <input id="gridToggle" type="checkbox" checked />
+          </div>
+          <div class="control-row">
+            <label for="mosaicToggle">mosaïque</label>
+            <input id="mosaicToggle" type="checkbox" checked />
+          </div>
+          <div class="control-row">
+            <label for="sampleToggle">fragments</label>
+            <input id="sampleToggle" type="checkbox" checked />
+          </div>
+          <label class="range-label" for="gridDensity">densité visible</label>
+          <input id="gridDensity" type="range" min="1" max="5" value="3" />
+          <label class="range-label" for="mosaicOpacity">opacité mosaïque</label>
+          <input id="mosaicOpacity" type="range" min="20" max="100" value="100" />
+          </div>
+
+          <form class="search-form" id="cellSearchForm">
+            <label for="cellSearchInput">rechercher dans l’archive</label>
+            <div class="search-row">
+              <input id="cellSearchInput" placeholder="alfama, bairro.ponte.vento, lis.-79o8.xg7l" />
+              <button type="submit">voir</button>
+            </div>
+            <div class="search-status" id="cellSearchStatus">recherche par trois mots locaux ou code cellule.</div>
+          </form>
+
+          <dl class="stats">
+            <div>
+              <dt>cellule</dt>
+              <dd>3 m × 3 m</dd>
+            </div>
+            <div>
+              <dt>fragments</dt>
+              <dd id="tileCount">0 fragments</dd>
+            </div>
+            <div>
+              <dt>maille</dt>
+              <dd id="cellCount">0 cellules</dd>
+            </div>
+          </dl>
+          <section class="active-cell" aria-label="Cellule active">
+            <h2>cellule active</h2>
+            <strong id="activeCellWords">aucune cellule sélectionnée</strong>
+            <span id="activeCellCode">clique la carte, un fragment ou une recherche.</span>
+            <span id="activeCellCoords"></span>
+            <button class="system-controls" id="copyActiveCellButton" type="button" disabled>copier cellule</button>
+            <textarea id="activeCellCopyValue" readonly aria-label="Texte de cellule à copier"></textarea>
+          </section>
+          <button class="secondary-action system-controls" id="fitMosaicButton">cadrer mosaïque</button>
+          <section class="fragment-index" aria-label="Index des fragments">
+            <h2>index</h2>
+            <div class="archive-filter">
+              <label for="archiveFilterInput">filtrer l’archive</label>
+              <div class="archive-filter-row">
+                <input id="archiveFilterInput" placeholder="Alfama, lis.-79e9.xft4, arquivo..." />
+                <button id="archiveFilterClearButton" type="button" aria-label="Effacer le filtre">×</button>
+              </div>
+            </div>
+            <div class="archive-filter-status" id="archiveFilterStatus">tous les fragments visibles.</div>
+            <div id="fragmentIndexList" class="fragment-index-list"></div>
+          </section>
+        </section>
+
+        <section class="panel-view" data-view="import">
+          <h2>importer un azulejo</h2>
+          <p>
+            Charge une photo, le prototype cherche un carré dominant puis
+            fabrique un fragment prêt à placer sur la carte.
+          </p>
+          <label class="file-drop" for="imageInput">
+            <span>choisir une image</span>
+            <input id="imageInput" type="file" accept="image/*" />
+          </label>
+          <div class="preview-grid">
+            <figure>
+              <canvas id="sourcePreview"></canvas>
+              <figcaption>image source</figcaption>
+            </figure>
+            <figure>
+              <canvas id="tilePreview"></canvas>
+              <figcaption>Carré extrait</figcaption>
+            </figure>
+          </div>
+          <div class="crop-status" id="cropStatus">aucune image analysée</div>
+          <div class="crop-controls" id="cropControls" aria-label="Ajustement du carré extrait">
+            <label>
+              X
+              <input id="cropXInput" type="range" min="0" max="1000" value="0" />
+            </label>
+            <label>
+              Y
+              <input id="cropYInput" type="range" min="0" max="1000" value="0" />
+            </label>
+            <label>
+              Taille
+              <input id="cropSizeInput" type="range" min="20" max="1000" value="320" />
+            </label>
+          </div>
+          <div class="field-grid">
+            <label>
+              latitude
+              <input id="latInput" inputmode="decimal" value="38.71374" />
+            </label>
+            <label>
+              longitude
+              <input id="lngInput" inputmode="decimal" value="-9.13934" />
+            </label>
+          </div>
+          <button class="primary-action" id="placeTileButton" disabled>placer sur la mosaïque</button>
+        </section>
+
+        <section class="panel-view" data-view="batch">
+          <h2>importer un lot</h2>
+          <p>
+            Ajoute plusieurs photos, puis un CSV ou GeoJSON avec leurs
+            coordonnées. Les carrés sont extraits et placés automatiquement.
+          </p>
+          <label class="file-drop compact" for="batchImagesInput">
+            <span>Photos d’azulejos</span>
+            <input id="batchImagesInput" type="file" accept="image/*" multiple />
+          </label>
+          <label class="file-drop compact" for="geoDataInput">
+            <span>CSV ou GeoJSON</span>
+            <input id="geoDataInput" type="file" accept=".csv,.json,.geojson,application/json,text/csv" />
+          </label>
+          <div class="template-links" aria-label="Modèles de géodonnées">
+            <a href="./examples/azulejos-example.csv" download>modèle CSV</a>
+            <a href="./examples/azulejos-example.geojson" download>modèle GeoJSON</a>
+          </div>
+          <label class="file-drop compact" for="archiveInput">
+            <span>Archive exportée JSON</span>
+            <input id="archiveInput" type="file" accept=".json,application/json" />
+          </label>
+          <div class="batch-status" id="batchStatus">Aucun lot chargé</div>
+          <button class="secondary-action" id="loadDemoButton">charger démo</button>
+          <button class="primary-action" id="processBatchButton" disabled>construire la mosaïque</button>
+          <button class="secondary-action" id="exportButton">exporter les fragments</button>
+          <button class="secondary-action" id="exportGeoJsonButton">exporter GeoJSON cellules</button>
+          <button class="secondary-action" id="exportPointGeoJsonButton">exporter GeoJSON points</button>
+          <button class="secondary-action" id="exportCsvButton">exporter CSV</button>
+          <button class="secondary-action danger-action" id="clearImportsButton">vider les imports</button>
+        </section>
+
+        <section class="panel-view" data-view="data">
+          <h2>format attendu</h2>
+          <p>
+            Le matching se fait par nom de fichier. Les coordonnées sont en
+            WGS84. Les champs reconnus sont `image`, `filename`, `file`, `lat`,
+            `latitude`, `lng`, `lon` ou `longitude`. Les trois mots sont
+            générés localement depuis la cellule 3 m.
+          </p>
+          <pre><code>image,lat,lng,title
+azulejo-001.jpg,38.71374,-9.13934,Alfama
+azulejo-002.jpg,38.71072,-9.13908,Baixa</code></pre>
+          <pre><code>{
+  "type": "FeatureCollection",
+  "features": [{
+    "type": "Feature",
+    "properties": {
+      "image": "azulejo-001.jpg",
+      "title": "Alfama"
+    },
+    "geometry": {
+      "type": "Point",
+      "coordinates": [-9.13934, 38.71374]
+    }
+  }]
+}</code></pre>
+          <div class="template-links data-template-links" aria-label="Fichiers exemples">
+            <a href="./examples/azulejos-example.csv" download>télécharger CSV</a>
+            <a href="./examples/azulejos-example.geojson" download>télécharger GeoJSON</a>
+            <a href="./examples/azulejo-archive-example.json" download>télécharger archive JSON</a>
+          </div>
+        </section>
+      </aside>
+    </main>
+
+    <section class="azulejo-viewer" id="azulejoViewer" aria-hidden="true" aria-label="azulejo sélectionné">
+      <button class="azulejo-viewer-close" id="azulejoViewerClose" type="button" aria-label="fermer">×</button>
+      <div class="azulejo-viewer-visual" id="azulejoViewerVisual">
+        <img id="azulejoViewerImage" alt="" draggable="false" />
+        <div class="azulejo-viewer-mosaic" id="azulejoViewerMosaic" aria-hidden="true"></div>
+      </div>
+      <a id="azulejoViewerCaption" href="#" target="_blank" rel="noopener"></a>
+    </section>
+
+    <section class="about-sheet" id="aboutSheet" aria-hidden="true" aria-label="about open azulejos">
+      <button class="about-close" id="aboutCloseButton" type="button" aria-label="close">×</button>
+      <article class="about-text">
+        <h1>open azulejos</h1>
+        <p>
+          open azulejos is a conservation research map for documenting the ceramic surface of Lisbon as a distributed public archive. The project treats each photographed tile not as an isolated decorative object, but as evidence within a larger urban fabric: a situated fragment, attached to a facade, a street, a neighbourhood, and a changing condition of care.
+        </p>
+        <p>
+          The map proposes a fine-grained method for recording azulejos through geographic position, square image capture, and a shared grid. This structure makes it possible to compare patterns, damages, repairs, replacements, and disappearances over time. It also creates a common spatial language for contributions made outside institutional survey campaigns, while keeping each image accountable to its place.
+        </p>
+        <p>
+          As a design research tool, open azulejos asks how civic documentation can support conservation before loss becomes visible only as absence. The interface is intentionally reduced: the map is the working surface, the photograph is the primary unit of evidence, and moderation protects the archive from noise while keeping participation open.
+        </p>
+        <p>
+          The goal is not to produce a complete inventory at once, but to build an evolving public memory of Lisbon's ceramic landscape. Over time, the archive can support historical analysis, material conservation, pattern study, and local stewardship by making the city readable through its smallest repeatable surfaces.
+        </p>
+      </article>
+    </section>
+
+    <template id="tilePopupTemplate">
+      <article class="tile-popup">
+        <img alt="" />
+        <strong></strong>
+        <span></span>
+      </article>
+    </template>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="./app-source-capture.js?v=20260701-direct-upload"></script>
+  </body>
+</html>

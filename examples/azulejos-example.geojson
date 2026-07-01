@@ -1,0 +1,41 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "image": "azulejo-001.jpg",
+        "title": "Alfama",
+        "source": "photo terrain"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-9.13934, 38.71374]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "image": "azulejo-002.jpg",
+        "title": "Baixa",
+        "source": "photo terrain"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-9.13908, 38.71072]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "image": "azulejo-003.jpg",
+        "title": "Chiado",
+        "source": "photo terrain"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-9.14466, 38.71008]
+      }
+    }
+  ]
+}

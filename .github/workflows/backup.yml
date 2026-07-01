@@ -1,0 +1,41 @@
+name: archive backup
+
+on:
+  schedule:
+    - cron: "17 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      BACKUP_S3_URI: ${{ secrets.BACKUP_S3_URI }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.BACKUP_AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_AWS_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: ${{ secrets.BACKUP_AWS_REGION }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Back up records and media
+        run: node scripts/backup-open-azulejos.mjs --output "$RUNNER_TEMP/openazulejos"
+      - name: Back up PostgreSQL
+        if: env.SUPABASE_DB_URL != ''
+        run: pg_dump "$SUPABASE_DB_URL" --format=custom --file="$RUNNER_TEMP/openazulejos/database.backup"
+      - name: Verify media backup
+        run: node scripts/verify-backup.mjs "$(find "$RUNNER_TEMP/openazulejos" -mindepth 1 -maxdepth 1 -type d | sort | tail -1)"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: openazulejos-${{ github.run_id }}
+          path: ${{ runner.temp }}/openazulejos
+          retention-days: 30
+      - name: Copy to independent object storage
+        if: env.BACKUP_S3_URI != ''
+        run: aws s3 cp "$RUNNER_TEMP/openazulejos" "$BACKUP_S3_URI/${{ github.run_id }}/" --recursive

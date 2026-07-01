@@ -1,0 +1,25 @@
+{
+  "type": "AzulejoAtlasExport",
+  "generatedAt": "2026-06-25T00:00:00.000Z",
+  "grid": {
+    "type": "web-mercator",
+    "cellMeters": 3
+  },
+  "fragments": [
+    {
+      "id": "archive-example-001",
+      "title": "Archive exemple",
+      "lat": 38.71374,
+      "lng": -9.13934,
+      "cell": "lis.-79o9.xfw9",
+      "words": "torre.janela.seta",
+      "bounds": "-9.139344,38.713734,-9.139317,38.713755",
+      "source": "archive-example",
+      "imageData": "./assets/azulejo-baixa.svg",
+      "crop": {
+        "method": "exemple",
+        "score": 100
+      }
+    }
+  ]
+}

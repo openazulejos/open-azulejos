@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>open azulejos admin</title>
+    <link rel="stylesheet" href="./styles-admin-editor.css?v=20260630-editor-nav" />
+  </head>
+  <body class="admin-page">
+    <header class="admin-header">
+      <a class="brand" href="./">open azulejos</a>
+      <span>back office</span>
+    </header>
+    <main class="admin-shell">
+      <form class="admin-login" id="adminLogin">
+        <label>
+          admin key
+          <input id="adminKeyInput" type="password" autocomplete="current-password" />
+        </label>
+        <button id="adminSaveKeyButton" type="submit">open</button>
+        <p id="adminLoginStatus" role="status"></p>
+      </form>
+      <section class="admin-tools" id="adminTools" hidden>
+        <div class="admin-toolbar">
+          <button id="adminRefreshButton" type="button">refresh</button>
+          <button id="adminForgetKeyButton" type="button">lock</button>
+        </div>
+        <div class="admin-filters" id="adminFilters" aria-label="moderation filters">
+          <button type="button" data-filter="pending">pending <span>0</span></button>
+          <button type="button" data-filter="approved">approved <span>0</span></button>
+          <button type="button" data-filter="rejected">rejected <span>0</span></button>
+          <button type="button" data-filter="all">all <span>0</span></button>
+        </div>
+        <div class="admin-status" id="adminStatus">loading</div>
+        <div class="admin-grid" id="adminGrid"></div>
+        <button class="admin-load-more" id="adminLoadMore" type="button" hidden>load more</button>
+      </section>
+    </main>
+    <section class="admin-editor" id="adminEditor" aria-hidden="true" aria-label="azulejo image editor">
+      <header class="admin-editor-header">
+        <div>
+          <strong>image treatment</strong>
+          <span id="adminEditorMeta"></span>
+        </div>
+        <nav class="admin-editor-nav" aria-label="image treatment navigation">
+          <button id="adminEditorPrev" type="button" aria-label="previous image">‹</button>
+          <button id="adminEditorNext" type="button" aria-label="next image">›</button>
+        </nav>
+        <button id="adminEditorClose" type="button" aria-label="close">×</button>
+      </header>
+      <div class="admin-editor-workspace">
+        <div class="admin-editor-source">
+          <canvas id="adminSourceCanvas" width="900" height="900" aria-label="source image with perspective points"></canvas>
+          <div class="admin-editor-source-actions">
+            <button id="adminWhitePoint" type="button">white point</button>
+            <button id="adminRecoverBorder" type="button">recover border</button>
+            <button id="adminResetCrop" type="button">reset crop</button>
+          </div>
+        </div>
+        <div class="admin-editor-preview">
+          <canvas id="adminPreviewCanvas" width="720" height="720" aria-label="corrected square preview"></canvas>
+        </div>
+        <div class="admin-editor-adjustments" id="adminAdjustments">
+          <label>brightness <output>0</output><input name="brightness" type="range" min="-100" max="100" value="0" /></label>
+          <label>highlights <output>0</output><input name="highlights" type="range" min="-100" max="100" value="0" /></label>
+          <label>shadows <output>0</output><input name="shadows" type="range" min="-100" max="100" value="0" /></label>
+          <label>contrast <output>0</output><input name="contrast" type="range" min="-100" max="100" value="0" /></label>
+          <label>saturation <output>0</output><input name="saturation" type="range" min="-100" max="100" value="0" /></label>
+          <label>warmth <output>0</output><input name="warmth" type="range" min="-100" max="100" value="0" /></label>
+          <label>tint <output>0</output><input name="tint" type="range" min="-100" max="100" value="0" /></label>
+          <button id="adminResetAdjustments" type="button">reset image</button>
+        </div>
+      </div>
+      <section class="admin-nearby" aria-label="nearby submissions">
+        <header>
+          <div>
+            <strong>nearby submissions</strong>
+            <span id="adminNearbyStatus">loading nearby tiles...</span>
+          </div>
+          <label>
+            radius <output id="adminNearbyRadiusValue">60 m</output>
+            <input id="adminNearbyRadius" type="range" min="10" max="250" step="5" value="60" />
+          </label>
+        </header>
+        <div class="admin-nearby-list" id="adminNearbyList"></div>
+      </section>
+      <footer class="admin-editor-footer">
+        <span id="adminEditorStatus"></span>
+        <button id="adminEditorSave" type="button">save treatment</button>
+      </footer>
+    </section>
+    <section class="admin-nearby-viewer" id="adminNearbyViewer" aria-hidden="true" aria-label="nearby submission comparison">
+      <button id="adminNearbyViewerClose" type="button" aria-label="close">×</button>
+      <img id="adminNearbyViewerImage" alt="nearby azulejo" />
+      <div>
+        <strong id="adminNearbyViewerDistance"></strong>
+        <span id="adminNearbyViewerMeta"></span>
+        <a id="adminNearbyViewerMap" target="_blank" rel="noopener">map</a>
+      </div>
+    </section>
+    <script src="./admin-image.js?v=20260630-expand-border"></script>
+    <script src="./admin.js?v=20260701-secure-session"></script>
+  </body>
+</html>

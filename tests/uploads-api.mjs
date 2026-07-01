@@ -1,0 +1,92 @@
+import { Readable } from "node:stream";
+import { createRequire } from "node:module";
+
+const require = createRequire(import.meta.url);
+const handler = require("../api/uploads.js");
+const originalFetch = global.fetch;
+const originalEnv = {
+  SUPABASE_URL: process.env.SUPABASE_URL,
+  SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+};
+process.env.SUPABASE_URL = "https://example.supabase.co";
+process.env.SUPABASE_SERVICE_ROLE_KEY = "service-test";
+
+function assert(condition, message) {
+  if (!condition) throw new Error(message);
+}
+
+async function invoke(body) {
+  const request = Readable.from([JSON.stringify(body)]);
+  request.method = "POST";
+  request.headers = {};
+  let responseBody = "";
+  const response = {
+    statusCode: 200,
+    setHeader() {},
+    end(value) { responseBody = value || ""; },
+  };
+  await handler(request, response);
+  return { status: response.statusCode, body: JSON.parse(responseBody) };
+}
+
+const uploadId = "11111111-1111-4111-8111-111111111111";
+const signedRequests = [];
+global.fetch = async (url) => {
+  signedRequests.push(String(url));
+  return {
+    ok: true,
+    json: async () => ({ url: `/object/upload/sign/mock?token=${signedRequests.length}` }),
+    text: async () => "",
+  };
+};
+const prepared = await invoke({
+  action: "prepare",
+  uploadId,
+  squareMime: "image/jpeg",
+  sourceMime: "image/webp",
+  lat: 38.72,
+  lng: -9.14,
+  gpsAccuracy: 12,
+  gpsTimestamp: Date.now(),
+  locationSource: "browser",
+});
+assert(prepared.status === 200, "signed upload preparation should succeed");
+assert(prepared.body.square.bucket === "azulejos", "published derivative should use public bucket");
+assert(prepared.body.source.bucket === "azulejos-originals", "source should use private bucket");
+assert(signedRequests.some((url) => url.includes("azulejos-originals")), "source upload must be signed for private bucket");
+
+let insertedRecord = null;
+global.fetch = async (url, options = {}) => {
+  const requestUrl = String(url);
+  if (requestUrl.includes("/storage/v1/object/info/")) {
+    return { ok: true, json: async () => ({ size: 1234 }), text: async () => "" };
+  }
+  if (requestUrl.includes("/rest/v1/azulejos") && options.method === "POST") {
+    insertedRecord = JSON.parse(options.body);
+    return { ok: true, json: async () => [insertedRecord], text: async () => "" };
+  }
+  throw new Error(`unexpected request ${requestUrl}`);
+};
+const finalized = await invoke({
+  action: "finalize",
+  uploadId,
+  squarePath: `captures/${uploadId}.jpg`,
+  sourcePath: `captures/${uploadId}-source.webp`,
+  lat: 38.72,
+  lng: -9.14,
+  gpsAccuracy: 12,
+  gpsTimestamp: Date.now(),
+  locationSource: "browser",
+  cropPoints: [{ x: 0.1, y: 0.1 }, { x: 0.9, y: 0.1 }, { x: 0.9, y: 0.9 }, { x: 0.1, y: 0.9 }],
+});
+assert(finalized.status === 200, "finalization should succeed after object verification");
+assert(insertedRecord.moderation_status === "pending", "new contribution must be pending");
+assert(insertedRecord.original_image_bucket === "azulejos-originals", "database must retain private source bucket");
+assert(insertedRecord.original_image_url === null, "private source URL must not be persisted publicly");
+
+global.fetch = originalFetch;
+for (const [key, value] of Object.entries(originalEnv)) {
+  if (value === undefined) delete process.env[key];
+  else process.env[key] = value;
+}
+console.log("uploads api tests passed");

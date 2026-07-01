@@ -1,0 +1,10 @@
+.vercel
+.env*
+!.env.example
+.DS_Store
+.verification-*
+node_modules/
+supabase/.temp/
+openazulejos-backups/
+*.backup
+*.dump
