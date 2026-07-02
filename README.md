@@ -51,6 +51,7 @@ npx supabase db push --linked --dry-run
 - [Architecture](docs/ARCHITECTURE.md)
 - [Backup and restore](docs/BACKUP_AND_RESTORE.md)
 - [Operations](docs/OPERATIONS.md)
+- [Interoperability](docs/INTEROPERABILITY.md)
 - [Strategic specification adoption](docs/decisions/0002-strategic-spec-adoption.md)
 - [Roadmap](ROADMAP.md)
 - [Governance](GOVERNANCE.md)

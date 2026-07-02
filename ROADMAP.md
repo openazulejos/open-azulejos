@@ -7,16 +7,17 @@
 - Completed: PostGIS-backed locations and normalized archival entities.
 - Completed: named Supabase Auth accounts with a temporary recovery bridge.
 - Completed: installable PWA shell and offline-resilient contribution queue.
+- Completed: stable JSON-LD, IIIF Presentation 3, and LIDO 1.1 representations
+  for approved records.
 - Public repository, continuous integration, contribution and license policy.
 - Contributor attribution and explicit photo-license consent.
 - Stable public identifiers and a first CIDOC CRM mapping profile.
 
 ## Consolidation: three to twelve months
 
-- Versioned public API, JSON-LD, LIDO, and rights-aware metadata exports.
+- Versioned collection API and rights-aware bulk metadata exports.
 - Duplicate review based on distance and visual similarity.
 - Controlled vocabulary, provenance, confidence, and citation support.
-- IIIF Presentation manifests over existing public derivatives.
 - First museum or university pilot without exclusivity.
 
 ## Research infrastructure: one to two years

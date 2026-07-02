@@ -8,8 +8,8 @@
     "node": ">=20"
   },
   "scripts": {
-    "check": "node --check app-source-capture.js && node --check offline-queue.js && node --check service-worker.js && node --check admin-image.js && node --check admin.js && node --check api/records.js && node --check api/uploads.js && node --check api/admin-session.js && node --check api/admin-account.js",
-    "test": "node tests/admin-image.mjs && node tests/records-api.mjs && node tests/security-api.mjs && node tests/admin-account-api.mjs && node tests/uploads-api.mjs && node tests/pwa.mjs && node tests/smoke.mjs",
+    "check": "node --check app-source-capture.js && node --check offline-queue.js && node --check service-worker.js && node --check admin-image.js && node --check admin.js && node --check api/archive.js && node --check api/records.js && node --check api/uploads.js && node --check api/admin-session.js && node --check api/admin-account.js",
+    "test": "node tests/admin-image.mjs && node tests/archive-api.mjs && node tests/records-api.mjs && node tests/security-api.mjs && node tests/admin-account-api.mjs && node tests/uploads-api.mjs && node tests/pwa.mjs && node tests/smoke.mjs",
     "backup:verify": "node scripts/verify-backup.mjs",
     "backup:restore": "node scripts/restore-open-azulejos.mjs"
   }

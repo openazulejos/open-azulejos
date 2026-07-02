@@ -1,5 +1,19 @@
 {
   "cleanUrls": true,
+  "rewrites": [
+    {
+      "source": "/archive/:id",
+      "destination": "/api/archive?id=:id&format=jsonld"
+    },
+    {
+      "source": "/iiif/:id/manifest",
+      "destination": "/api/archive?id=:id&format=iiif"
+    },
+    {
+      "source": "/lido/:id",
+      "destination": "/api/archive?id=:id&format=lido"
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",
