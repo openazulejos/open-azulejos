@@ -36,6 +36,15 @@ assert(lido.includes("<lido:lidoWrap") && lido.includes("lido-v1.1.xsd"), "LIDO 
 assert(lido.includes("Recorded azulejo &amp; fragment"), "LIDO output should XML-escape archive values");
 assert(lido.includes("<gml:pos>38.71374 -9.13934</gml:pos>"), "LIDO output should preserve the observation coordinates");
 
+const licensedRecord = { ...record, photographer_credit: "Test contributor", photo_license: "CC-BY-4.0" };
+const licensedJsonLd = handler._test.jsonLdRecord(licensedRecord);
+assert(JSON.stringify(licensedJsonLd).includes("https://creativecommons.org/licenses/by/4.0/"), "licensed JSON-LD should expose explicit CC BY rights");
+const licensedManifest = handler._test.iiifManifest(licensedRecord);
+assert(licensedManifest.rights.endsWith("/by/4.0/"), "licensed IIIF manifest should expose its rights URI");
+assert(licensedManifest.requiredStatement.value.en[0] === "Test contributor", "licensed IIIF manifest should require photographer attribution");
+const licensedLido = handler._test.lidoRecord(licensedRecord);
+assert(licensedLido.includes("<lido:creditLine>Test contributor</lido:creditLine>"), "licensed LIDO should expose the photographer credit line");
+
 const originalFetch = global.fetch;
 const originalEnv = {
   SUPABASE_URL: process.env.SUPABASE_URL,

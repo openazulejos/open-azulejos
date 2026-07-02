@@ -55,6 +55,18 @@ assert(prepared.body.square.bucket === "azulejos", "published derivative should 
 assert(prepared.body.source.bucket === "azulejos-originals", "source should use private bucket");
 assert(signedRequests.some((url) => url.includes("azulejos-originals")), "source upload must be signed for private bucket");
 
+const missingRights = await invoke({
+  action: "finalize",
+  uploadId,
+  squarePath: `captures/${uploadId}.jpg`,
+  lat: 38.72,
+  lng: -9.14,
+  gpsAccuracy: 12,
+  gpsTimestamp: Date.now(),
+  locationSource: "browser",
+});
+assert(missingRights.status === 400, "finalization must reject a contribution without explicit photo rights");
+
 let insertedRecord = null;
 global.fetch = async (url, options = {}) => {
   const requestUrl = String(url);
@@ -78,11 +90,17 @@ const finalized = await invoke({
   gpsTimestamp: Date.now(),
   locationSource: "browser",
   cropPoints: [{ x: 0.1, y: 0.1 }, { x: 0.9, y: 0.1 }, { x: 0.9, y: 0.9 }, { x: 0.1, y: 0.9 }],
+  photographerCredit: "Test contributor",
+  photoLicense: "CC-BY-4.0",
+  contributorConsent: true,
+  contributorConsentAt: "2026-07-02T10:00:00Z",
 });
 assert(finalized.status === 200, "finalization should succeed after object verification");
 assert(insertedRecord.moderation_status === "pending", "new contribution must be pending");
 assert(insertedRecord.original_image_bucket === "azulejos-originals", "database must retain private source bucket");
 assert(insertedRecord.original_image_url === null, "private source URL must not be persisted publicly");
+assert(insertedRecord.photographer_credit === "Test contributor", "finalization should retain photographer attribution");
+assert(insertedRecord.photo_license === "CC-BY-4.0", "finalization should retain explicit photo rights");
 
 global.fetch = originalFetch;
 for (const [key, value] of Object.entries(originalEnv)) {

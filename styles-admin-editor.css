@@ -177,7 +177,7 @@ textarea {
   inset: 0;
   z-index: 1310;
   display: none;
-  grid-template-rows: 1fr auto auto;
+  grid-template-rows: minmax(0, 1fr) auto auto auto;
   place-items: center;
   gap: 14px;
   padding: 16px 16px max(18px, env(safe-area-inset-bottom));
@@ -214,6 +214,44 @@ textarea {
   gap: 8px;
   color: var(--muted);
   font-size: 11px;
+}
+
+.capture-rights {
+  display: grid;
+  gap: 8px;
+  width: min(92vmin, 720px);
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.capture-credit {
+  display: grid;
+  grid-template-columns: 42px 1fr;
+  align-items: center;
+  gap: 8px;
+}
+
+.capture-credit input {
+  min-width: 0;
+  height: 30px;
+  padding: 0 7px;
+  border: 1px solid var(--line);
+  border-radius: 0;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+}
+
+.capture-license {
+  display: grid;
+  grid-template-columns: 16px 1fr;
+  align-items: start;
+  gap: 7px;
+  line-height: 1.35;
+}
+
+.capture-license input {
+  margin: 1px 0 0;
 }
 
 .capture-preview-controls {
@@ -314,7 +352,8 @@ textarea {
   }
 
   .capture-preview-frame,
-  .capture-crop-controls {
+  .capture-crop-controls,
+  .capture-rights {
     width: min(92vw, calc(100dvh - 196px), 720px);
   }
 }

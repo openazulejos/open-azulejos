@@ -9,8 +9,9 @@
 - Completed: installable PWA shell and offline-resilient contribution queue.
 - Completed: stable JSON-LD, IIIF Presentation 3, and LIDO 1.1 representations
   for approved records.
+- Completed: explicit CC BY 4.0 consent and photographer attribution for new
+  contributions, without retroactive licensing.
 - Public repository, continuous integration, contribution and license policy.
-- Contributor attribution and explicit photo-license consent.
 - Stable public identifiers and a first CIDOC CRM mapping profile.
 
 ## Consolidation: three to twelve months

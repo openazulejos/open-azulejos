@@ -73,6 +73,24 @@ const normalizedEditSettings = (value) => {
   return settings;
 };
 
+const normalizedContributionRights = (body) => {
+  const photographerCredit = String(body.photographerCredit || "").trim();
+  const consentAt = body.contributorConsentAt ? new Date(body.contributorConsentAt) : null;
+  if (body.contributorConsent !== true
+    || body.photoLicense !== "CC-BY-4.0"
+    || photographerCredit.length < 1
+    || photographerCredit.length > 120
+    || !consentAt
+    || !Number.isFinite(consentAt.getTime())) {
+    return { error: "photographer credit and explicit CC BY 4.0 consent are required" };
+  }
+  return {
+    photographerCredit,
+    photoLicense: "CC-BY-4.0",
+    contributorConsentAt: consentAt.toISOString(),
+  };
+};
+
 const distanceMeters = (firstLat, firstLng, secondLat, secondLng) => {
   const toRadians = (degrees) => degrees * Math.PI / 180;
   const lat1 = toRadians(firstLat);
@@ -456,6 +474,8 @@ module.exports = async function handler(req, res) {
   if (!image || !Number.isFinite(lat) || !Number.isFinite(lng)) {
     return json(res, 400, { error: "imageData, lat and lng are required" });
   }
+  const rights = normalizedContributionRights(body);
+  if (rights.error) return json(res, 400, { error: rights.error });
   if (image.buffer.length > 3_000_000) {
     return json(res, 413, { error: "image is too large" });
   }
@@ -533,6 +553,9 @@ module.exports = async function handler(req, res) {
     gps_accuracy_m: Number.isFinite(gpsAccuracy) ? gpsAccuracy : null,
     gps_timestamp: Number.isFinite(gpsTimestamp) ? new Date(gpsTimestamp).toISOString() : null,
     location_source: ["browser", "exif"].includes(locationSource) ? locationSource : "legacy",
+    photographer_credit: rights.photographerCredit,
+    photo_license: rights.photoLicense,
+    contributor_consent_at: rights.contributorConsentAt,
   };
 
   const insert = await fetch(`${supabaseUrl}/rest/v1/azulejos`, {

@@ -175,6 +175,8 @@ const captureCropX = document.querySelector("#captureCropX");
 const captureCropY = document.querySelector("#captureCropY");
 const captureRetakeButton = document.querySelector("#captureRetakeButton");
 const captureSendButton = document.querySelector("#captureSendButton");
+const capturePhotographerCredit = document.querySelector("#capturePhotographerCredit");
+const captureLicenseConsent = document.querySelector("#captureLicenseConsent");
 const locationPermissionSheet = document.querySelector("#locationPermissionSheet");
 const locationPermissionClose = document.querySelector("#locationPermissionClose");
 const locationPermissionMessage = document.querySelector("#locationPermissionMessage");
@@ -1934,6 +1936,14 @@ async function openCapturePreview(imageSource, gps = null) {
   }
   if (captureCropX) captureCropX.value = "0";
   if (captureCropY) captureCropY.value = "0";
+  if (capturePhotographerCredit && !capturePhotographerCredit.value) {
+    try {
+      capturePhotographerCredit.value = localStorage.getItem("open-azulejos-photographer-credit") || "";
+    } catch {
+      capturePhotographerCredit.value = "";
+    }
+  }
+  if (captureLicenseConsent) captureLicenseConsent.checked = false;
   drawPendingCapture();
   capturePreview?.classList.add("is-open");
   capturePreview?.setAttribute("aria-hidden", "false");
@@ -2460,7 +2470,7 @@ function locateUserOnMap() {
   }
 }
 
-async function placeRecordedAzulejo(squareImage, gps = null, uploadId = null, originalImageData = null, cropPoints = null) {
+async function placeRecordedAzulejo(squareImage, gps = null, uploadId = null, originalImageData = null, cropPoints = null, rights = null) {
   const center = map.getCenter();
   const lat = gps?.lat ?? center.lat;
   const lng = gps?.lng ?? center.lng;
@@ -2479,6 +2489,10 @@ async function placeRecordedAzulejo(squareImage, gps = null, uploadId = null, or
     locationSource: gps?.source || "unknown",
     cropPoints,
     editSettings: {},
+    photographerCredit: rights?.photographerCredit || null,
+    photoLicense: rights?.photoLicense || null,
+    contributorConsent: Boolean(rights?.contributorConsent),
+    contributorConsentAt: rights?.contributorConsentAt || null,
   };
   let stored;
   if (navigator.onLine === false) {
@@ -2717,6 +2731,12 @@ async function sendPendingCapture() {
   let keepStatus = false;
   let queuedOffline = false;
   try {
+    const photographerCredit = String(capturePhotographerCredit?.value || "").trim();
+    if (!photographerCredit || !captureLicenseConsent?.checked) {
+      keepStatus = true;
+      showCaptureSendStatus("credit and consent required", 3200);
+      return;
+    }
     const squareImage = drawPendingCapture(true);
     if (!squareImage) throw new Error("image encoding failed");
     const originalImageData = encodeSourceImageForAdmin(pendingCapture.image);
@@ -2733,7 +2753,18 @@ async function sendPendingCapture() {
     captureSendButton.textContent = "sending...";
     recordHistoryButton.disabled = true;
     recordHistoryButton.textContent = "recording...";
-    const stored = await placeRecordedAzulejo(squareImage, gps, pendingCapture.uploadId, originalImageData, cropPoints);
+    const rights = {
+      photographerCredit,
+      photoLicense: "CC-BY-4.0",
+      contributorConsent: true,
+      contributorConsentAt: new Date().toISOString(),
+    };
+    const stored = await placeRecordedAzulejo(squareImage, gps, pendingCapture.uploadId, originalImageData, cropPoints, rights);
+    try {
+      localStorage.setItem("open-azulejos-photographer-credit", photographerCredit);
+    } catch {
+      // Submission does not depend on local preference storage.
+    }
     queuedOffline = Boolean(stored?.queued);
     closeCapturePreview();
   } catch (error) {

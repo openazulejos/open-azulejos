@@ -59,6 +59,24 @@ const normalizedCropPoints = (value) => Array.isArray(value)
   }))
   : null;
 
+const normalizedContributionRights = (body) => {
+  const photographerCredit = String(body.photographerCredit || "").trim();
+  const consentAt = body.contributorConsentAt ? new Date(body.contributorConsentAt) : null;
+  if (body.contributorConsent !== true
+    || body.photoLicense !== "CC-BY-4.0"
+    || photographerCredit.length < 1
+    || photographerCredit.length > 120
+    || !consentAt
+    || !Number.isFinite(consentAt.getTime())) {
+    return { error: "photographer credit and explicit CC BY 4.0 consent are required" };
+  }
+  return {
+    photographerCredit,
+    photoLicense: "CC-BY-4.0",
+    contributorConsentAt: consentAt.toISOString(),
+  };
+};
+
 const signUpload = async (supabaseUrl, headers, bucket, objectPath) => {
   const response = await fetch(`${supabaseUrl}/storage/v1/object/upload/sign/${bucket}/${objectPath}`, {
     method: "POST",
@@ -126,6 +144,8 @@ module.exports = async function handler(request, response) {
 
   const location = validateLocation(body);
   if (location.error) return json(response, 400, { error: location.error });
+  const rights = normalizedContributionRights(body);
+  if (rights.error) return json(response, 400, { error: rights.error });
   const { lat, lng, accuracy: gpsAccuracy, timestamp: gpsTimestamp, source: locationSource } = location;
   const squarePath = String(body.squarePath || "");
   const sourcePath = body.sourcePath ? String(body.sourcePath) : null;
@@ -159,6 +179,9 @@ module.exports = async function handler(request, response) {
       gps_accuracy_m: Number.isFinite(gpsAccuracy) ? gpsAccuracy : null,
       gps_timestamp: Number.isFinite(gpsTimestamp) ? new Date(gpsTimestamp).toISOString() : null,
       location_source: ["browser", "exif"].includes(locationSource) ? locationSource : "legacy",
+      photographer_credit: rights.photographerCredit,
+      photo_license: rights.photoLicense,
+      contributor_consent_at: rights.contributorConsentAt,
     };
     const insert = await fetch(`${supabaseUrl}/rest/v1/azulejos`, {
       method: "POST",

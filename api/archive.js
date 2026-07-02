@@ -29,6 +29,10 @@ const imageFormat = (url) => {
   return "image/jpeg";
 };
 
+const licenseUrl = (record) => record.photo_license === "CC-BY-4.0"
+  ? "https://creativecommons.org/licenses/by/4.0/"
+  : null;
+
 const canonicalUrls = (record) => ({
   object: `${PUBLIC_BASE_URL}/archive/${record.id}`,
   manifest: `${PUBLIC_BASE_URL}/iiif/${record.id}/manifest`,
@@ -50,6 +54,7 @@ const jsonLdRecord = (record) => {
   const placeId = `${urls.object}#place`;
   const observationId = `${urls.object}#observation`;
   const photographId = `${urls.object}#photograph`;
+  const rightsUrl = licenseUrl(record);
   return {
     "@context": {
       crm: "http://www.cidoc-crm.org/cidoc-crm/",
@@ -102,12 +107,20 @@ const jsonLdRecord = (record) => {
         "schema:contentUrl": record.image_url,
         "schema:encodingFormat": imageFormat(record.image_url),
         "schema:dateCreated": displayDate(record.created_at),
+        ...(rightsUrl ? {
+          "schema:license": rightsUrl,
+          "schema:creditText": record.photographer_credit,
+        } : {}),
       },
     ],
     "schema:associatedMedia": {
       "@type": "schema:ImageObject",
       "@id": photographId,
       "schema:contentUrl": record.image_url,
+      ...(rightsUrl ? {
+        "schema:license": rightsUrl,
+        "schema:creditText": record.photographer_credit,
+      } : {}),
     },
     "schema:sameAs": [urls.manifest, urls.lido],
   };
@@ -117,11 +130,19 @@ const iiifManifest = (record) => {
   const urls = canonicalUrls(record);
   const canvasId = `${urls.manifest}/canvas/1`;
   const annotationPageId = `${urls.manifest}/page/1`;
+  const rightsUrl = licenseUrl(record);
   return {
     "@context": "http://iiif.io/api/presentation/3/context.json",
     id: urls.manifest,
     type: "Manifest",
     label: languageMap(record.title || "Recorded azulejo"),
+    ...(rightsUrl ? {
+      rights: rightsUrl,
+      requiredStatement: {
+        label: languageMap("Attribution"),
+        value: languageMap(record.photographer_credit),
+      },
+    } : {}),
     metadata: metadataPairs(record).map(([label, value]) => ({
       label: languageMap(label),
       value: languageMap(value),
@@ -162,6 +183,7 @@ const lidoRecord = (record) => {
   const urls = canonicalUrls(record);
   const observedAt = displayDate(record.gps_timestamp);
   const submittedAt = displayDate(record.created_at);
+  const rightsUrl = licenseUrl(record);
   return `<?xml version="1.0" encoding="UTF-8"?>
 <lido:lidoWrap xmlns:lido="http://www.lido-schema.org" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.lido-schema.org http://www.lido-schema.org/schema/v1.1/lido-v1.1.xsd">
   <lido:lido>
@@ -180,7 +202,7 @@ const lidoRecord = (record) => {
     </lido:descriptiveMetadata>
     <lido:administrativeMetadata xml:lang="en">
       <lido:recordWrap><lido:recordID lido:type="local">${xmlEscape(record.id)}</lido:recordID><lido:recordType><lido:term>item-level record</lido:term></lido:recordType><lido:recordSource><lido:legalBodyName><lido:appellationValue>Open Azulejos</lido:appellationValue></lido:legalBodyName></lido:recordSource>${submittedAt ? `<lido:recordInfoSet><lido:recordInfoLink>${xmlEscape(urls.object)}</lido:recordInfoLink><lido:recordMetadataDate>${xmlEscape(submittedAt)}</lido:recordMetadataDate></lido:recordInfoSet>` : ""}</lido:recordWrap>
-      <lido:resourceWrap><lido:resourceSet><lido:resourceRepresentation lido:type="image"><lido:linkResource>${xmlEscape(record.image_url)}</lido:linkResource></lido:resourceRepresentation></lido:resourceSet></lido:resourceWrap>
+      <lido:resourceWrap><lido:resourceSet><lido:resourceRepresentation lido:type="image"><lido:linkResource>${xmlEscape(record.image_url)}</lido:linkResource></lido:resourceRepresentation>${rightsUrl ? `<lido:rightsResource><lido:rightsType lido:type="http://terminology.lido-schema.org/lido00920"><lido:conceptID lido:type="http://terminology.lido-schema.org/lido00099">${xmlEscape(rightsUrl)}</lido:conceptID><lido:term>CC BY 4.0</lido:term></lido:rightsType><lido:creditLine>${xmlEscape(record.photographer_credit)}</lido:creditLine></lido:rightsResource>` : ""}</lido:resourceSet></lido:resourceWrap>
     </lido:administrativeMetadata>
   </lido:lido>
 </lido:lidoWrap>`;
@@ -188,7 +210,7 @@ const lidoRecord = (record) => {
 
 const fetchApprovedRecord = async (supabaseUrl, headers, id) => {
   const query = new URLSearchParams({
-    select: "id,title,lat,lng,image_url,cell_code,words,created_at,gps_accuracy_m,gps_timestamp,location_source",
+    select: "id,title,lat,lng,image_url,cell_code,words,created_at,gps_accuracy_m,gps_timestamp,location_source,photographer_credit,photo_license,contributor_consent_at",
     id: `eq.${id}`,
     source: "eq.web-camera",
     moderation_status: "eq.approved",

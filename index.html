@@ -10,7 +10,7 @@
     <link rel="apple-touch-icon" href="./assets/azulejo-field-photo-1-crop.png" />
     <link rel="preconnect" href="https://unpkg.com" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="./styles-admin-editor.css" />
+    <link rel="stylesheet" href="./styles-admin-editor.css?v=20260702-contribution-rights" />
   </head>
   <body>
     <header class="topbar" aria-label="Navigation principale">
@@ -61,6 +61,16 @@
           <label>
             y
             <input id="captureCropY" type="range" min="-100" max="100" value="0" />
+          </label>
+        </div>
+        <div class="capture-rights">
+          <label class="capture-credit">
+            credit
+            <input id="capturePhotographerCredit" type="text" maxlength="120" autocomplete="nickname" placeholder="name or pseudonym" />
+          </label>
+          <label class="capture-license">
+            <input id="captureLicenseConsent" type="checkbox" />
+            <span>i took this photograph and publish it under cc by 4.0</span>
           </label>
         </div>
         <div class="capture-preview-controls">
@@ -303,7 +313,7 @@ azulejo-002.jpg,38.71072,-9.13908,Baixa</code></pre>
     </template>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="./offline-queue.js?v=20260702-offline-capture"></script>
-    <script src="./app-source-capture.js?v=20260702-offline-capture"></script>
+    <script src="./offline-queue.js?v=20260702-contribution-rights"></script>
+    <script src="./app-source-capture.js?v=20260702-contribution-rights"></script>
   </body>
 </html>

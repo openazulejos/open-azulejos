@@ -10,7 +10,8 @@ PostGIS, Storage, and named administrator identities.
 2. `/api/uploads` returns short-lived signed upload URLs.
 3. The derivative uploads to the public `azulejos` bucket; the source uploads to
    private `azulejos-originals`.
-4. A small finalize request records GPS quality and creates a pending record.
+4. A small finalize request records GPS quality, photographer attribution, and
+   explicit photo-license consent before creating a pending record.
 5. The compatibility trigger mirrors `azulejos` into normalized archive tables.
 6. Admin reads receive temporary signed URLs for private originals.
 7. Named administrators authenticate through Supabase Auth; the API exchanges a
@@ -27,6 +28,8 @@ have migrated.
 - Original files are immutable and private.
 - Published images are derivatives and may be replaced without changing IDs.
 - Every location stores GPS accuracy and provenance where available.
+- A photo license is published only when its contributor credit and consent
+  timestamp are both present.
 - Every moderation transition creates an append-only event.
 - Named moderation actions retain the administrator UUID in the audit event.
 - Public APIs never return private paths or moderation records.

@@ -19,9 +19,9 @@ It deliberately does not advertise an IIIF Image API service: region and scale
 requests require a future dedicated image server. The manifest links to the
 JSON-LD and LIDO descriptions through `seeAlso`.
 
-LIDO output is generated against schema version 1.1. Rights statements are
-omitted until a photograph has explicit, recorded rights metadata. Existing
-images must not receive a license retroactively.
+LIDO output is generated against schema version 1.1. Rights statements and
+attribution are emitted only when a photograph has explicit, recorded CC BY 4.0
+consent. Existing images do not receive a license retroactively.
 
 All representations are read-only, CORS-enabled, cacheable, and restricted to
 approved `web-camera` records. Private originals and moderation data are never

@@ -11,12 +11,14 @@ Source: [github.com/orsoneveraert/open-azulejos](https://github.com/orsoneveraer
 ## Current capabilities
 
 - Mobile camera and photo-library capture with square preview and hidden margin.
+- Required photographer credit and explicit CC BY 4.0 consent for new photos.
 - Mandatory recent GPS position with accuracy checks and live map location.
 - Pending-by-default moderation and a mobile-compatible image editor.
 - Perspective correction, tonal adjustments, white point, and border recovery.
 - Grid-aligned map images, viewport sampling, fullscreen mosaic viewer, and LQIP.
 - Installable PWA shell and an IndexedDB submission queue that retries after a
   network interruption.
+- Stable CIDOC CRM-oriented JSON-LD, IIIF Presentation 3, and LIDO 1.1 records.
 - PostGIS-backed archive foundation and private storage for new source images.
 - Verified media backups with checksums and a dry-run restore command.
 
