@@ -15,6 +15,8 @@ Source: [github.com/orsoneveraert/open-azulejos](https://github.com/orsoneveraer
 - Pending-by-default moderation and a mobile-compatible image editor.
 - Perspective correction, tonal adjustments, white point, and border recovery.
 - Grid-aligned map images, viewport sampling, fullscreen mosaic viewer, and LQIP.
+- Installable PWA shell and an IndexedDB submission queue that retries after a
+  network interruption.
 - PostGIS-backed archive foundation and private storage for new source images.
 - Verified media backups with checksums and a dry-run restore command.
 
@@ -49,6 +51,7 @@ npx supabase db push --linked --dry-run
 - [Architecture](docs/ARCHITECTURE.md)
 - [Backup and restore](docs/BACKUP_AND_RESTORE.md)
 - [Operations](docs/OPERATIONS.md)
+- [Strategic specification adoption](docs/decisions/0002-strategic-spec-adoption.md)
 - [Roadmap](ROADMAP.md)
 - [Governance](GOVERNANCE.md)
 - [Contributing](CONTRIBUTING.md)

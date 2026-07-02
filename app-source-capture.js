@@ -2060,6 +2060,56 @@ async function saveRecordedAzulejo(payload) {
   throw lastError || new Error("upload failed");
 }
 
+function isQueueableUploadFailure(error) {
+  if (navigator.onLine === false) return true;
+  const message = String(error?.message || "");
+  return error?.name === "AbortError"
+    || /network|fetch|abort|load failed|timed out|failed (?:408|429|5\d\d)|record (?:408|429|5\d\d)/i.test(message);
+}
+
+async function queueRecordedAzulejo(payload) {
+  const queue = window.OpenAzulejosOfflineQueue;
+  if (!queue) throw new Error("offline storage is unavailable on this device");
+  await queue.enqueue(payload);
+  return {
+    queued: true,
+    record: {
+      id: `queued-${payload.uploadId}`,
+      image_url: payload.imageData,
+      moderation_status: "pending",
+    },
+  };
+}
+
+let offlineFlushPromise = null;
+
+async function flushOfflineContributions() {
+  const queue = window.OpenAzulejosOfflineQueue;
+  if (!queue || navigator.onLine === false) return { sent: 0, remaining: 0 };
+  if (offlineFlushPromise) return offlineFlushPromise;
+
+  offlineFlushPromise = (async () => {
+    const entries = await queue.list();
+    let sent = 0;
+    for (const entry of entries) {
+      try {
+        await saveRecordedAzulejo(entry.payload);
+        await queue.remove(entry.id);
+        sent += 1;
+      } catch (error) {
+        await queue.markFailure(entry, error);
+        if (isQueueableUploadFailure(error)) break;
+      }
+    }
+    const remaining = (await queue.list()).length;
+    return { sent, remaining };
+  })().finally(() => {
+    offlineFlushPromise = null;
+  });
+
+  return offlineFlushPromise;
+}
+
 function readCurrentBrowserPosition() {
   if (!navigator.geolocation) return Promise.resolve(null);
   return new Promise((resolve) => {
@@ -2415,7 +2465,7 @@ async function placeRecordedAzulejo(squareImage, gps = null, uploadId = null, or
   const lat = gps?.lat ?? center.lat;
   const lng = gps?.lng ?? center.lng;
   const cell = cellForLatLng(lat, lng);
-  const stored = await saveRecordedAzulejo({
+  const payload = {
     imageData: squareImage,
     originalImageData,
     lat,
@@ -2429,17 +2479,29 @@ async function placeRecordedAzulejo(squareImage, gps = null, uploadId = null, or
     locationSource: gps?.source || "unknown",
     cropPoints,
     editSettings: {},
-  });
+  };
+  let stored;
+  if (navigator.onLine === false) {
+    stored = await queueRecordedAzulejo(payload);
+  } else {
+    try {
+      stored = await saveRecordedAzulejo(payload);
+    } catch (error) {
+      if (!isQueueableUploadFailure(error)) throw error;
+      stored = await queueRecordedAzulejo(payload);
+    }
+  }
   addAzulejoTile({
     id: stored.record.id,
     title: "recorded azulejo",
     lat,
     lng,
     image: stored.record.image_url || stored.imageUrl,
-    source: "supabase-camera",
+    source: stored.queued ? "offline-pending" : "supabase-camera",
     minZoom: map.getZoom(),
   });
   highlightCell({ ...cell, lat, lng }, { fit: false });
+  return stored;
 }
 
 function viewportRenderBudget(width, height) {
@@ -2653,6 +2715,7 @@ async function sendPendingCapture() {
   captureSendButton.disabled = true;
   captureSendButton.textContent = "locating...";
   let keepStatus = false;
+  let queuedOffline = false;
   try {
     const squareImage = drawPendingCapture(true);
     if (!squareImage) throw new Error("image encoding failed");
@@ -2670,7 +2733,8 @@ async function sendPendingCapture() {
     captureSendButton.textContent = "sending...";
     recordHistoryButton.disabled = true;
     recordHistoryButton.textContent = "recording...";
-    await placeRecordedAzulejo(squareImage, gps, pendingCapture.uploadId, originalImageData, cropPoints);
+    const stored = await placeRecordedAzulejo(squareImage, gps, pendingCapture.uploadId, originalImageData, cropPoints);
+    queuedOffline = Boolean(stored?.queued);
     closeCapturePreview();
   } catch (error) {
     console.error("Azulejo upload failed:", error);
@@ -2680,7 +2744,12 @@ async function sendPendingCapture() {
     captureSendButton.disabled = false;
     if (!keepStatus) captureSendButton.textContent = "send";
     recordHistoryButton.disabled = false;
-    recordHistoryButton.textContent = "record azulejos now";
+    recordHistoryButton.textContent = queuedOffline ? "saved offline" : "record azulejos now";
+    if (queuedOffline) {
+      window.setTimeout(() => {
+        if (recordHistoryButton && !recordHistoryButton.disabled) recordHistoryButton.textContent = "record azulejos now";
+      }, 2600);
+    }
   }
 }
 
@@ -3412,6 +3481,17 @@ loadNeighborhoodLayer();
 map.fitBounds([[38.686, -9.232], [38.797, -9.083]], { padding: [32, 32], maxZoom: 13 });
 sampleTiles.forEach((tile) => addAzulejoTile(tile, { skipRecord: true }));
 loadRecordedAzulejos();
+window.addEventListener?.("online", () => {
+  flushOfflineContributions().catch((error) => console.error("Offline contribution sync failed:", error));
+});
+flushOfflineContributions().catch((error) => console.error("Offline contribution sync failed:", error));
+if ("serviceWorker" in navigator) {
+  window.addEventListener?.("load", () => {
+    navigator.serviceWorker.register("/service-worker.js").catch((error) => {
+      console.error("Service worker registration failed:", error);
+    });
+  });
+}
 restoreMosaicState();
 const initialCell = cellForLatLng(LISBON[0], LISBON[1]);
 cursorReadout.textContent = `${initialCell.words} · Lisboa · grille 3 m · ${initialCell.code}`;
@@ -3430,6 +3510,7 @@ window.AzulejoAtlas = {
   detectSquareCrop,
   encodeCanvasForMobileUpload,
   fitTilesOnMap,
+  flushOfflineContributions,
   findCellByWords,
   gpsDistanceMeters,
   readGpsFromExif,
