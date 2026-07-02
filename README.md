@@ -19,6 +19,7 @@ Source: [github.com/orsoneveraert/open-azulejos](https://github.com/orsoneveraer
 - Installable PWA shell and an IndexedDB submission queue that retries after a
   network interruption.
 - Stable CIDOC CRM-oriented JSON-LD, IIIF Presentation 3, and LIDO 1.1 records.
+- Cursor-paginated JSON-LD, IIIF, LIDO, GeoJSON, and CSV collection exports.
 - PostGIS-backed archive foundation and private storage for new source images.
 - Verified media backups with checksums and a dry-run restore command.
 
@@ -44,6 +45,7 @@ ignored by Git.
 ```sh
 npm run check
 npm test
+npm run harvest -- --format geojson --output ../openazulejos-harvest
 npx supabase migration list --linked
 npx supabase db push --linked --dry-run
 ```

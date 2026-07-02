@@ -2,16 +2,36 @@
   "cleanUrls": true,
   "rewrites": [
     {
+      "source": "/archive",
+      "destination": "/api/archive?format=jsonld"
+    },
+    {
       "source": "/archive/:id",
       "destination": "/api/archive?id=:id&format=jsonld"
+    },
+    {
+      "source": "/iiif/collection",
+      "destination": "/api/archive?format=iiif"
     },
     {
       "source": "/iiif/:id/manifest",
       "destination": "/api/archive?id=:id&format=iiif"
     },
     {
+      "source": "/lido",
+      "destination": "/api/archive?format=lido"
+    },
+    {
       "source": "/lido/:id",
       "destination": "/api/archive?id=:id&format=lido"
+    },
+    {
+      "source": "/exports/azulejos.geojson",
+      "destination": "/api/archive?format=geojson"
+    },
+    {
+      "source": "/exports/azulejos.csv",
+      "destination": "/api/archive?format=csv"
     }
   ],
   "headers": [

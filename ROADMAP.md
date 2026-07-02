@@ -11,12 +11,13 @@
   for approved records.
 - Completed: explicit CC BY 4.0 consent and photographer attribution for new
   contributions, without retroactive licensing.
+- Completed: versioned cursor pagination and rights-aware JSON-LD, IIIF, LIDO,
+  GeoJSON, and CSV collection exports, tested at 100,000 records.
 - Public repository, continuous integration, contribution and license policy.
 - Stable public identifiers and a first CIDOC CRM mapping profile.
 
 ## Consolidation: three to twelve months
 
-- Versioned collection API and rights-aware bulk metadata exports.
 - Duplicate review based on distance and visual similarity.
 - Controlled vocabulary, provenance, confidence, and citation support.
 - First museum or university pilot without exclusivity.

@@ -44,6 +44,20 @@ assert(licensedManifest.rights.endsWith("/by/4.0/"), "licensed IIIF manifest sho
 assert(licensedManifest.requiredStatement.value.en[0] === "Test contributor", "licensed IIIF manifest should require photographer attribution");
 const licensedLido = handler._test.lidoRecord(licensedRecord);
 assert(licensedLido.includes("<lido:creditLine>Test contributor</lido:creditLine>"), "licensed LIDO should expose the photographer credit line");
+const encodedCursor = handler._test.encodeCursor(record);
+const decodedCursor = handler._test.decodeCursor(encodedCursor);
+assert(decodedCursor.id === record.id && Date.parse(decodedCursor.createdAt) === Date.parse(record.created_at), "collection cursor should preserve its timestamp and UUID");
+assert(handler._test.decodeCursor("invalid") === null, "invalid collection cursors should be rejected");
+const wrappedLido = handler._test.lidoWrap([record, licensedRecord]);
+assert((wrappedLido.match(/<lido:lido>/g) || []).length === 2, "bulk LIDO should wrap each record independently");
+const geoJson = handler._test.geoJsonCollection([record, licensedRecord], "https://example.test/current", "https://example.test/next");
+assert(geoJson.features[0].geometry.coordinates.join(",") === "-9.13934,38.71374", "GeoJSON should use WGS84 longitude-latitude coordinate order");
+assert(geoJson.features[0].properties.photoLicense === null, "GeoJSON should not invent rights for historic photographs");
+assert(geoJson.features[1].properties.photoLicense.endsWith("/by/4.0/"), "GeoJSON should expose explicit photo rights");
+const csv = handler._test.csvCollection([{ ...licensedRecord, title: 'Quoted, "tile"' }]);
+assert(csv.startsWith("id,title,latitude,longitude"), "CSV export should expose stable research columns");
+assert(csv.includes('"Quoted, ""tile"""'), "CSV export should escape commas and quotation marks");
+assert(csv.includes("Test contributor,https://creativecommons.org/licenses/by/4.0/"), "CSV export should include recorded attribution and rights");
 
 const originalFetch = global.fetch;
 const originalEnv = {
@@ -55,7 +69,10 @@ process.env.SUPABASE_SERVICE_ROLE_KEY = "service-test";
 let requestedUrl = "";
 global.fetch = async (url) => {
   requestedUrl = String(url);
-  return { ok: true, json: async () => [record] };
+  const records = requestedUrl.includes("id=eq.")
+    ? [record]
+    : [record, { ...record, id: "22222222-2222-4222-8222-222222222222", created_at: "2026-07-01T10:01:00Z" }];
+  return { ok: true, json: async () => records };
 };
 
 async function request(format) {
@@ -75,6 +92,33 @@ assert(iiifResponse.status === 200 && iiifResponse.headers["Content-Type"].inclu
 assert(requestedUrl.includes("moderation_status=eq.approved"), "public archive routes must only read approved records");
 const lidoResponse = await request("lido");
 assert(lidoResponse.status === 200 && lidoResponse.headers["Content-Type"].startsWith("application/xml"), "LIDO route should return XML");
+
+let collectionStatus = 0;
+let collectionBody = "";
+const collectionHeaders = {};
+await handler({ method: "GET", headers: { host: "localhost" }, url: "/api/archive?format=jsonld&limit=1" }, {
+  setHeader(name, value) { collectionHeaders[name] = value; },
+  end(value) { collectionBody = value; },
+  set statusCode(value) { collectionStatus = value; },
+});
+const collectionPayload = JSON.parse(collectionBody);
+assert(collectionStatus === 200, "collection endpoint should return approved records");
+assert(collectionPayload["schema:hasPart"].length === 1, "collection endpoint should honor its page limit");
+assert(collectionPayload["hydra:next"]["@id"].includes("cursor="), "collection endpoint should expose a next cursor");
+assert(collectionHeaders.Link.includes('rel="next"'), "collection endpoint should expose HTTP pagination metadata");
+assert(collectionHeaders["X-Open-Azulejos-API-Version"] === "1", "archive responses should expose their API version");
+assert(requestedUrl.includes("order=created_at.asc%2Cid.asc"), "collection database reads should use stable chronological ordering");
+
+let geoJsonStatus = 0;
+let geoJsonBody = "";
+const geoJsonHeaders = {};
+await handler({ method: "GET", headers: { host: "localhost" }, url: "/api/archive?format=geojson&limit=1" }, {
+  setHeader(name, value) { geoJsonHeaders[name] = value; },
+  end(value) { geoJsonBody = value; },
+  set statusCode(value) { geoJsonStatus = value; },
+});
+assert(geoJsonStatus === 200 && geoJsonHeaders["Content-Type"].startsWith("application/geo+json"), "GeoJSON collection route should expose its standard media type");
+assert(JSON.parse(geoJsonBody).features.length === 1, "GeoJSON collection should honor pagination");
 
 global.fetch = originalFetch;
 Object.entries(originalEnv).forEach(([key, value]) => {
