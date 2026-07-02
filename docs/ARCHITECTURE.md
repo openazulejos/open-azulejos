@@ -16,6 +16,8 @@ PostGIS, Storage, and named administrator identities.
 6. Admin reads receive temporary signed URLs for private originals.
 7. Named administrators authenticate through Supabase Auth; the API exchanges a
    verified active profile for a short-lived HttpOnly application session.
+8. Duplicate review first bounds candidates spatially in PostGIS, then ranks
+   their public derivatives locally with a 64-bit perceptual difference hash.
 
 The legacy `azulejos` table remains the write contract during migration. The v2
 tables distinguish site, physical instance, observation, contribution, media,

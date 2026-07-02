@@ -13,12 +13,14 @@
   contributions, without retroactive licensing.
 - Completed: versioned cursor pagination and rights-aware JSON-LD, IIIF, LIDO,
   GeoJSON, and CSV collection exports, tested at 100,000 records.
+- Completed: local perceptual similarity ranking for geographically nearby
+  submissions in the moderation editor.
 - Public repository, continuous integration, contribution and license policy.
 - Stable public identifiers and a first CIDOC CRM mapping profile.
 
 ## Consolidation: three to twelve months
 
-- Duplicate review based on distance and visual similarity.
+- Persisted visual fingerprints and reviewed duplicate relationships.
 - Controlled vocabulary, provenance, confidence, and citation support.
 - First museum or university pilot without exclusivity.
 

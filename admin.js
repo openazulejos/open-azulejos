@@ -49,6 +49,7 @@ const adminNearbyViewerMap = document.querySelector("#adminNearbyViewerMap");
 const ADMIN_INITIAL_BATCH_SIZE = 18;
 const ADMIN_BATCH_SIZE = 24;
 const imageTools = window.AdminImageTools;
+const similarityTools = window.AdminSimilarityTools;
 let adminRecords = [];
 let renderedRecordCount = 0;
 let adminRecordFilter = "pending";
@@ -110,6 +111,12 @@ function nearbyDistanceLabel(record) {
   return Number.isFinite(accuracy)
     ? `${distance} m · GPS ±${Math.round(accuracy)} m`
     : `${distance} m`;
+}
+
+function nearbySimilarityLabel(record) {
+  return Number.isFinite(record.visual_similarity)
+    ? `${record.visual_similarity}% visual match`
+    : "visual match unavailable";
 }
 
 function updateCardStatus(card, record) {
@@ -469,7 +476,7 @@ function closeNearbyViewer() {
 
 function openNearbyViewer(record) {
   adminNearbyViewerImage.src = record.image_url;
-  adminNearbyViewerDistance.textContent = nearbyDistanceLabel(record);
+  adminNearbyViewerDistance.textContent = `${nearbySimilarityLabel(record)} · ${nearbyDistanceLabel(record)}`;
   adminNearbyViewerMeta.textContent = `${formatSubmissionDate(record.created_at)} · ${record.moderation_status || "approved"}`;
   adminNearbyViewerMap.href = googleMapsUrl(record);
   adminNearbyViewer.classList.add("is-open");
@@ -479,22 +486,25 @@ function openNearbyViewer(record) {
 function renderNearbyRecords(records, radius) {
   adminNearbyList.textContent = "";
   adminNearbyStatus.textContent = records.length
-    ? `${records.length} tile${records.length > 1 ? "s" : ""} within ${radius} m`
+    ? `${records.length} tile${records.length > 1 ? "s" : ""} within ${radius} m · ranked visually`
     : `no other tile within ${radius} m`;
   records.forEach((record) => {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "admin-nearby-card";
-    button.title = `${nearbyDistanceLabel(record)} · ${formatSubmissionDate(record.created_at)}`;
+    button.title = `${nearbySimilarityLabel(record)} · ${nearbyDistanceLabel(record)} · ${formatSubmissionDate(record.created_at)}`;
     const image = document.createElement("img");
     image.src = record.image_url;
     image.alt = record.title || "nearby azulejo";
     image.loading = "lazy";
-    const distance = document.createElement("strong");
+    const similarity = document.createElement("strong");
+    similarity.className = "admin-nearby-similarity";
+    similarity.textContent = nearbySimilarityLabel(record);
+    const distance = document.createElement("span");
     distance.textContent = nearbyDistanceLabel(record);
     const meta = document.createElement("span");
     meta.textContent = `${record.moderation_status || "approved"} · ${formatSubmissionDate(record.created_at)}`;
-    button.append(image, distance, meta);
+    button.append(image, similarity, distance, meta);
     button.addEventListener("click", () => openNearbyViewer(record));
     adminNearbyList.append(button);
   });
@@ -523,7 +533,18 @@ async function loadNearbyRecords() {
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || `nearby search failed ${response.status}`);
     if (editorState.record?.id !== record.id) return;
-    renderNearbyRecords(Array.isArray(data.records) ? data.records : [], Number(data.radius) || radius);
+    const nearbyRecords = Array.isArray(data.records) ? data.records : [];
+    let rankedRecords = nearbyRecords;
+    if (similarityTools && nearbyRecords.length) {
+      adminNearbyStatus.textContent = `comparing ${nearbyRecords.length} nearby tile${nearbyRecords.length > 1 ? "s" : ""}...`;
+      try {
+        rankedRecords = await similarityTools.scoreRecords(record.image_url, nearbyRecords);
+      } catch {
+        rankedRecords = nearbyRecords.map((candidate) => ({ ...candidate, visual_similarity: null }));
+      }
+    }
+    if (editorState.record?.id !== record.id) return;
+    renderNearbyRecords(rankedRecords, Number(data.radius) || radius);
   } catch (error) {
     if (error.name !== "AbortError") adminNearbyStatus.textContent = error.message;
   }

@@ -106,6 +106,15 @@
       ]
     },
     {
+      "source": "/admin-similarity.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "private, no-store"
+        }
+      ]
+    },
+    {
       "source": "/styles-admin-editor.css",
       "headers": [
         {
