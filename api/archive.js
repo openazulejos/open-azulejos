@@ -42,8 +42,10 @@ const decodeCursor = (value) => {
   if (!value) return null;
   try {
     const [createdAt, id] = JSON.parse(Buffer.from(String(value), "base64url").toString("utf8"));
-    if (!displayDate(createdAt) || !UUID_PATTERN.test(id)) return null;
-    return { createdAt: displayDate(createdAt), id };
+    if (typeof createdAt !== "string" || createdAt.length > 64 || !displayDate(createdAt) || !UUID_PATTERN.test(id)) return null;
+    // Preserve PostgreSQL microseconds. Normalizing through Date would round to
+    // milliseconds and include the boundary record again on the next page.
+    return { createdAt, id };
   } catch {
     return null;
   }
