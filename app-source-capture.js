@@ -253,6 +253,8 @@ let userLocationWatchId = null;
 let latestUserLocation = null;
 let userLocationSearchTimer = null;
 const CONTRIBUTION_RECEIPTS_KEY = "open-azulejos-contribution-receipts";
+const ACCOUNT_INVITE_COUNT_KEY = "open-azulejos-account-invite-count";
+const ACCOUNT_INVITE_THRESHOLD = 3;
 let contributorAccount = null;
 let serverTilesById = new Map();
 let serverTileCacheById = new Map();
@@ -976,9 +978,11 @@ function setAccountMode(mode) {
   if (accountStatus) accountStatus.textContent = "";
 }
 
-function openAccountSheet() {
+function openAccountSheet(options = {}) {
+  if (options.mode) setAccountMode(options.mode);
   accountSheet?.classList.add("is-open");
   accountSheet?.setAttribute("aria-hidden", "false");
+  if (options.message && accountStatus) accountStatus.textContent = options.message;
   refreshContributorAccount().catch(() => {
     if (accountStatus) accountStatus.textContent = "account temporarily unavailable";
   });
@@ -2129,14 +2133,32 @@ function readContributionReceipts() {
 function rememberContributionReceipt(result) {
   const id = result?.record?.id;
   const token = result?.receiptToken;
-  if (!id || !token) return;
+  if (!id || !token) return null;
   try {
     const receipts = readContributionReceipts().filter((item) => item.id !== id);
     receipts.unshift({ id, token, submittedAt: new Date().toISOString() });
-    localStorage.setItem(CONTRIBUTION_RECEIPTS_KEY, JSON.stringify(receipts.slice(0, 50)));
+    const nextReceipts = receipts.slice(0, 50);
+    localStorage.setItem(CONTRIBUTION_RECEIPTS_KEY, JSON.stringify(nextReceipts));
+    return nextReceipts.length;
   } catch {
     // A successful contribution does not depend on local receipt storage.
+    return null;
   }
+}
+
+function maybeInviteContributorAccount(receiptCount) {
+  if (contributorAccount || !accountSheet || !Number.isFinite(receiptCount) || receiptCount < ACCOUNT_INVITE_THRESHOLD) return;
+  try {
+    const lastInviteCount = Number(localStorage.getItem(ACCOUNT_INVITE_COUNT_KEY) || "0");
+    if (lastInviteCount >= ACCOUNT_INVITE_THRESHOLD) return;
+    localStorage.setItem(ACCOUNT_INVITE_COUNT_KEY, String(receiptCount));
+  } catch {
+    // Account creation is optional; failing to persist the prompt state is harmless.
+  }
+  openAccountSheet({
+    mode: "sign-up",
+    message: "you have recorded 3 azulejos. create an account to keep your contributions linked across devices.",
+  });
 }
 
 function contributionStatusLabel(record) {
@@ -2327,7 +2349,7 @@ async function flushOfflineContributions() {
     for (const entry of entries) {
       try {
         const stored = await saveRecordedAzulejo(entry.payload);
-        rememberContributionReceipt(stored);
+        maybeInviteContributorAccount(rememberContributionReceipt(stored));
         await queue.remove(entry.id);
         sent += 1;
       } catch (error) {
@@ -2729,7 +2751,7 @@ async function placeRecordedAzulejo(squareImage, gps = null, uploadId = null, or
       stored = await queueRecordedAzulejo(payload);
     }
   }
-  rememberContributionReceipt(stored);
+  maybeInviteContributorAccount(rememberContributionReceipt(stored));
   addAzulejoTile({
     id: stored.record.id,
     title: "recorded azulejo",
