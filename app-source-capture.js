@@ -2722,7 +2722,7 @@ async function requestLocationPermission() {
     const succeed = (position) => {
       if (settled) return;
       const gps = browserGpsFromPosition(position);
-      if (!isUsableUploadGpsFix(gps)) {
+      if (!gps || !isInsideLisbonBounds(Number(gps.lat), Number(gps.lng))) {
         failures += 1;
         if (failures >= 2) {
           settled = true;
@@ -2731,7 +2731,7 @@ async function requestLocationPermission() {
         return;
       }
       settled = true;
-      resolve({ state: "granted", gps });
+      resolve({ state: "granted", gps: isUsableUploadGpsFix(gps) ? gps : null });
     };
     const fail = async (error) => {
       if (settled) return;
@@ -2831,15 +2831,19 @@ async function beginRecordingFlow() {
   const result = await requestLocationPermission();
   recordHistoryButton.disabled = false;
   recordHistoryButton.textContent = "record azulejos now";
-  if (result.state !== "granted") {
+  if (result.state === "denied" || result.state === "unsupported") {
     setCameraPermissionStep(locationPermissionStep, "denied");
     closeSquareCamera();
     showLocationPermissionSheet(result.state);
     return;
   }
-  setCameraPermissionStep(locationPermissionStep, "granted");
+  setCameraPermissionStep(locationPermissionStep, result.state === "granted" ? "granted" : "pending");
   if (result.gps) focusUserLocation(result.gps, false);
   openSquareCamera();
+}
+
+function latestUsableUploadGps() {
+  return isUsableUploadGpsFix(latestUserLocation) ? latestUserLocation : null;
 }
 
 function readReliableBrowserPosition(timeoutMs = RELIABLE_GPS_TIMEOUT_MS) {
@@ -3281,7 +3285,7 @@ async function sendPendingCapture() {
     if (!squareImage) throw new Error("image encoding failed");
     const originalImageData = encodeSourceImageForAdmin(pendingCapture.image);
     const cropPoints = normalizedCropPoints(pendingCapture.crop, pendingCapture.image);
-    const gps = pendingCapture.gps || await (pendingCapture.gpsPromise || readReliableBrowserPosition());
+    const gps = pendingCapture.gps || latestUsableUploadGps() || await (pendingCapture.gpsPromise || readReliableBrowserPosition());
     pendingCapture.gpsPromise = null;
     if (!gps) {
       keepStatus = true;

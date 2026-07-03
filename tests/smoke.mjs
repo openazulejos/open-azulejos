@@ -350,6 +350,11 @@ await Promise.resolve();
 assert(api.__currentGpsRequestCount() === permissionRequestCount + 2, "recording should explicitly request precise geolocation and a Safari fallback");
 api.__denyLatestGps(1);
 assert((await deniedPermissionPromise).state === "denied", "permission denial should be reported to the location guidance UI");
+const imprecisePermissionPromise = api.requestLocationPermission();
+await Promise.resolve();
+api.__emitLowAccuracyGps(38.706083, -9.1455, 160);
+const imprecisePermission = await imprecisePermissionPromise;
+assert(imprecisePermission.state === "granted" && imprecisePermission.gps === null, "imprecise iOS permission fix should allow camera flow without upload GPS");
 assert(api.tileMatchesArchiveQuery({
   id: "x",
   title: "Alfama",
