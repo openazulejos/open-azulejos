@@ -161,6 +161,8 @@ const azulejoViewerClose = document.querySelector("#azulejoViewerClose");
 const aboutOpenButton = document.querySelector("#aboutOpenButton");
 const aboutSheet = document.querySelector("#aboutSheet");
 const aboutCloseButton = document.querySelector("#aboutCloseButton");
+const aboutContributorsStatus = document.querySelector("#aboutContributorsStatus");
+const aboutContributorsList = document.querySelector("#aboutContributorsList");
 const accountOpenButton = document.querySelector("#accountOpenButton");
 const accountSheet = document.querySelector("#accountSheet");
 const accountCloseButton = document.querySelector("#accountCloseButton");
@@ -270,6 +272,7 @@ let serverViewportRequest = null;
 let serverViewportSequence = 0;
 let serverViewportTimer = null;
 let accountRecoveryAccessToken = "";
+let contributorStatsLoaded = false;
 
 const sampleTiles = [
   {
@@ -966,11 +969,45 @@ function stepAzulejoViewer(direction) {
 function openAboutSheet() {
   aboutSheet?.classList.add("is-open");
   aboutSheet?.setAttribute("aria-hidden", "false");
+  loadContributorStats().catch(() => {
+    if (aboutContributorsStatus) aboutContributorsStatus.textContent = "contributors temporarily unavailable";
+  });
 }
 
 function closeAboutSheet() {
   aboutSheet?.classList.remove("is-open");
   aboutSheet?.setAttribute("aria-hidden", "true");
+}
+
+function renderContributorStats(contributors) {
+  if (!aboutContributorsList || !aboutContributorsStatus) return;
+  aboutContributorsList.textContent = "";
+  if (!contributors.length) {
+    aboutContributorsStatus.textContent = "no linked contributors yet";
+    return;
+  }
+  contributors.forEach((contributor) => {
+    const item = document.createElement("li");
+    const name = document.createElement("strong");
+    name.textContent = contributor.pseudonym || "anonymous contributor";
+    const count = document.createElement("span");
+    const approved = Number(contributor.approvedCount) || 0;
+    const total = Number(contributor.totalCount) || approved;
+    count.textContent = `${approved}/${total} accepted`;
+    item.append(name, count);
+    aboutContributorsList.append(item);
+  });
+  aboutContributorsStatus.textContent = `${contributors.length} active contributor${contributors.length === 1 ? "" : "s"}`;
+}
+
+async function loadContributorStats() {
+  if (contributorStatsLoaded || !aboutContributorsList || !aboutContributorsStatus || typeof fetch !== "function") return;
+  aboutContributorsStatus.textContent = "loading contributors...";
+  const response = await fetch("/api/contributors?limit=10", { headers: { Accept: "application/json" } });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || `contributors ${response.status}`);
+  contributorStatsLoaded = true;
+  renderContributorStats(Array.isArray(data.contributors) ? data.contributors : []);
 }
 
 function setAccountMode(mode) {

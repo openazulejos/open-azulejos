@@ -1264,6 +1264,60 @@ pre {
   line-height: 1.38;
 }
 
+.about-contributors {
+  margin-top: 58px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+
+.about-contributors h2 {
+  margin: 0 0 16px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(24px, 3vw, 36px);
+  font-weight: 400;
+  line-height: 1.1;
+  text-transform: lowercase;
+}
+
+.about-contributors p {
+  margin: 0 0 14px;
+  color: var(--muted);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.about-contributors ol {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.about-contributors li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 13px;
+}
+
+.about-contributors strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-weight: 400;
+}
+
+.about-contributors span {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 11px;
+}
+
 .account-content {
   width: min(640px, calc(100vw - 40px));
   margin: 0 auto;
