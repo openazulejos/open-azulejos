@@ -21,7 +21,7 @@ module.exports = async function handler(request, response) {
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!supabaseUrl || !serviceRoleKey) return json(response, 503, { error: "contributors service unavailable" }, "private, no-store");
 
-  const url = new URL(request.url || "/api/contributors", `https://${request.headers.host || "openazulejos.vercel.app"}`);
+  const url = new URL(request.url || "/api/contributors", `https://${request.headers.host || "openazulejos.com"}`);
   const query = new URLSearchParams({
     select: "pseudonym,joined_at,approved_count,pending_count,total_count,last_contribution_at",
     total_count: "gt.0",

@@ -5,10 +5,10 @@ Replace `{id}` with the UUID of an approved contribution.
 
 | Representation | Stable URL | Media type |
 | --- | --- | --- |
-| CIDOC CRM-oriented JSON-LD | `https://openazulejos.vercel.app/archive/{id}` | `application/ld+json` |
-| IIIF Presentation 3 manifest | `https://openazulejos.vercel.app/iiif/{id}/manifest` | `application/ld+json` with the IIIF profile |
-| LIDO 1.1 record | `https://openazulejos.vercel.app/lido/{id}` | `application/xml` |
-| Dated observation history | `https://openazulejos.vercel.app/observations/{id}` | `application/json` |
+| CIDOC CRM-oriented JSON-LD | `https://openazulejos.com/archive/{id}` | `application/ld+json` |
+| IIIF Presentation 3 manifest | `https://openazulejos.com/iiif/{id}/manifest` | `application/ld+json` with the IIIF profile |
+| LIDO 1.1 record | `https://openazulejos.com/lido/{id}` | `application/xml` |
+| Dated observation history | `https://openazulejos.com/observations/{id}` | `application/json` |
 
 The observation-history representation groups every approved field observation
 that moderators have attached to the same physical instance. Each item retains
@@ -25,11 +25,11 @@ version `1` in `X-Open-Azulejos-API-Version`.
 
 | Format | Collection URL |
 | --- | --- |
-| JSON-LD | `https://openazulejos.vercel.app/archive` |
-| IIIF Collection | `https://openazulejos.vercel.app/iiif/collection` |
-| LIDO 1.1 | `https://openazulejos.vercel.app/lido` |
-| GeoJSON/WGS84 | `https://openazulejos.vercel.app/exports/azulejos.geojson` |
-| CSV | `https://openazulejos.vercel.app/exports/azulejos.csv` |
+| JSON-LD | `https://openazulejos.com/archive` |
+| IIIF Collection | `https://openazulejos.com/iiif/collection` |
+| LIDO 1.1 | `https://openazulejos.com/lido` |
+| GeoJSON/WGS84 | `https://openazulejos.com/exports/azulejos.geojson` |
+| CSV | `https://openazulejos.com/exports/azulejos.csv` |
 
 For a durable page-by-page harvest with checksums:
 

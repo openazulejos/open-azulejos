@@ -4,7 +4,7 @@ Open Azulejos is a participatory map and photographic archive for documenting
 Lisbon azulejos in place. Contributions combine a square image, retained source
 frame, GPS quality metadata, moderation history, and a stable geographic record.
 
-Production: [openazulejos.vercel.app](https://openazulejos.vercel.app)
+Production: [openazulejos.com](https://openazulejos.com)
 
 Source: [github.com/orsoneveraert/open-azulejos](https://github.com/orsoneveraert/open-azulejos)
 

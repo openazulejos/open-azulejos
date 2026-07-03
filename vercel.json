@@ -1,5 +1,40 @@
 {
   "cleanUrls": true,
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.openazulejos.com"
+        }
+      ],
+      "destination": "https://openazulejos.com/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "openazulejos.vercel.app"
+        }
+      ],
+      "destination": "https://openazulejos.com/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "what3world-lisboa.vercel.app"
+        }
+      ],
+      "destination": "https://openazulejos.com/:path*",
+      "permanent": true
+    }
+  ],
   "rewrites": [
     {
       "source": "/archive",

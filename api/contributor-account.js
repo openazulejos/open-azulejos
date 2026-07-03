@@ -50,7 +50,7 @@ const serviceHeaders = (serviceKey) => ({ apikey: serviceKey, Authorization: `Be
 
 function requestOrigin(request) {
   const host = request.headers["x-forwarded-host"] || request.headers.host;
-  if (!host) return "https://openazulejos.vercel.app";
+  if (!host) return "https://openazulejos.com";
   const proto = request.headers["x-forwarded-proto"] || "https";
   return `${proto}://${host}`;
 }

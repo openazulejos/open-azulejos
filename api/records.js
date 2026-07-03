@@ -190,7 +190,7 @@ module.exports = async function handler(req, res) {
   const adminAuthorization = authorizeAdminRequest(req);
   const isAdmin = adminAuthorization.ok;
   const presentedAdminKey = typeof requestKey === "string";
-  const requestUrl = new URL(req.url || "/api/records", `https://${req.headers.host || "openazulejos.vercel.app"}`);
+  const requestUrl = new URL(req.url || "/api/records", `https://${req.headers.host || "openazulejos.com"}`);
   const requestedAdminRead = req.method === "GET" && requestUrl.searchParams.get("admin") === "1";
 
   if (req.method === "GET" && ((presentedAdminKey && !isAdmin) || (requestedAdminRead && !isAdmin))) {

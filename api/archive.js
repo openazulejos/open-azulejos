@@ -1,4 +1,4 @@
-const PUBLIC_BASE_URL = String(process.env.PUBLIC_BASE_URL || "https://openazulejos.vercel.app").replace(/\/$/, "");
+const PUBLIC_BASE_URL = String(process.env.PUBLIC_BASE_URL || "https://openazulejos.com").replace(/\/$/, "");
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const API_VERSION = "1";
 const PUBLIC_SELECT = "id,title,lat,lng,image_url,cell_code,words,created_at,gps_accuracy_m,gps_timestamp,location_source,photographer_credit,photo_license,contributor_consent_at";
@@ -305,7 +305,7 @@ const jsonLdCollection = (records, currentUrl, nextUrl) => ({
 const iiifCollection = (records, currentUrl, nextUrl) => ({
   "@context": [
     "http://iiif.io/api/presentation/3/context.json",
-    { oa: "https://openazulejos.vercel.app/ns/", next: "oa:next" },
+    { oa: "https://openazulejos.com/ns/", next: "oa:next" },
   ],
   id: currentUrl,
   type: "Collection",
@@ -423,7 +423,7 @@ module.exports = async function handler(request, response) {
     || process.env.SUPABASE_ANON_KEY;
   if (!supabaseUrl || !serviceKey) return json(response, 503, { error: "archive service unavailable" });
 
-  const url = new URL(request.url || "/api/archive", `https://${request.headers.host || "openazulejos.vercel.app"}`);
+  const url = new URL(request.url || "/api/archive", `https://${request.headers.host || "openazulejos.com"}`);
   const id = String(url.searchParams.get("id") || "");
   const format = String(url.searchParams.get("format") || "jsonld").toLowerCase();
   if (!new Set(["jsonld", "iiif", "lido", "geojson", "csv"]).has(format)) return json(response, 400, { error: "unsupported archive format" });

@@ -8,7 +8,7 @@ const argument = (name, fallback = "") => {
   return index >= 0 ? argumentsList[index + 1] || fallback : fallback;
 };
 
-const origin = argument("--origin", "https://openazulejos.vercel.app").replace(/\/$/, "");
+const origin = argument("--origin", "https://openazulejos.com").replace(/\/$/, "");
 const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
 const outputRoot = path.resolve(argument("--output", path.join("..", "openazulejos-backups")));
 const destination = path.join(outputRoot, timestamp);

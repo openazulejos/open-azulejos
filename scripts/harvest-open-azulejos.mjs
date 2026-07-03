@@ -8,7 +8,7 @@ const argument = (name, fallback = "") => {
   return index >= 0 ? argumentsList[index + 1] || fallback : fallback;
 };
 
-const origin = argument("--origin", "https://openazulejos.vercel.app").replace(/\/$/, "");
+const origin = argument("--origin", "https://openazulejos.com").replace(/\/$/, "");
 const format = argument("--format", "jsonld").toLowerCase();
 const pageSize = Math.max(1, Math.min(Number.parseInt(argument("--page-size", "200"), 10) || 200, 200));
 const output = path.resolve(argument("--output", path.join("..", "openazulejos-harvest")));
