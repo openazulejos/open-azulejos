@@ -64,6 +64,36 @@ assert(requestedUrl.includes("lat=gte.") && requestedUrl.includes("lng=lte."), "
 assert(requestedUrl.includes("id=neq."), "nearby endpoint should exclude the current contribution");
 assert(headers["Cache-Control"] === "private, no-store", "nearby admin results should not be publicly cached");
 
+let historyRequest = null;
+global.fetch = async (url, options = {}) => {
+  historyRequest = { url: String(url), payload: JSON.parse(options.body) };
+  return {
+    ok: true,
+    json: async () => [{
+      legacy_azulejo_id: "11111111-1111-4111-8111-111111111111",
+      observed_at: "2026-06-29T20:00:00Z",
+      condition_codes: ["intact"],
+    }],
+  };
+};
+let historyStatus = 200;
+let historyBody = "";
+const historyHeaders = {};
+await handler({
+  method: "GET",
+  headers: { host: "localhost" },
+  url: "/api/records?history=11111111-1111-4111-8111-111111111111",
+}, {
+  setHeader(name, value) { historyHeaders[name] = value; },
+  end(value) { historyBody = value; },
+  set statusCode(value) { historyStatus = value; },
+});
+assert(historyStatus === 200, "public observation history should succeed");
+assert(historyRequest.url.endsWith("/rest/v1/rpc/azulejo_observation_history"), "history should use the rights-filtered database function");
+assert(historyRequest.payload.p_legacy_azulejo_id === "11111111-1111-4111-8111-111111111111", "history should request the selected legacy record");
+assert(JSON.parse(historyBody).records[0].condition_codes[0] === "intact", "history should preserve structured condition evidence");
+assert(historyHeaders["Cache-Control"].includes("stale-while-revalidate"), "public history should have bounded cache revalidation");
+
 const statusCalls = [];
 global.fetch = async (url) => {
   const requestUrl = String(url);
@@ -178,15 +208,22 @@ assert(fingerprintUpdates.every(({ payload }) => /^[01]{64}$/.test(payload.image
 let relationPayload = null;
 global.fetch = async (url, options = {}) => {
   const requestUrl = String(url);
-  if (requestUrl.includes("/rest/v1/physical_instances?")) {
+  if (requestUrl.includes("/rest/v1/observations?")) {
     return {
       ok: true,
       json: async () => [
-        { id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb", legacy_azulejo_id: "66666666-6666-4666-8666-666666666666" },
-        { id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", legacy_azulejo_id: "77777777-7777-4777-8777-777777777777" },
+        { id: "observation-one", legacy_azulejo_id: "66666666-6666-4666-8666-666666666666", physical_instance_id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb" },
+        { id: "observation-two", legacy_azulejo_id: "77777777-7777-4777-8777-777777777777", physical_instance_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" },
       ],
     };
   }
+  if (requestUrl.includes("/rest/v1/physical_instances?")) return {
+    ok: true,
+    json: async () => [
+      { id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb", canonical_instance_id: null },
+      { id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", canonical_instance_id: null },
+    ],
+  };
   if (requestUrl.includes("/rest/v1/similarity_links?")) {
     relationPayload = JSON.parse(options.body);
     return { ok: true, json: async () => [{ id: "relation-test", ...relationPayload }] };
@@ -218,6 +255,68 @@ assert(relationStatus === 200 && JSON.parse(relationBody).relation.reviewed, "co
 assert(relationPayload.first_instance_id === "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", "duplicate relation should canonicalize instance ordering");
 assert(relationPayload.second_instance_id === "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb", "duplicate relation should retain both physical instances");
 assert(relationPayload.relation === "duplicate" && relationPayload.score === 0.91, "duplicate relation should persist its type and visual score");
+
+let attachedObservationPayload = null;
+let canonicalizedInstancePayload = null;
+global.fetch = async (url, options = {}) => {
+  const requestUrl = String(url);
+  if (requestUrl.includes("/rest/v1/observations?select=id%2Clegacy_azulejo_id%2Cphysical_instance_id")) {
+    return {
+      ok: true,
+      json: async () => [
+        { id: "observation-current", legacy_azulejo_id: "88888888-8888-4888-8888-888888888888", physical_instance_id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd" },
+        { id: "observation-target", legacy_azulejo_id: "99999999-9999-4999-8999-999999999999", physical_instance_id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc" },
+      ],
+    };
+  }
+  if (requestUrl.includes("/rest/v1/physical_instances?select=id%2Ccanonical_instance_id")) return {
+    ok: true,
+    json: async () => [
+      { id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd", canonical_instance_id: null },
+      { id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc", canonical_instance_id: null },
+    ],
+  };
+  if (requestUrl.includes("/rest/v1/similarity_links?")) {
+    return { ok: true, json: async () => [{ id: "attachment-relation", ...JSON.parse(options.body) }] };
+  }
+  if (requestUrl.includes("/rest/v1/observations?id=eq.observation-current") && options.method === "PATCH") {
+    attachedObservationPayload = JSON.parse(options.body);
+    return { ok: true, json: async () => [{ id: "observation-current", ...attachedObservationPayload }] };
+  }
+  if (requestUrl.includes("/rest/v1/observations?select=id&physical_instance_id=eq.")) {
+    return { ok: true, json: async () => [] };
+  }
+  if (requestUrl.includes("/rest/v1/physical_instances?id=eq.dddddddd-dddd-4ddd-8ddd-dddddddddddd") && options.method === "PATCH") {
+    canonicalizedInstancePayload = JSON.parse(options.body);
+    return { ok: true, text: async () => "" };
+  }
+  throw new Error(`unexpected attachment test fetch: ${requestUrl}`);
+};
+let attachmentStatus = 200;
+let attachmentBody = "";
+await handler({
+  method: "PATCH",
+  headers: { host: "localhost", "x-admin-key": "admin-test" },
+  url: "/api/records",
+  on(event, callback) {
+    if (event === "data") callback(Buffer.from(JSON.stringify({
+      id: "88888888-8888-4888-8888-888888888888",
+      relatedId: "99999999-9999-4999-8999-999999999999",
+      relationAction: "attach-observation",
+      relation: "duplicate",
+      score: 0.97,
+    })));
+    if (event === "end") callback();
+  },
+  destroy() {},
+}, {
+  setHeader() {},
+  end(value) { attachmentBody = value; },
+  set statusCode(value) { attachmentStatus = value; },
+});
+assert(attachmentStatus === 200 && JSON.parse(attachmentBody).attached, "same-tile review should attach the current observation");
+assert(attachedObservationPayload.physical_instance_id === "cccccccc-cccc-4ccc-8ccc-cccccccccccc", "attachment should target the reviewed canonical instance");
+assert(canonicalizedInstancePayload.canonical_instance_id === "cccccccc-cccc-4ccc-8ccc-cccccccccccc", "empty source instance should point to its canonical instance");
 
 let rejectedStatus = 200;
 let rejectedBody = "";

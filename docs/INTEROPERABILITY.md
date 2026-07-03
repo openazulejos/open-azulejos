@@ -8,6 +8,13 @@ Replace `{id}` with the UUID of an approved contribution.
 | CIDOC CRM-oriented JSON-LD | `https://openazulejos.vercel.app/archive/{id}` | `application/ld+json` |
 | IIIF Presentation 3 manifest | `https://openazulejos.vercel.app/iiif/{id}/manifest` | `application/ld+json` with the IIIF profile |
 | LIDO 1.1 record | `https://openazulejos.vercel.app/lido/{id}` | `application/xml` |
+| Dated observation history | `https://openazulejos.vercel.app/observations/{id}` | `application/json` |
+
+The observation-history representation groups every approved field observation
+that moderators have attached to the same physical instance. Each item retains
+its own observation and submission dates, image, credit, coordinates, GPS
+accuracy, condition evidence, and confidence. Attaching an observation never
+overwrites an earlier photograph.
 
 ## Collections and research exports
 

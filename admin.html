@@ -119,11 +119,17 @@
         <strong id="adminNearbyViewerDistance"></strong>
         <span id="adminNearbyViewerMeta"></span>
         <a id="adminNearbyViewerMap" target="_blank" rel="noopener">map</a>
-        <button id="adminNearbyViewerDuplicate" type="button">same tile</button>
+        <select id="adminNearbyViewerRelation" aria-label="relationship to current observation">
+          <option value="duplicate">same physical tile</option>
+          <option value="same-pattern">same pattern</option>
+          <option value="variation">colour variation</option>
+          <option value="possibly-related">possibly related</option>
+        </select>
+        <button id="adminNearbyViewerDuplicate" type="button">record relation</button>
       </div>
     </section>
     <script src="./admin-image.js?v=20260630-expand-border"></script>
     <script src="./admin-similarity.js?v=20260703-persist-similarity"></script>
-    <script src="./admin.js?v=20260703-persist-similarity"></script>
+    <script src="./admin.js?v=20260703-temporal-observations"></script>
   </body>
 </html>

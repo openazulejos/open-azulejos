@@ -21,6 +21,9 @@ PostGIS, Storage, and named administrator identities.
 9. Computed fingerprints are persisted on the compatibility record and its
    published media asset. A confirmed duplicate creates a reviewed similarity
    relation between physical instances; it never merges or deletes media.
+10. A reviewed same-tile decision moves only the newer observation to the
+    canonical physical instance. Its contribution, media, location, credit, and
+    timestamps remain independent and available through observation history.
 
 The legacy `azulejos` table remains the write contract during migration. The v2
 tables distinguish site, physical instance, observation, contribution, media,
@@ -38,4 +41,5 @@ have migrated.
 - Every moderation transition creates an append-only event.
 - Named moderation actions retain the administrator UUID in the audit event.
 - Duplicate decisions preserve both physical instances and both contributions.
+- Compatibility updates never undo a reviewed observation attachment.
 - Public APIs never return private paths or moderation records.

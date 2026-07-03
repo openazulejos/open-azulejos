@@ -45,6 +45,7 @@ const adminNearbyViewerImage = document.querySelector("#adminNearbyViewerImage")
 const adminNearbyViewerDistance = document.querySelector("#adminNearbyViewerDistance");
 const adminNearbyViewerMeta = document.querySelector("#adminNearbyViewerMeta");
 const adminNearbyViewerMap = document.querySelector("#adminNearbyViewerMap");
+const adminNearbyViewerRelation = document.querySelector("#adminNearbyViewerRelation");
 const adminNearbyViewerDuplicate = document.querySelector("#adminNearbyViewerDuplicate");
 
 const ADMIN_INITIAL_BATCH_SIZE = 18;
@@ -483,8 +484,10 @@ function openNearbyViewer(record) {
   adminNearbyViewerDistance.textContent = `${nearbySimilarityLabel(record)} · ${nearbyDistanceLabel(record)}`;
   adminNearbyViewerMeta.textContent = `${formatSubmissionDate(record.created_at)} · ${record.moderation_status || "approved"}`;
   adminNearbyViewerMap.href = googleMapsUrl(record);
+  adminNearbyViewerRelation.value = "duplicate";
+  adminNearbyViewerRelation.disabled = false;
   adminNearbyViewerDuplicate.disabled = false;
-  adminNearbyViewerDuplicate.textContent = "same tile";
+  adminNearbyViewerDuplicate.textContent = "record relation";
   adminNearbyViewer.classList.add("is-open");
   adminNearbyViewer.setAttribute("aria-hidden", "false");
 }
@@ -803,7 +806,9 @@ adminNearbyViewerDuplicate.addEventListener("click", async () => {
   const reference = editorState.record;
   const candidate = editorState.nearbyRecord;
   if (!reference || !candidate) return;
+  const relation = adminNearbyViewerRelation.value;
   adminNearbyViewerDuplicate.disabled = true;
+  adminNearbyViewerRelation.disabled = true;
   adminNearbyViewerDuplicate.textContent = "recording...";
   try {
     const response = await fetch("/api/records", {
@@ -813,16 +818,18 @@ adminNearbyViewerDuplicate.addEventListener("click", async () => {
       body: JSON.stringify({
         id: reference.id,
         relatedId: candidate.id,
-        relationAction: "confirm-duplicate",
+        relationAction: relation === "duplicate" ? "attach-observation" : "review-relation",
+        relation,
         score: Number.isFinite(candidate.visual_similarity) ? candidate.visual_similarity / 100 : null,
       }),
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || `duplicate relation failed ${response.status}`);
-    adminNearbyViewerDuplicate.textContent = "same tile recorded";
+    adminNearbyViewerDuplicate.textContent = relation === "duplicate" ? "observation attached" : "relation recorded";
   } catch (error) {
     adminNearbyViewerDuplicate.disabled = false;
-    adminNearbyViewerDuplicate.textContent = "same tile";
+    adminNearbyViewerRelation.disabled = false;
+    adminNearbyViewerDuplicate.textContent = "record relation";
     adminNearbyViewerMeta.textContent = error.message;
   }
 });

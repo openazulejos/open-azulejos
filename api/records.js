@@ -2,6 +2,7 @@ const crypto = require("node:crypto");
 const { authorizeAdminRequest } = require("./_admin-auth");
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const FINGERPRINT_PATTERN = /^[01]{64}$/;
+const REVIEWED_RELATIONS = new Set(["duplicate", "same-pattern", "variation", "possibly-related"]);
 
 const json = (res, status, payload) => {
   res.statusCode = status;
@@ -197,10 +198,24 @@ module.exports = async function handler(req, res) {
 
   if (req.method === "GET") {
     const adminHeaders = serviceRoleKey ? { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}` } : headers;
+    const historyId = String(requestUrl.searchParams.get("history") || "").trim();
     const hasNearbyQuery = requestUrl.searchParams.has("nearLat") || requestUrl.searchParams.has("nearLng");
     const nearLat = Number(requestUrl.searchParams.get("nearLat"));
     const nearLng = Number(requestUrl.searchParams.get("nearLng"));
     const requestedRadius = Number(requestUrl.searchParams.get("radius"));
+    if (historyId) {
+      if (!UUID_PATTERN.test(historyId)) return json(res, 400, { error: "valid history id is required" });
+      const historyResponse = await fetch(`${supabaseUrl}/rest/v1/rpc/azulejo_observation_history`, {
+        method: "POST",
+        headers: { ...headers, "Content-Type": "application/json" },
+        body: JSON.stringify({ p_legacy_azulejo_id: historyId }),
+      });
+      if (!historyResponse.ok) {
+        return json(res, historyResponse.status, { error: "observation history failed", detail: await historyResponse.text() });
+      }
+      res.setHeader("Cache-Control", "public, max-age=30, stale-while-revalidate=120");
+      return json(res, 200, { records: await historyResponse.json() });
+    }
     if (isAdmin && requestUrl.searchParams.get("backup") === "manifest") {
       const limit = 500;
       try {
@@ -343,41 +358,107 @@ module.exports = async function handler(req, res) {
       return json(res, 200, { updated: fingerprints.length });
     }
 
-    if (body.relationAction === "confirm-duplicate") {
+    if (["confirm-duplicate", "review-relation", "attach-observation"].includes(body.relationAction)) {
       const relatedId = String(body.relatedId || "");
       if (!UUID_PATTERN.test(body.id) || !UUID_PATTERN.test(relatedId) || body.id === relatedId) {
         return json(res, 400, { error: "two distinct valid record ids are required" });
       }
-      const instanceQuery = new URLSearchParams({
-        select: "id,legacy_azulejo_id",
+      const requestedRelation = body.relationAction === "confirm-duplicate"
+        ? "duplicate"
+        : String(body.relation || "");
+      if (!REVIEWED_RELATIONS.has(requestedRelation)) {
+        return json(res, 400, { error: "valid reviewed relation is required" });
+      }
+      if (body.relationAction === "attach-observation" && requestedRelation !== "duplicate") {
+        return json(res, 400, { error: "only duplicate observations can share a physical instance" });
+      }
+      const observationQuery = new URLSearchParams({
+        select: "id,legacy_azulejo_id,physical_instance_id",
         legacy_azulejo_id: `in.(${body.id},${relatedId})`,
       });
-      const instanceResponse = await fetch(`${supabaseUrl}/rest/v1/physical_instances?${instanceQuery}`, { headers: adminHeaders });
-      if (!instanceResponse.ok) return json(res, instanceResponse.status, { error: "instance lookup failed", detail: await instanceResponse.text() });
-      const instances = await instanceResponse.json();
-      if (instances.length !== 2) return json(res, 404, { error: "physical instances not found" });
-      const [firstInstanceId, secondInstanceId] = instances.map((item) => item.id).sort();
+      const observationResponse = await fetch(`${supabaseUrl}/rest/v1/observations?${observationQuery}`, { headers: adminHeaders });
+      if (!observationResponse.ok) return json(res, observationResponse.status, { error: "observation lookup failed", detail: await observationResponse.text() });
+      const observations = await observationResponse.json();
+      if (observations.length !== 2) return json(res, 404, { error: "observations not found" });
+      const currentObservation = observations.find((item) => item.legacy_azulejo_id === body.id);
+      const relatedObservation = observations.find((item) => item.legacy_azulejo_id === relatedId);
+      if (!currentObservation || !relatedObservation) return json(res, 404, { error: "observations not found" });
+
+      const rawInstanceIds = [...new Set(observations.map((item) => item.physical_instance_id))];
+      const canonicalQuery = new URLSearchParams({
+        select: "id,canonical_instance_id",
+        id: `in.(${rawInstanceIds.join(",")})`,
+      });
+      const canonicalResponse = await fetch(`${supabaseUrl}/rest/v1/physical_instances?${canonicalQuery}`, { headers: adminHeaders });
+      if (!canonicalResponse.ok) return json(res, canonicalResponse.status, { error: "instance lookup failed", detail: await canonicalResponse.text() });
+      const canonicalInstances = new Map((await canonicalResponse.json()).map((item) => [item.id, item.canonical_instance_id || item.id]));
+      const currentInstanceId = canonicalInstances.get(currentObservation.physical_instance_id) || currentObservation.physical_instance_id;
+      const relatedInstanceId = canonicalInstances.get(relatedObservation.physical_instance_id) || relatedObservation.physical_instance_id;
+
+      if (body.relationAction !== "attach-observation" && currentInstanceId === relatedInstanceId) {
+        return json(res, 409, { error: "observations already share a physical instance" });
+      }
+      const [firstInstanceId, secondInstanceId] = [currentInstanceId, relatedInstanceId].sort();
       const score = typeof body.score === "number" ? body.score : null;
       const relationPayload = {
         first_instance_id: firstInstanceId,
         second_instance_id: secondInstanceId,
-        relation: "duplicate",
+        relation: requestedRelation,
         score: Number.isFinite(score) ? Math.max(0, Math.min(1, score)) : null,
         reviewed: true,
         reviewed_by: adminAuthorization.userId,
         reviewed_at: new Date().toISOString(),
       };
-      const relationResponse = await fetch(`${supabaseUrl}/rest/v1/similarity_links?on_conflict=first_instance_id,second_instance_id,relation`, {
-        method: "POST",
-        headers: {
-          ...adminHeaders,
-          "Content-Type": "application/json",
-          Prefer: "resolution=merge-duplicates,return=representation",
-        },
-        body: JSON.stringify(relationPayload),
-      });
-      if (!relationResponse.ok) return json(res, relationResponse.status, { error: "duplicate relation failed", detail: await relationResponse.text() });
-      return json(res, 200, { relation: (await relationResponse.json())[0] || relationPayload });
+      let relation = null;
+      if (firstInstanceId !== secondInstanceId) {
+        const relationResponse = await fetch(`${supabaseUrl}/rest/v1/similarity_links?on_conflict=first_instance_id,second_instance_id,relation`, {
+          method: "POST",
+          headers: {
+            ...adminHeaders,
+            "Content-Type": "application/json",
+            Prefer: "resolution=merge-duplicates,return=representation",
+          },
+          body: JSON.stringify(relationPayload),
+        });
+        if (!relationResponse.ok) return json(res, relationResponse.status, { error: "reviewed relation failed", detail: await relationResponse.text() });
+        [relation] = await relationResponse.json();
+      }
+
+      if (body.relationAction === "attach-observation" && currentInstanceId !== relatedInstanceId) {
+        const attachedAt = new Date().toISOString();
+        const attachResponse = await fetch(`${supabaseUrl}/rest/v1/observations?id=eq.${currentObservation.id}`, {
+          method: "PATCH",
+          headers: { ...adminHeaders, "Content-Type": "application/json", Prefer: "return=representation" },
+          body: JSON.stringify({
+            physical_instance_id: relatedInstanceId,
+            attached_at: attachedAt,
+            attached_by: adminAuthorization.userId,
+          }),
+        });
+        if (!attachResponse.ok) return json(res, attachResponse.status, { error: "observation attachment failed", detail: await attachResponse.text() });
+        const sourceRemainingResponse = await fetch(`${supabaseUrl}/rest/v1/observations?select=id&physical_instance_id=eq.${currentInstanceId}&limit=1`, { headers: adminHeaders });
+        if (!sourceRemainingResponse.ok) return json(res, sourceRemainingResponse.status, { error: "source instance check failed", detail: await sourceRemainingResponse.text() });
+        if ((await sourceRemainingResponse.json()).length === 0) {
+          const canonicalizeResponse = await fetch(`${supabaseUrl}/rest/v1/physical_instances?id=eq.${currentInstanceId}`, {
+            method: "PATCH",
+            headers: { ...adminHeaders, "Content-Type": "application/json", Prefer: "return=minimal" },
+            body: JSON.stringify({
+              canonical_instance_id: relatedInstanceId,
+              canonicalized_at: attachedAt,
+              canonicalized_by: adminAuthorization.userId,
+            }),
+          });
+          if (!canonicalizeResponse.ok) return json(res, canonicalizeResponse.status, { error: "instance canonicalization failed", detail: await canonicalizeResponse.text() });
+        }
+        return json(res, 200, {
+          attached: true,
+          observationId: currentObservation.id,
+          physicalInstanceId: relatedInstanceId,
+          relation: relation || relationPayload,
+        });
+      }
+
+      return json(res, 200, { attached: currentInstanceId === relatedInstanceId, relation: relation || relationPayload });
     }
 
     const id = String(body.id || "").trim();
