@@ -15,12 +15,13 @@
   GeoJSON, and CSV collection exports, tested at 100,000 records.
 - Completed: local perceptual similarity ranking for geographically nearby
   submissions in the moderation editor.
+- Completed: persisted 64-bit visual fingerprints and administrator-reviewed
+  duplicate relationships without destructive record merging.
 - Public repository, continuous integration, contribution and license policy.
 - Stable public identifiers and a first CIDOC CRM mapping profile.
 
 ## Consolidation: three to twelve months
 
-- Persisted visual fingerprints and reviewed duplicate relationships.
 - Controlled vocabulary, provenance, confidence, and citation support.
 - First museum or university pilot without exclusivity.
 

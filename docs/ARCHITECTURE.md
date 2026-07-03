@@ -18,6 +18,9 @@ PostGIS, Storage, and named administrator identities.
    verified active profile for a short-lived HttpOnly application session.
 8. Duplicate review first bounds candidates spatially in PostGIS, then ranks
    their public derivatives locally with a 64-bit perceptual difference hash.
+9. Computed fingerprints are persisted on the compatibility record and its
+   published media asset. A confirmed duplicate creates a reviewed similarity
+   relation between physical instances; it never merges or deletes media.
 
 The legacy `azulejos` table remains the write contract during migration. The v2
 tables distinguish site, physical instance, observation, contribution, media,
@@ -34,4 +37,5 @@ have migrated.
   timestamp are both present.
 - Every moderation transition creates an append-only event.
 - Named moderation actions retain the administrator UUID in the audit event.
+- Duplicate decisions preserve both physical instances and both contributions.
 - Public APIs never return private paths or moderation records.

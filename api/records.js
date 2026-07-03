@@ -1,5 +1,7 @@
 const crypto = require("node:crypto");
 const { authorizeAdminRequest } = require("./_admin-auth");
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const FINGERPRINT_PATTERN = /^[01]{64}$/;
 
 const json = (res, status, payload) => {
   res.statusCode = status;
@@ -226,7 +228,7 @@ module.exports = async function handler(req, res) {
       const lngDelta = radius / Math.max(1, 111320 * Math.cos(nearLat * Math.PI / 180));
       const exclude = String(requestUrl.searchParams.get("exclude") || "").trim();
       const query = new URLSearchParams();
-      query.set("select", "id,title,lat,lng,image_url,created_at,gps_accuracy_m,moderation_status,cell_code,words");
+      query.set("select", "id,title,lat,lng,image_url,created_at,gps_accuracy_m,moderation_status,cell_code,words,image_fingerprint");
       query.set("source", "eq.web-camera");
       query.set("title", "neq.api test");
       query.append("lat", `gte.${nearLat - latDelta}`);
@@ -321,8 +323,65 @@ module.exports = async function handler(req, res) {
     } catch {
       return json(res, 400, { error: "invalid json body" });
     }
+    const adminHeaders = {
+      apikey: serviceRoleKey,
+      Authorization: `Bearer ${serviceRoleKey}`,
+    };
+
+    if (Array.isArray(body.fingerprints)) {
+      const fingerprints = body.fingerprints.slice(0, 50);
+      if (!fingerprints.length || fingerprints.some((item) => !UUID_PATTERN.test(item?.id) || !FINGERPRINT_PATTERN.test(item?.fingerprint))) {
+        return json(res, 400, { error: "valid fingerprint records are required" });
+      }
+      const results = await Promise.all(fingerprints.map((item) => fetch(`${supabaseUrl}/rest/v1/azulejos?id=eq.${item.id}`, {
+        method: "PATCH",
+        headers: { ...adminHeaders, "Content-Type": "application/json", Prefer: "return=minimal" },
+        body: JSON.stringify({ image_fingerprint: item.fingerprint }),
+      })));
+      const failed = results.find((result) => !result.ok);
+      if (failed) return json(res, failed.status, { error: "fingerprint update failed", detail: await failed.text() });
+      return json(res, 200, { updated: fingerprints.length });
+    }
+
+    if (body.relationAction === "confirm-duplicate") {
+      const relatedId = String(body.relatedId || "");
+      if (!UUID_PATTERN.test(body.id) || !UUID_PATTERN.test(relatedId) || body.id === relatedId) {
+        return json(res, 400, { error: "two distinct valid record ids are required" });
+      }
+      const instanceQuery = new URLSearchParams({
+        select: "id,legacy_azulejo_id",
+        legacy_azulejo_id: `in.(${body.id},${relatedId})`,
+      });
+      const instanceResponse = await fetch(`${supabaseUrl}/rest/v1/physical_instances?${instanceQuery}`, { headers: adminHeaders });
+      if (!instanceResponse.ok) return json(res, instanceResponse.status, { error: "instance lookup failed", detail: await instanceResponse.text() });
+      const instances = await instanceResponse.json();
+      if (instances.length !== 2) return json(res, 404, { error: "physical instances not found" });
+      const [firstInstanceId, secondInstanceId] = instances.map((item) => item.id).sort();
+      const score = typeof body.score === "number" ? body.score : null;
+      const relationPayload = {
+        first_instance_id: firstInstanceId,
+        second_instance_id: secondInstanceId,
+        relation: "duplicate",
+        score: Number.isFinite(score) ? Math.max(0, Math.min(1, score)) : null,
+        reviewed: true,
+        reviewed_by: adminAuthorization.userId,
+        reviewed_at: new Date().toISOString(),
+      };
+      const relationResponse = await fetch(`${supabaseUrl}/rest/v1/similarity_links?on_conflict=first_instance_id,second_instance_id,relation`, {
+        method: "POST",
+        headers: {
+          ...adminHeaders,
+          "Content-Type": "application/json",
+          Prefer: "resolution=merge-duplicates,return=representation",
+        },
+        body: JSON.stringify(relationPayload),
+      });
+      if (!relationResponse.ok) return json(res, relationResponse.status, { error: "duplicate relation failed", detail: await relationResponse.text() });
+      return json(res, 200, { relation: (await relationResponse.json())[0] || relationPayload });
+    }
+
     const id = String(body.id || "").trim();
-    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+    if (!UUID_PATTERN.test(id)) {
       return json(res, 400, { error: "valid id is required" });
     }
     const status = String(body.moderation_status || body.status || "").trim();
@@ -335,10 +394,6 @@ module.exports = async function handler(req, res) {
       return json(res, 413, { error: "edited image is too large" });
     }
 
-    const adminHeaders = {
-      apikey: serviceRoleKey,
-      Authorization: `Bearer ${serviceRoleKey}`,
-    };
     let existingRecord = null;
     if (editedImage) {
       const existingResponse = await fetch(`${supabaseUrl}/rest/v1/azulejos?select=id,original_image_path,original_image_url,original_image_bucket&id=eq.${id}&limit=1`, {
@@ -381,6 +436,7 @@ module.exports = async function handler(req, res) {
         updatePayload.edit_settings = normalizedEditSettings();
       }
       updatePayload.edited_at = new Date().toISOString();
+      if (FINGERPRINT_PATTERN.test(body.image_fingerprint || "")) updatePayload.image_fingerprint = body.image_fingerprint;
     }
 
     const update = await fetch(`${supabaseUrl}/rest/v1/azulejos?id=eq.${id}`, {

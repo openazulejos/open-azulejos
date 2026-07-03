@@ -45,6 +45,7 @@ const adminNearbyViewerImage = document.querySelector("#adminNearbyViewerImage")
 const adminNearbyViewerDistance = document.querySelector("#adminNearbyViewerDistance");
 const adminNearbyViewerMeta = document.querySelector("#adminNearbyViewerMeta");
 const adminNearbyViewerMap = document.querySelector("#adminNearbyViewerMap");
+const adminNearbyViewerDuplicate = document.querySelector("#adminNearbyViewerDuplicate");
 
 const ADMIN_INITIAL_BATCH_SIZE = 18;
 const ADMIN_BATCH_SIZE = 24;
@@ -67,6 +68,7 @@ const editorState = {
   renderFrame: null,
   nearbyController: null,
   nearbyTimer: null,
+  nearbyRecord: null,
 };
 
 function setAdminStatus(message) {
@@ -472,15 +474,46 @@ function closeNearbyViewer() {
   adminNearbyViewer.classList.remove("is-open");
   adminNearbyViewer.setAttribute("aria-hidden", "true");
   adminNearbyViewerImage.removeAttribute("src");
+  editorState.nearbyRecord = null;
 }
 
 function openNearbyViewer(record) {
+  editorState.nearbyRecord = record;
   adminNearbyViewerImage.src = record.image_url;
   adminNearbyViewerDistance.textContent = `${nearbySimilarityLabel(record)} · ${nearbyDistanceLabel(record)}`;
   adminNearbyViewerMeta.textContent = `${formatSubmissionDate(record.created_at)} · ${record.moderation_status || "approved"}`;
   adminNearbyViewerMap.href = googleMapsUrl(record);
+  adminNearbyViewerDuplicate.disabled = false;
+  adminNearbyViewerDuplicate.textContent = "same tile";
   adminNearbyViewer.classList.add("is-open");
   adminNearbyViewer.setAttribute("aria-hidden", "false");
+}
+
+async function persistVisualFingerprints(referenceRecord, records) {
+  if (!similarityTools) return;
+  const referenceFingerprint = /^[01]{64}$/.test(referenceRecord.image_fingerprint || "")
+    ? referenceRecord.image_fingerprint
+    : await similarityTools.differenceHash(referenceRecord.image_url);
+  const fingerprints = [
+    { id: referenceRecord.id, fingerprint: referenceFingerprint },
+    ...records
+      .filter((record) => /^[01]{64}$/.test(record.image_fingerprint || ""))
+      .map((record) => ({ id: record.id, fingerprint: record.image_fingerprint })),
+  ].filter((item, index, items) => items.findIndex((candidate) => candidate.id === item.id) === index);
+  const missingIds = new Set([
+    ...(!referenceRecord.image_fingerprint ? [referenceRecord.id] : []),
+    ...records.filter((record) => !record.fingerprint_was_stored).map((record) => record.id),
+  ]);
+  const updates = fingerprints.filter((item) => missingIds.has(item.id));
+  referenceRecord.image_fingerprint = referenceFingerprint;
+  if (!updates.length) return;
+  const response = await fetch("/api/records", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    credentials: "same-origin",
+    body: JSON.stringify({ fingerprints: updates }),
+  });
+  if (!response.ok) throw new Error("fingerprints could not be stored");
 }
 
 function renderNearbyRecords(records, radius) {
@@ -538,7 +571,12 @@ async function loadNearbyRecords() {
     if (similarityTools && nearbyRecords.length) {
       adminNearbyStatus.textContent = `comparing ${nearbyRecords.length} nearby tile${nearbyRecords.length > 1 ? "s" : ""}...`;
       try {
-        rankedRecords = await similarityTools.scoreRecords(record.image_url, nearbyRecords);
+        const candidates = nearbyRecords.map((candidate) => ({
+          ...candidate,
+          fingerprint_was_stored: /^[01]{64}$/.test(candidate.image_fingerprint || ""),
+        }));
+        rankedRecords = await similarityTools.scoreRecords(record, candidates);
+        persistVisualFingerprints(record, rankedRecords).catch(() => {});
       } catch {
         rankedRecords = nearbyRecords.map((candidate) => ({ ...candidate, visual_similarity: null }));
       }
@@ -761,6 +799,34 @@ adminNearbyRadius.addEventListener("input", () => {
 
 adminNearbyViewerClose.addEventListener("click", closeNearbyViewer);
 
+adminNearbyViewerDuplicate.addEventListener("click", async () => {
+  const reference = editorState.record;
+  const candidate = editorState.nearbyRecord;
+  if (!reference || !candidate) return;
+  adminNearbyViewerDuplicate.disabled = true;
+  adminNearbyViewerDuplicate.textContent = "recording...";
+  try {
+    const response = await fetch("/api/records", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify({
+        id: reference.id,
+        relatedId: candidate.id,
+        relationAction: "confirm-duplicate",
+        score: Number.isFinite(candidate.visual_similarity) ? candidate.visual_similarity / 100 : null,
+      }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || `duplicate relation failed ${response.status}`);
+    adminNearbyViewerDuplicate.textContent = "same tile recorded";
+  } catch (error) {
+    adminNearbyViewerDuplicate.disabled = false;
+    adminNearbyViewerDuplicate.textContent = "same tile";
+    adminNearbyViewerMeta.textContent = error.message;
+  }
+});
+
 adminEditorPrev.addEventListener("click", () => openEditorAdjacent(-1));
 adminEditorNext.addEventListener("click", () => openEditorAdjacent(1));
 
@@ -773,6 +839,7 @@ adminEditorSave.addEventListener("click", async () => {
     const output = document.createElement("canvas");
     imageTools.renderEditedImage(output, editorState.image, editorState.points, editorState.settings, 1200, 28);
     const imageData = output.toDataURL("image/jpeg", 0.9);
+    const imageFingerprint = similarityTools?.differenceHashFromCanvas(output) || null;
     const response = await fetch("/api/records", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -780,6 +847,7 @@ adminEditorSave.addEventListener("click", async () => {
       body: JSON.stringify({
         id: editorState.record.id,
         imageData,
+        image_fingerprint: imageFingerprint,
         crop_points: editorState.record.original_image_url ? editorState.points : null,
         edit_settings: editorState.record.original_image_url ? editorState.settings : imageTools.normalizeSettings(),
       }),

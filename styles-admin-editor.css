@@ -1925,6 +1925,22 @@ pre {
   text-underline-offset: 3px;
 }
 
+.admin-nearby-viewer div button {
+  padding: 5px 8px;
+  border: 1px solid var(--ink);
+  border-radius: 0;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+
+.admin-nearby-viewer div button:disabled {
+  border-color: var(--line);
+  color: var(--muted);
+  cursor: default;
+}
+
 @media (max-width: 980px) {
   .admin-editor {
     overflow: hidden;

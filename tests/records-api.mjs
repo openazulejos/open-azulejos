@@ -127,6 +127,7 @@ await handler({
     if (event === "data") callback(Buffer.from(JSON.stringify({
       id: "33333333-3333-4333-8333-333333333333",
       imageData: "data:image/jpeg;base64,AA==",
+      image_fingerprint: "01".repeat(32),
       crop_points: [{ x: 0.1, y: 0.1 }, { x: 0.9, y: 0.1 }, { x: 0.9, y: 0.9 }, { x: 0.1, y: 0.9 }],
       edit_settings: { warmth: 40, tint: 20 },
     })));
@@ -141,7 +142,82 @@ await handler({
 assert(patchStatus === 200, "published-only image edit should succeed");
 assert(patchPayload.crop_points === null, "published-only image edit should clear crop points to avoid double crop");
 assert(patchPayload.edit_settings.warmth === 0 && patchPayload.edit_settings.tint === 0, "published-only image edit should clear baked color adjustments");
+assert(patchPayload.image_fingerprint === "01".repeat(32), "image treatment should persist its perceptual fingerprint");
 assert(JSON.parse(patchBody).record.crop_points === null, "patched record should return cleared crop points");
+
+const fingerprintUpdates = [];
+global.fetch = async (url, options = {}) => {
+  fingerprintUpdates.push({ url: String(url), payload: JSON.parse(options.body) });
+  return { ok: true, text: async () => "" };
+};
+let fingerprintStatus = 200;
+let fingerprintBody = "";
+await handler({
+  method: "PATCH",
+  headers: { host: "localhost", "x-admin-key": "admin-test" },
+  url: "/api/records",
+  on(event, callback) {
+    if (event === "data") callback(Buffer.from(JSON.stringify({
+      fingerprints: [
+        { id: "44444444-4444-4444-8444-444444444444", fingerprint: "0".repeat(64) },
+        { id: "55555555-5555-4555-8555-555555555555", fingerprint: "1".repeat(64) },
+      ],
+    })));
+    if (event === "end") callback();
+  },
+  destroy() {},
+}, {
+  setHeader() {},
+  end(value) { fingerprintBody = value; },
+  set statusCode(value) { fingerprintStatus = value; },
+});
+assert(fingerprintStatus === 200 && JSON.parse(fingerprintBody).updated === 2, "fingerprint batch should report persisted records");
+assert(fingerprintUpdates.length === 2, "fingerprint batch should update each requested legacy record");
+assert(fingerprintUpdates.every(({ payload }) => /^[01]{64}$/.test(payload.image_fingerprint)), "fingerprint updates should contain valid hashes");
+
+let relationPayload = null;
+global.fetch = async (url, options = {}) => {
+  const requestUrl = String(url);
+  if (requestUrl.includes("/rest/v1/physical_instances?")) {
+    return {
+      ok: true,
+      json: async () => [
+        { id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb", legacy_azulejo_id: "66666666-6666-4666-8666-666666666666" },
+        { id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", legacy_azulejo_id: "77777777-7777-4777-8777-777777777777" },
+      ],
+    };
+  }
+  if (requestUrl.includes("/rest/v1/similarity_links?")) {
+    relationPayload = JSON.parse(options.body);
+    return { ok: true, json: async () => [{ id: "relation-test", ...relationPayload }] };
+  }
+  throw new Error(`unexpected relation test fetch: ${requestUrl}`);
+};
+let relationStatus = 200;
+let relationBody = "";
+await handler({
+  method: "PATCH",
+  headers: { host: "localhost", "x-admin-key": "admin-test" },
+  url: "/api/records",
+  on(event, callback) {
+    if (event === "data") callback(Buffer.from(JSON.stringify({
+      id: "66666666-6666-4666-8666-666666666666",
+      relatedId: "77777777-7777-4777-8777-777777777777",
+      relationAction: "confirm-duplicate",
+      score: 0.91,
+    })));
+    if (event === "end") callback();
+  },
+  destroy() {},
+}, {
+  setHeader() {},
+  end(value) { relationBody = value; },
+  set statusCode(value) { relationStatus = value; },
+});
+assert(relationStatus === 200 && JSON.parse(relationBody).relation.reviewed, "confirmed duplicate should return a reviewed relation");
+assert(relationPayload.first_instance_id === "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", "duplicate relation should canonicalize instance ordering");
+assert(relationPayload.second_instance_id === "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb", "duplicate relation should retain both physical instances");
+assert(relationPayload.relation === "duplicate" && relationPayload.score === 0.91, "duplicate relation should persist its type and visual score");
 
 let rejectedStatus = 200;
 let rejectedBody = "";
