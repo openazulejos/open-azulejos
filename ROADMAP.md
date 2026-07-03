@@ -1,35 +1,174 @@
 # Roadmap
 
-## Foundation: now to three months
+## Product direction
 
-- Completed: verified off-provider backups and documented restoration.
-- Completed: private original photographs and explicit public derivatives.
-- Completed: PostGIS-backed locations and normalized archival entities.
-- Completed: named Supabase Auth accounts with a temporary recovery bridge.
-- Completed: installable PWA shell and offline-resilient contribution queue.
-- Completed: stable JSON-LD, IIIF Presentation 3, and LIDO 1.1 representations
-  for approved records.
-- Completed: explicit CC BY 4.0 consent and photographer attribution for new
-  contributions, without retroactive licensing.
-- Completed: versioned cursor pagination and rights-aware JSON-LD, IIIF, LIDO,
-  GeoJSON, and CSV collection exports, tested at 100,000 records.
-- Completed: local perceptual similarity ranking for geographically nearby
-  submissions in the moderation editor.
-- Completed: persisted 64-bit visual fingerprints and administrator-reviewed
-  duplicate relationships without destructive record merging.
-- Public repository, continuous integration, contribution and license policy.
-- Stable public identifiers and a first CIDOC CRM mapping profile.
+Open Azulejos is a community-built, open-source observatory of Lisbon's visible
+azulejos. It is not an expert catalogue produced by a university or museum. Its
+research value comes from broad geographic coverage, dated field observations,
+repeat visits, transparent provenance, and reusable open data.
 
-## Consolidation: three to twelve months
+The core loop is:
 
-- Controlled vocabulary, provenance, confidence, and citation support.
-- First museum or university pilot without exclusivity.
+1. notice an azulejo while walking;
+2. record it in a few seconds;
+3. see it appear after moderation;
+4. receive recognition for a useful contribution;
+5. return to complete an area or document change over time.
 
-## Research infrastructure: one to two years
+## Product invariants
 
-- IIIF Image API delivery if region and scale requests justify a dedicated
-  image server.
-- Longitudinal conservation observations and institutional data exchange.
-- Evaluate MapLibre/PMTiles, Arches, and dedicated search infrastructure only
-  against measured operational requirements.
-- Sustainable legal entity, funding, and multi-maintainer operations.
+- A photograph is a dated observation, not automatically a new physical tile
+  or pattern.
+- One physical instance may have many observations over time and many media
+  assets. Earlier observations are never overwritten.
+- First contribution remains possible without creating an account.
+- The map remains the primary experience; profiles, scores, and campaigns stay
+  secondary to seeing the city's azulejos.
+- Public identity is a pseudonym; email and recovery information remain private.
+- Recognition is based on approved, useful observations, never raw uploads.
+- Precise locations remain public for approved observations by default; masking
+  is an exceptional moderation decision, not a general loss of map accuracy.
+- Observation date and estimated production period remain separate facts.
+- Automated similarity and condition analysis propose evidence; they do not
+  create historical claims without review.
+- Public data contracts and governance remain independent from any exclusive
+  institutional partnership.
+
+## Foundation completed
+
+- Verified off-provider backups and documented restoration.
+- Private original photographs and explicit public derivatives.
+- PostGIS-backed locations and normalized archival entities.
+- Named Supabase Auth accounts with a temporary recovery bridge.
+- Installable PWA shell and offline-resilient contribution queue.
+- Stable JSON-LD, IIIF Presentation 3, and LIDO 1.1 representations.
+- Explicit CC BY 4.0 consent and photographer attribution for new contributions.
+- Versioned JSON-LD, IIIF, LIDO, GeoJSON, and CSV collection exports, tested at
+  100,000 records.
+- Nearby perceptual-similarity ranking and persisted 64-bit image fingerprints.
+- Administrator-reviewed duplicate relationships without destructive merging.
+
+## Phase 1: temporal observation core
+
+Target: next 6 to 10 weeks.
+
+- Make repeated observations first-class: remove the remaining one-observation
+  assumptions from compatibility tables and APIs.
+- Extend admin relationships to distinguish `same physical tile`, `same
+  pattern`, `colour variation`, and `possibly related`.
+- Let moderation attach a new contribution to an existing physical instance
+  while preserving both images, dates, locations, and credits.
+- Record a deliberately small condition vocabulary: intact, crazed, chipped,
+  missing, painted or covered, repaired, and unknown.
+- Store structured condition evidence separately from optional free-text notes.
+- Expose observation history through stable APIs before adding timeline UI.
+- Add moderation reasons that can later be shown safely to contributors.
+
+Success signals:
+
+- repeat photographs create additional observations instead of duplicates;
+- every approved contribution has an observation timestamp and provenance;
+- moderators can resolve same-tile candidates without deleting evidence.
+
+## Phase 2: progressive contributor identity
+
+Target: 2 to 4 months.
+
+- Give every installation a random guest identity and a recoverable claim token.
+- Keep capture account-free and retain guest contributions across offline retry.
+- After three successfully submitted observations, invite the contributor to
+  choose a pseudonym and provide an email; never block the fourth contribution.
+- Use passwordless email authentication and allow earlier guest contributions to
+  be claimed by the new account.
+- Provide a private contribution page showing pending, approved, and rejected
+  observations, moderation dates, and concise rejection reasons.
+- Make public profiles opt-in and never expose email, precise movement history,
+  device identifiers, or rejected contributions.
+
+Success signals:
+
+- guest-to-account conversion can be measured without third-party tracking;
+- contributors can find the outcome of every submission;
+- returning contributors retain attribution across devices after authentication.
+
+## Phase 3: recognition and collective collection
+
+Target: 4 to 8 months.
+
+- Count newly documented physical instances and verified temporal revisits as
+  separate forms of recognition; never count submitted photos directly.
+- Add opt-in contributor pages and a restrained top-ten acknowledgements
+  leaderboard.
+- Offer monthly and neighbourhood views so new contributors can participate
+  without competing against lifetime totals.
+- Reward useful behaviours: first observation in a grid cell, a verified revisit,
+  coverage of an incomplete street, and a contribution accepted without edits.
+- Show map coverage and suggested nearby gaps without turning the map into a
+  task dashboard.
+- Run bounded collection walks and campaigns that can be shared with geocaching,
+  urban-walking, local-history, architecture, and design communities.
+- Add rate limits, duplicate warnings, and moderator workload metrics before any
+  large public recruitment campaign.
+
+Success signals:
+
+- approval rate and geographic coverage rise together;
+- repeat-contributor rate increases without increasing moderation time per item;
+- no leaderboard metric can be improved merely by resubmitting the same tile.
+
+## Phase 4: the city through time
+
+Target: 6 to 12 months, after sufficient repeated observations exist.
+
+- Add a map timeline based on observation dates, with an explicit latest-state
+  mode and comparable historical snapshots.
+- Let viewers move between observations of the same physical instance.
+- Build neighbourhood summaries for observed colours, pattern recurrence,
+  condition, loss, repair, and replacement.
+- Publish methodology and uncertainty with every aggregate; do not present
+  photographic estimates of age or condition as established facts.
+- Release versioned, citable observation-level dataset snapshots with checksums.
+- Provide reproducible notebooks or reference queries for researchers without
+  requiring institutional access or changing community governance.
+
+Success signals:
+
+- temporal views are backed by actual repeat observations rather than image
+  upload dates being misrepresented as object history;
+- every chart can be reproduced from a public, versioned export;
+- researchers can cite a dataset release and trace each result to observations.
+
+## Phase 5: durable open infrastructure
+
+Target: 12 to 24 months, triggered by measured use.
+
+- Move image derivatives and map delivery only when storage, bandwidth, or
+  latency measurements justify it.
+- Evaluate MapLibre, PMTiles, IIIF Image API, and dedicated search infrastructure
+  against documented operational requirements.
+- Introduce assisted visual clustering and condition-change detection with a
+  review queue and published algorithm versions.
+- Establish technical, data-curation, and moderation maintainers.
+- Create a sustainable legal entity only when funding, contracts, or provider
+  ownership require one; preserve open data access and non-exclusive governance.
+
+## Explicitly deferred
+
+- A general discussion forum, because it creates a separate moderation system
+  before the collection community is established.
+- Mandatory registration before capture.
+- Rewards based on raw upload volume or daily engagement streaks.
+- Automatic historical dating, authorship, or conservation diagnosis from AI.
+- Bulk replication of third-party catalogues without clear rights and provenance.
+- Institutional features that do not improve public collection, data durability,
+  or independent research reuse.
+
+## Immediate implementation order
+
+1. Finish the many-observations-per-instance data contract.
+2. Add reviewed relation types and non-destructive instance attachment in admin.
+3. Add moderation reasons and contributor-visible status APIs.
+4. Design the guest identity and contribution-claim security model in an ADR.
+5. Implement progressive identity before public leaderboards.
+6. Pilot repeated observations and condition vocabulary on existing records.
+7. Build the timeline only after the temporal dataset is credible.
