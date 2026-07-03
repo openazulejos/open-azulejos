@@ -2797,15 +2797,20 @@ async function requestLocationPermissionForContext({ allowOutsideLisbon = false 
 function showLocationPermissionSheet(reason = "unavailable") {
   if (!locationPermissionSheet) return;
   const copy = locationPermissionCopy();
+  const outsideLisbon = reason === "outside-lisbon";
   locationPermissionMessage.textContent = reason === "denied"
     ? "location access is blocked. you must enable location permission to record an azulejo."
     : reason === "unsupported"
       ? "this browser cannot provide the location required to record an azulejo."
-      : reason === "outside-lisbon"
+      : outsideLisbon
         ? "recording is only available in Lisbon for now."
         : "an accurate location could not be found. check location permission and device location services before sending.";
-  locationPermissionInstructions.textContent = copy.instructions;
+  locationPermissionSheet.dataset.reason = reason;
+  locationPermissionInstructions.textContent = outsideLisbon ? "" : copy.instructions;
+  locationPermissionInstructions.hidden = outsideLisbon;
   locationPermissionHelp.href = copy.helpUrl;
+  locationPermissionHelp.hidden = outsideLisbon;
+  locationPermissionRetry.textContent = outsideLisbon ? "back to the map" : "retry location";
   locationPermissionSheet.classList.add("is-open");
   locationPermissionSheet.setAttribute("aria-hidden", "false");
 }
@@ -2813,6 +2818,7 @@ function showLocationPermissionSheet(reason = "unavailable") {
 function closeLocationPermissionSheet() {
   locationPermissionSheet?.classList.remove("is-open");
   locationPermissionSheet?.setAttribute("aria-hidden", "true");
+  delete locationPermissionSheet?.dataset.reason;
 }
 
 function setCameraPermissionStep(step, state) {
@@ -2835,6 +2841,10 @@ function closePermissionCameraShell() {
 
 async function retryLocationPermission() {
   if (!locationPermissionRetry) return;
+  if (locationPermissionSheet?.dataset.reason === "outside-lisbon") {
+    closeLocationPermissionSheet();
+    return;
+  }
   const allowOutsideLisbon = await refreshAdminCaptureSession();
   locationPermissionRetry.disabled = true;
   locationPermissionRetry.textContent = "checking location...";
