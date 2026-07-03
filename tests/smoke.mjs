@@ -278,14 +278,25 @@ const sceneCounts = api.sceneAzulejoCounts(sceneTiles, sceneBounds, 18);
 assert(sceneCounts.visible === 1 && sceneCounts.total === 2, "scene counter should report visible and total registered azulejos");
 const sceneOnlyTiles = api.tilesInMapScene(sceneTiles, sceneBounds, 18);
 assert(sceneOnlyTiles.length === 2 && !sceneOnlyTiles.includes(sceneTiles[1]), "viewer scene filter should exclude azulejos outside current map bounds");
+const contributionViewerTile = api.viewerTileFromContribution({
+  id: "contribution-1",
+  title: "My tile",
+  lat: 38.72,
+  lng: -9.14,
+  imageUrl: "https://example.com/tile.jpg",
+});
+assert(contributionViewerTile.id === "contribution-1" && contributionViewerTile.image.endsWith("tile.jpg"), "approved contributions should become viewer tiles immediately");
+assert(contributionViewerTile.cell === api.cellForLatLng(38.72, -9.14).code, "contribution viewer tiles should retain their map cell");
+assert(api.selectionCellForTile(contributionViewerTile).code === contributionViewerTile.cell, "viewer tiles should restore their selected cell when closed");
+assert(api.viewerTileFromContribution({ id: "missing-image", lat: 38.72, lng: -9.14 }) === null, "contributions without an image should not open an empty viewer");
 
 const cell = api.cellForLatLng(38.71374, -9.13934);
 assert(/^lis\./.test(cell.code), "cell code should use lis prefix");
-assert(/^[a-z]+(?:\.[a-z]+){2}$/.test(cell.words), "cell should expose three local words");
 assert(api.normalizedCellFromCell({ cx: cell.cx, cy: cell.cy }).code === cell.code, "cell normalization should rebuild code from indexes");
 assert(api.normalizedCellFromCell({ lat: 38.71374, lng: -9.13934 }).code === cell.code, "cell normalization should accept coordinates");
 const activeText = api.activeCellText(cell);
-assert(activeText.includes(cell.words) && activeText.includes(cell.code), "active cell copy text should include words and cell code");
+assert(activeText.includes(cell.code), "active cell copy text should include the cell code");
+assert(!activeText.includes(cell.words), "active cell copy text should not expose synthetic cell words");
 assert(/\| -?\d+\.\d{6}, -?\d+\.\d{6}$/.test(activeText), "active cell copy text should include fixed center coordinates");
 assert(api.cellHash(cell) === `cell=${encodeURIComponent(cell.code)}`, "cell hash should encode the cell code");
 assert(api.cellFromHash(`#cell=${encodeURIComponent(cell.code)}`).code === cell.code, "cell hash parser should restore cell code");
@@ -293,6 +304,30 @@ assert(api.cellFromHash(`#${cell.code}`).code === cell.code, "cell hash parser s
 assert(api.gridStepForZoom(15, 3) === 96, "grid should show a coarse city-scale mesh at opening zoom");
 assert(api.gridStepForZoom(12, 3) === 768, "grid should remain visible at city overview zoom");
 assert(api.gridStepForZoom(20, 3) === 3, "grid should resolve to true 3 m cells at fine zoom");
+const primaryTile = { id: "primary", cx: 10, cy: 10 };
+const duplicateTile = { id: "duplicate", cx: 10, cy: 10 };
+const trueNeighborTile = { id: "neighbor", cx: 10, cy: 11 };
+const fineGridLayout = api.allocateFineGridDisplayCells([
+  primaryTile,
+  duplicateTile,
+  trueNeighborTile,
+], 22, 3);
+assert(fineGridLayout.get(primaryTile).cx === 10 && fineGridLayout.get(primaryTile).cy === 10, "first tile should keep its true GPS cell");
+assert(fineGridLayout.get(trueNeighborTile).cx === 10 && fineGridLayout.get(trueNeighborTile).cy === 11, "a true GPS cell should take priority over displaced duplicates");
+assert(fineGridLayout.get(duplicateTile).cx === 11 && fineGridLayout.get(duplicateTile).cy === 10, "duplicate should use the next free adjacent cell");
+assert(api.allocateFineGridDisplayCells([primaryTile, duplicateTile], 19, 3) === null, "duplicate displacement should only run on the finest grid");
+const crowdedCenter = { id: "crowded-center", cx: 20, cy: 20 };
+const crowdedDuplicate = { id: "crowded-duplicate", cx: 20, cy: 20 };
+const occupiedNeighbors = [
+  [20, 21], [21, 20], [20, 19], [19, 20],
+  [21, 21], [21, 19], [19, 19], [19, 21],
+].map(([cx, cy], index) => ({ id: `occupied-${index}`, cx, cy }));
+const crowdedLayout = api.allocateFineGridDisplayCells([
+  crowdedCenter,
+  crowdedDuplicate,
+  ...occupiedNeighbors,
+], 22, 3);
+assert(crowdedLayout.get(crowdedDuplicate) === null, "duplicate should stay hidden when every adjacent cell has a true GPS occupant");
 assert(api.gridStepForZoom(20, 1) > api.gridStepForZoom(20, 5), "density slider should affect grid detail");
 const capturePoints = api.normalizedCropPoints({ sx: 90, sy: 45, side: 820 }, { width: 1000, height: 910 });
 assert(capturePoints[0].x === 0.09 && capturePoints[1].x === 0.91, "capture metadata should retain the hidden horizontal margin");
@@ -321,7 +356,7 @@ assert(api.tileMatchesArchiveQuery({
   words: "arquivo.estrela.vidro",
   cell: "lis.-79e9.xft4",
   source: "demo",
-}, "Alfama arquivo"), "archive filter should match title and local words together");
+}, "Alfama demo"), "archive filter should match title and source together");
 assert(api.tileMatchesArchiveQuery({
   id: "x",
   title: "Alfama",

@@ -11,7 +11,7 @@
     <link rel="apple-touch-icon" href="./assets/azulejo-field-photo-1-crop.png" />
     <link rel="preconnect" href="https://unpkg.com" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="./styles-admin-editor.css?v=20260703-gps-safari" />
+    <link rel="stylesheet" href="./styles-admin-editor.css?v=20260703-account-settings" />
   </head>
   <body>
     <header class="topbar" aria-label="Navigation principale">
@@ -107,10 +107,10 @@
           <form class="search-form" id="cellSearchForm">
             <label for="cellSearchInput">rechercher dans l’archive</label>
             <div class="search-row">
-              <input id="cellSearchInput" placeholder="alfama, bairro.ponte.vento, lis.-79o8.xg7l" />
+              <input id="cellSearchInput" placeholder="lis.-79o8.xg7l" />
               <button type="submit">voir</button>
             </div>
-            <div class="search-status" id="cellSearchStatus">recherche par trois mots locaux ou code cellule.</div>
+            <div class="search-status" id="cellSearchStatus">recherche par code cellule.</div>
           </form>
 
           <dl class="stats">
@@ -129,8 +129,7 @@
           </dl>
           <section class="active-cell" aria-label="Cellule active">
             <h2>cellule active</h2>
-            <strong id="activeCellWords">aucune cellule sélectionnée</strong>
-            <span id="activeCellCode">clique la carte, un fragment ou une recherche.</span>
+            <strong id="activeCellCode">aucune cellule sélectionnée</strong>
             <span id="activeCellCoords"></span>
             <button class="system-controls" id="copyActiveCellButton" type="button" disabled>copier cellule</button>
             <textarea id="activeCellCopyValue" readonly aria-label="Texte de cellule à copier"></textarea>
@@ -235,8 +234,7 @@
           <p>
             Le matching se fait par nom de fichier. Les coordonnées sont en
             WGS84. Les champs reconnus sont `image`, `filename`, `file`, `lat`,
-            `latitude`, `lng`, `lon` ou `longitude`. Les trois mots sont
-            générés localement depuis la cellule 3 m.
+            `latitude`, `lng`, `lon` ou `longitude`.
           </p>
           <pre><code>image,lat,lng,title
 azulejo-001.jpg,38.71374,-9.13934,Alfama
@@ -356,7 +354,23 @@ azulejo-002.jpg,38.71072,-9.13908,Baixa</code></pre>
           <p class="account-status" id="accountStatus" aria-live="polite"></p>
         </section>
 
-        <section class="account-member" id="accountMember" hidden>
+        <section class="my-contributions" id="myContributions" aria-label="my contributions" hidden>
+          <div class="my-contributions-heading">
+            <h2 id="myContributionsTitle">my contributions</h2>
+            <div class="my-contributions-view" role="group" aria-label="contribution view">
+              <button id="contributionsGridView" type="button" aria-label="mosaic view" title="mosaic view" aria-pressed="true">
+                <span class="contribution-view-icon is-grid" aria-hidden="true"></span>
+              </button>
+              <button id="contributionsListView" type="button" aria-label="list view" title="list view" aria-pressed="false">
+                <span class="contribution-view-icon is-list" aria-hidden="true"></span>
+              </button>
+            </div>
+          </div>
+          <p id="myContributionsStatus">no contribution receipt on this device</p>
+          <ol id="myContributionsList"></ol>
+        </section>
+        <section class="account-settings account-member" id="accountMember" aria-label="settings" hidden>
+          <h2>settings</h2>
           <div class="account-identity">
             <strong id="accountPseudonym"></strong>
             <button id="accountLogoutButton" type="button">log out</button>
@@ -368,12 +382,7 @@ azulejo-002.jpg,38.71072,-9.13908,Baixa</code></pre>
             </label>
             <button type="submit">save username</button>
           </form>
-        </section>
-
-        <section class="my-contributions" aria-label="my contributions">
-          <h2 id="myContributionsTitle">my contributions</h2>
-          <p id="myContributionsStatus">no contribution receipt on this device</p>
-          <ol id="myContributionsList"></ol>
+          <p class="account-status" id="accountSettingsStatus" aria-live="polite"></p>
         </section>
       </main>
     </section>
@@ -388,6 +397,6 @@ azulejo-002.jpg,38.71072,-9.13908,Baixa</code></pre>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="./offline-queue.js?v=20260702-contribution-rights"></script>
-    <script src="./app-source-capture.js?v=20260703-gps-safari"></script>
+    <script src="./app-source-capture.js?v=20260703-viewer-selection"></script>
   </body>
 </html>

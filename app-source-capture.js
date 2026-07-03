@@ -6,6 +6,16 @@ const LISBON_BOUNDS = {
   east: -8.90,
 };
 const GRID_METERS = 3;
+const FINE_GRID_NEIGHBOR_OFFSETS = [
+  [0, 1],
+  [1, 0],
+  [0, -1],
+  [-1, 0],
+  [1, 1],
+  [1, -1],
+  [-1, -1],
+  [-1, 1],
+];
 const WEB_MERCATOR_RADIUS = 6378137;
 const TILE_SIZE = 34;
 const LQIP_SIZES = [1, 2, 4, 8, 16, 32, 64, 128];
@@ -138,7 +148,6 @@ const cursorReadout = document.querySelector("#cursorReadout");
 const tileCount = document.querySelector("#tileCount");
 const cellCount = document.querySelector("#cellCount");
 const fragmentIndexList = document.querySelector("#fragmentIndexList");
-const activeCellWords = document.querySelector("#activeCellWords");
 const activeCellCode = document.querySelector("#activeCellCode");
 const activeCellCoords = document.querySelector("#activeCellCoords");
 const copyActiveCellButton = document.querySelector("#copyActiveCellButton");
@@ -183,13 +192,17 @@ const accountSignupPassword = document.querySelector("#accountSignupPassword");
 const accountResetEmail = document.querySelector("#accountResetEmail");
 const accountNewPassword = document.querySelector("#accountNewPassword");
 const accountStatus = document.querySelector("#accountStatus");
+const accountSettingsStatus = document.querySelector("#accountSettingsStatus");
 const accountPseudonym = document.querySelector("#accountPseudonym");
 const accountLogoutButton = document.querySelector("#accountLogoutButton");
 const accountProfileForm = document.querySelector("#accountProfileForm");
 const accountProfilePseudonym = document.querySelector("#accountProfilePseudonym");
+const myContributions = document.querySelector("#myContributions");
 const myContributionsStatus = document.querySelector("#myContributionsStatus");
 const myContributionsTitle = document.querySelector("#myContributionsTitle");
 const myContributionsList = document.querySelector("#myContributionsList");
+const contributionsGridView = document.querySelector("#contributionsGridView");
+const contributionsListView = document.querySelector("#contributionsListView");
 const recordHistoryButton = document.querySelector("#recordHistoryButton");
 const recordCameraInput = document.querySelector("#recordCameraInput");
 const squareCamera = document.querySelector("#squareCamera");
@@ -258,6 +271,7 @@ let squareCameraStream = null;
 let pendingCapture = null;
 const CAPTURE_MIN_ZOOM = 1.22;
 let activeViewerTileId = null;
+let activeViewerTile = null;
 let viewerMosaicMode = 0;
 let viewerGesture = null;
 let viewerMosaicRenderToken = 0;
@@ -267,6 +281,7 @@ let userLocationWatchId = null;
 let latestUserLocation = null;
 let userLocationSearchTimer = null;
 const CONTRIBUTION_RECEIPTS_KEY = "open-azulejos-contribution-receipts";
+const CONTRIBUTION_VIEW_KEY = "open-azulejos-contribution-view";
 const ACCOUNT_INVITE_COUNT_KEY = "open-azulejos-account-invite-count";
 const ACCOUNT_INVITE_THRESHOLD = 3;
 let contributorAccount = null;
@@ -420,38 +435,6 @@ function parseCellCode(value) {
   return { cx, cy, code: `lis.${cx.toString(36)}.${cy.toString(36)}`, words: localWordsForCell(cx, cy) };
 }
 
-function findCellByWords(words) {
-  const target = words.trim().toLowerCase();
-  if (!/^[a-z]+(?:\.[a-z]+){2}$/.test(target)) return null;
-  const knownTiles = [
-    ...sampleTiles,
-    ...placedTiles,
-  ];
-  for (const tile of knownTiles) {
-    const cell = cellForLatLng(Number(tile.lat), Number(tile.lng));
-    if (cell.words === target) return cell;
-  }
-  const mapCenter = map.getCenter();
-  const center = cellForLatLng(mapCenter.lat, mapCenter.lng);
-  const radius = 420;
-  let best = null;
-  let bestDistance = Infinity;
-  for (let dy = -radius; dy <= radius; dy += 1) {
-    for (let dx = -radius; dx <= radius; dx += 1) {
-      const cx = center.cx + dx;
-      const cy = center.cy + dy;
-      if (localWordsForCell(cx, cy) === target) {
-        const distance = dx * dx + dy * dy;
-        if (distance < bestDistance) {
-          bestDistance = distance;
-          best = { cx, cy, code: `lis.${cx.toString(36)}.${cy.toString(36)}`, words: target };
-        }
-      }
-    }
-  }
-  return best;
-}
-
 function boundsForCell(cell) {
   const westSouth = metersToLonLat(cell.cx * GRID_METERS, cell.cy * GRID_METERS);
   const eastNorth = metersToLonLat((cell.cx + 1) * GRID_METERS, (cell.cy + 1) * GRID_METERS);
@@ -487,7 +470,7 @@ function activeCellText(cell = activeCell) {
   const normalized = normalizedCellFromCell(cell);
   if (!normalized) return "";
   const center = cellCenter(normalized);
-  return `${normalized.words} | ${normalized.code} | ${center.lat.toFixed(6)}, ${center.lng.toFixed(6)}`;
+  return `${normalized.code} | ${center.lat.toFixed(6)}, ${center.lng.toFixed(6)}`;
 }
 
 function cellHash(cell) {
@@ -515,7 +498,6 @@ function setActiveCell(cell) {
   if (!normalized) return null;
   activeCell = normalized;
   const center = cellCenter(normalized);
-  activeCellWords.textContent = normalized.words;
   activeCellCode.textContent = normalized.code;
   activeCellCoords.textContent = `${center.lat.toFixed(6)}, ${center.lng.toFixed(6)}`;
   activeCellCopyValue.value = activeCellText(normalized);
@@ -564,8 +546,8 @@ function highlightCell(cell, options = {}) {
     lng: selectionPoint.lng,
   };
   renderHighlightedSelection(options);
-  cursorReadout.textContent = `${normalized.words} · ${normalized.code}`;
-  cellSearchStatus.textContent = `${normalized.words} · ${normalized.code}`;
+  cursorReadout.textContent = normalized.code;
+  cellSearchStatus.textContent = normalized.code;
 }
 
 function renderHighlightedSelection(options = {}) {
@@ -598,7 +580,7 @@ function cellOccupancy() {
 
 function visibleTiles() {
   if (!mosaicToggle.checked) return [];
-  return displayedTiles.filter((tile) => tileVisibleAtZoom(tile));
+  return displayedTiles.filter((tile) => tileVisibleAtZoom(tile) && !tile.isLayoutHidden);
 }
 
 function tileInsideMapScene(tile, bounds = map.getBounds()) {
@@ -621,7 +603,11 @@ function sceneAzulejoCounts(tiles = displayedTiles, bounds = map.getBounds(), zo
 }
 
 function tilesInMapScene(tiles = displayedTiles, bounds = map.getBounds(), zoom = map.getZoom()) {
-  return tiles.filter((tile) => tileVisibleAtZoom(tile, zoom) && tileInsideMapScene(tile, bounds));
+  return tiles.filter((tile) => (
+    tileVisibleAtZoom(tile, zoom)
+    && !tile.isLayoutHidden
+    && tileInsideMapScene(tile, bounds)
+  ));
 }
 
 function updateMapAzulejoCount() {
@@ -651,9 +637,18 @@ function setLayerPresence(parentLayer, childLayer, visible) {
 
 function refreshTileVisibility() {
   const sceneBounds = map.getBounds();
+  const fineGridLayout = allocateFineGridDisplayCells(
+    displayedTiles.filter((tile) => tileVisibleAtZoom(tile)),
+    map.getZoom(),
+    Number(gridDensity.value),
+  );
   displayedTiles.forEach((tile) => {
-    const visible = tileVisibleAtZoom(tile) && tileInsideMapScene(tile, sceneBounds);
-    updateTileOverlayBounds(tile);
+    const displayCell = fineGridLayout?.get(tile);
+    tile.isLayoutHidden = fineGridLayout instanceof Map && !displayCell;
+    const visible = tileVisibleAtZoom(tile)
+      && !tile.isLayoutHidden
+      && tileInsideMapScene(tile, sceneBounds);
+    updateTileOverlayBounds(tile, displayCell);
     setLayerPresence(tile.layerGroup, tile.mosaicCell, visible);
     if (visible && !tile.imageLoadStarted) {
       tile.imageLoadStarted = true;
@@ -679,9 +674,45 @@ function boundsForSnappedGridSquare(lat, lng, zoom = map.getZoom()) {
   );
 }
 
-function updateTileOverlayBounds(tile) {
+function gridCellKey(cx, cy) {
+  return `${cx}:${cy}`;
+}
+
+function allocateFineGridDisplayCells(tiles, zoom = map.getZoom(), density = Number(gridDensity.value)) {
+  if (gridStepForZoom(zoom, density) !== GRID_METERS) return null;
+  const candidates = tiles.filter((tile) => Number.isFinite(tile?.cx) && Number.isFinite(tile?.cy));
+  const trueCells = new Set(candidates.map((tile) => gridCellKey(tile.cx, tile.cy)));
+  const occupiedDisplayCells = new Set();
+  const layout = new Map();
+
+  candidates.forEach((tile) => {
+    const trueKey = gridCellKey(tile.cx, tile.cy);
+    if (!occupiedDisplayCells.has(trueKey)) {
+      occupiedDisplayCells.add(trueKey);
+      layout.set(tile, { cx: tile.cx, cy: tile.cy });
+      return;
+    }
+
+    const offset = FINE_GRID_NEIGHBOR_OFFSETS.find(([dx, dy]) => {
+      const candidateKey = gridCellKey(tile.cx + dx, tile.cy + dy);
+      return !trueCells.has(candidateKey) && !occupiedDisplayCells.has(candidateKey);
+    });
+    if (!offset) {
+      layout.set(tile, null);
+      return;
+    }
+    const [dx, dy] = offset;
+    const displayCell = { cx: tile.cx + dx, cy: tile.cy + dy };
+    occupiedDisplayCells.add(gridCellKey(displayCell.cx, displayCell.cy));
+    layout.set(tile, displayCell);
+  });
+
+  return layout;
+}
+
+function updateTileOverlayBounds(tile, displayCell = null) {
   if (!tile?.mosaicCell || typeof tile.mosaicCell.setBounds !== "function") return;
-  tile.displayBounds = boundsForSnappedGridSquare(tile.lat, tile.lng);
+  tile.displayBounds = displayCell ? boundsForCell(displayCell) : boundsForSnappedGridSquare(tile.lat, tile.lng);
   tile.mosaicCell.setBounds(tile.displayBounds);
 }
 
@@ -690,7 +721,31 @@ function googleMapsUrl(lat, lng) {
 }
 
 function geodataCaption(tile) {
-  return `${tile.lat.toFixed(6)}, ${tile.lng.toFixed(6)} · ${tile.words} · ${tile.cell}`;
+  return `${tile.lat.toFixed(6)}, ${tile.lng.toFixed(6)} · ${tile.cell}`;
+}
+
+function selectionCellForTile(tile) {
+  const lat = Number(tile?.lat);
+  const lng = Number(tile?.lng);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  return { ...cellForLatLng(lat, lng), lat, lng };
+}
+
+function viewerTileFromContribution(record) {
+  const selection = selectionCellForTile(record);
+  const image = record?.imageUrl || record?.image_url || "";
+  if (!selection || !record?.id || !image) return null;
+  return {
+    id: record.id,
+    title: record.title || "recorded azulejo",
+    lat: selection.lat,
+    lng: selection.lng,
+    image,
+    source: "supabase-camera",
+    minZoom: 12,
+    ...selection,
+    cell: record.cell || selection.code,
+  };
 }
 
 function viewerTiles() {
@@ -911,6 +966,7 @@ function cycleViewerMosaic() {
 function renderAzulejoViewerTile(tile) {
   if (!tile || !azulejoViewerImage || !azulejoViewerCaption) return;
   activeViewerTileId = tile.id;
+  activeViewerTile = tile;
   azulejoViewerImage.src = tile.image;
   azulejoViewerImage.alt = tile.title;
   azulejoViewerCaption.textContent = geodataCaption(tile);
@@ -927,11 +983,17 @@ function openAzulejoViewer(tile) {
 
 function closeAzulejoViewer() {
   if (!azulejoViewer || !azulejoViewerImage) return;
+  const selectedTile = activeViewerTile;
   azulejoViewer.classList.remove("is-open");
   azulejoViewer.setAttribute("aria-hidden", "true");
   azulejoViewerImage.removeAttribute("src");
   setViewerMosaicMode(0, null);
   activeViewerTileId = null;
+  activeViewerTile = null;
+  const selection = selectionCellForTile(selectedTile);
+  if (selection) {
+    highlightCell(selection, { fit: false, latlng: selection });
+  }
 }
 
 function startViewerGesture(event) {
@@ -1103,7 +1165,6 @@ function tileMatchesArchiveQuery(tile, query) {
   if (!normalizedQuery) return true;
   const haystack = [
     tile.title,
-    tile.words,
     tile.cell,
     tile.source,
     tile.id,
@@ -1160,7 +1221,7 @@ function renderFragmentIndex() {
     title.textContent = tile.title;
     const meta = document.createElement("span");
     const duplicateLabel = (occupancy.get(tile.cell) || 0) > 1 ? " · doublon" : "";
-    meta.textContent = `${tile.words} · ${tile.cell}${duplicateLabel}`;
+    meta.textContent = `${tile.cell}${duplicateLabel}`;
     text.append(title, meta);
     button.append(img, text);
     button.addEventListener("click", () => {
@@ -1173,7 +1234,7 @@ function renderFragmentIndex() {
 function searchCell(value) {
   const query = value.trim().toLowerCase();
   if (!query) return null;
-  return parseCellCode(query) || findCellByWords(query);
+  return parseCellCode(query);
 }
 
 function resizeGridCanvas() {
@@ -1201,38 +1262,6 @@ function gridStepForZoom(zoom, density) {
 
 function gridStepLabel(step) {
   return step === GRID_METERS ? "grille 3 m" : `aperçu ${step} m`;
-}
-
-function drawGridLabels(startX, endX, startY, endY, step) {
-  if (map.getZoom() < 20 || step !== GRID_METERS) return;
-  const westSouth = metersToLonLat(startX, startY);
-  const eastNorth = metersToLonLat(startX + step, startY + step);
-  const p1 = map.latLngToContainerPoint([westSouth.lat, westSouth.lng]);
-  const p2 = map.latLngToContainerPoint([eastNorth.lat, eastNorth.lng]);
-  const cellWidth = Math.abs(p2.x - p1.x);
-  const cellHeight = Math.abs(p2.y - p1.y);
-  if (cellWidth < 74 || cellHeight < 22) return;
-
-  const labelEvery = cellWidth > 160 ? 1 : 2;
-  gridCtx.save();
-  applyCityClipPath();
-  gridCtx.font = "10px Helvetica Neue, Arial, sans-serif";
-  gridCtx.textAlign = "center";
-  gridCtx.textBaseline = "middle";
-  gridCtx.fillStyle = "rgba(16, 16, 16, 0.72)";
-
-  for (let x = startX; x < endX; x += step * labelEvery) {
-    for (let y = startY; y < endY; y += step * labelEvery) {
-      const cx = Math.floor(x / GRID_METERS);
-      const cy = Math.floor(y / GRID_METERS);
-      const center = metersToLonLat(x + GRID_METERS / 2, y + GRID_METERS / 2);
-      const point = map.latLngToContainerPoint([center.lat, center.lng]);
-      const words = localWordsForCell(cx, cy);
-      if (gridCtx.measureText(words).width > cellWidth - 8) continue;
-      gridCtx.fillText(words, point.x, point.y);
-    }
-  }
-  gridCtx.restore();
 }
 
 function drawGrid() {
@@ -1281,10 +1310,8 @@ function drawGrid() {
   }
 
   gridCtx.restore();
-  drawGridLabels(startX, endX, startY, endY, step);
-
   const current = cellForLatLng(map.getCenter().lat, map.getCenter().lng);
-  cursorReadout.textContent = `${current.words} · Lisboa · ${gridStepLabel(step)} · ${current.code}`;
+  cursorReadout.textContent = `Lisboa · ${gridStepLabel(step)} · ${current.code}`;
 }
 
 function applyCityClipPath() {
@@ -1451,7 +1478,7 @@ function addAzulejoTile(tile, options = {}) {
   content.querySelector("img").src = normalizedTile.displayImage;
   content.querySelector("img").alt = normalizedTile.title;
   content.querySelector("strong").textContent = normalizedTile.title;
-  content.querySelector("span").textContent = `${cell.words} · ${cell.code}`;
+  content.querySelector("span").textContent = cell.code;
   const wrapper = document.createElement("div");
   wrapper.append(content);
   normalizedTile.displayBounds = boundsForSnappedGridSquare(normalizedTile.lat, normalizedTile.lng);
@@ -2237,6 +2264,40 @@ function contributionStatusLabel(record) {
   return "pending review";
 }
 
+function setContributionView(view, options = {}) {
+  const listView = view === "list";
+  myContributions?.classList.toggle("is-list-view", listView);
+  contributionsGridView?.setAttribute?.("aria-pressed", String(!listView));
+  contributionsListView?.setAttribute?.("aria-pressed", String(listView));
+  if (options.persist !== false) {
+    try {
+      localStorage.setItem(CONTRIBUTION_VIEW_KEY, listView ? "list" : "grid");
+    } catch {
+      // View preference is optional.
+    }
+  }
+}
+
+function restoreContributionView() {
+  let view = "grid";
+  try {
+    view = localStorage.getItem(CONTRIBUTION_VIEW_KEY) === "list" ? "list" : "grid";
+  } catch {
+    // Keep the mosaic default when storage is unavailable.
+  }
+  setContributionView(view, { persist: false });
+}
+
+function contributionDateLabel(value) {
+  const date = new Date(value || "");
+  if (Number.isNaN(date.getTime())) return "date unavailable";
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(date);
+}
+
 function renderContributionRecords(records, statusCopy) {
   if (!myContributionsList || !myContributionsStatus) return;
   if (myContributionsTitle) myContributionsTitle.textContent = `my contributions (${records.length})`;
@@ -2249,15 +2310,27 @@ function renderContributionRecords(records, statusCopy) {
     button.title = record.status === "approved" ? "show on map" : contributionStatusLabel(record);
     if (record.imageUrl) {
       const image = document.createElement("img");
-      image.src = record.imageUrl;
+      image.src = thumbnailImageUrl(record.imageUrl, 160);
       image.alt = "";
       image.loading = "lazy";
+      image.decoding = "async";
+      image.width = 160;
+      image.height = 160;
       button.append(image);
     }
+    const details = document.createElement("span");
+    details.className = "contribution-details";
+    const title = document.createElement("span");
+    title.className = "contribution-title";
+    title.textContent = record.title || "azulejo";
     const status = document.createElement("strong");
     status.className = `is-${record.status || "unavailable"}`;
     status.textContent = record.status ? contributionStatusLabel(record) : "receipt unavailable";
-    button.append(status);
+    const submitted = document.createElement("time");
+    submitted.dateTime = record.submittedAt || "";
+    submitted.textContent = contributionDateLabel(record.submittedAt);
+    details.append(title, status, submitted);
+    button.append(details);
     button.addEventListener("click", () => focusContributionRecord(record));
     item.append(button);
     myContributionsList.append(item);
@@ -2269,13 +2342,20 @@ function focusContributionRecord(record) {
   const lat = Number(record.lat);
   const lng = Number(record.lng);
   if (record.status !== "approved" || !Number.isFinite(lat) || !Number.isFinite(lng)) return;
+  const fallbackTile = viewerTileFromContribution(record);
   closeAccountSheet();
-  map.setView([lat, lng], Math.max(map.getZoom(), 19), { animate: true });
-  const tile = displayedTiles.find((candidate) => candidate.id === record.id);
-  if (tile) {
-    setActiveCell(tile.cell);
-    openAzulejoViewer(tile);
-  }
+  map.setView([lat, lng], 21, { animate: false });
+  const tile = displayedTiles.find((candidate) => candidate.id === record.id)
+    || serverTileCacheById.get(record.id)
+    || fallbackTile;
+  if (!tile) return;
+  openAzulejoViewer(tile);
+  loadRecordedAzulejos().then(() => {
+    if (activeViewerTileId !== record.id) return;
+    const loadedTile = displayedTiles.find((candidate) => candidate.id === record.id)
+      || serverTileCacheById.get(record.id);
+    if (loadedTile) activeViewerTile = loadedTile;
+  });
 }
 
 async function refreshContributionReceipts() {
@@ -2312,6 +2392,7 @@ function applyContributorAccount(data) {
   const authenticated = Boolean(contributorAccount);
   if (accountGuest) accountGuest.hidden = authenticated;
   if (accountMember) accountMember.hidden = !authenticated;
+  if (myContributions) myContributions.hidden = !authenticated;
   if (accountOpenButton) accountOpenButton.textContent = authenticated ? "account" : "log in";
   if (accountPseudonym) accountPseudonym.textContent = contributorAccount?.profile?.pseudonym || "";
   if (accountProfilePseudonym) accountProfilePseudonym.value = contributorAccount?.profile?.pseudonym || "";
@@ -2336,7 +2417,6 @@ async function refreshContributorAccount() {
   const response = await fetch("/api/contributor-account", { headers: { Accept: "application/json" } });
   if (response.status === 401) {
     applyContributorAccount(null);
-    await refreshContributionReceipts();
     return null;
   }
   const data = await response.json().catch(() => ({}));
@@ -2432,7 +2512,7 @@ async function updateContributorProfile(event) {
   if (!accountProfileForm || !accountProfilePseudonym) return;
   const button = accountProfileForm.querySelector("button[type='submit']");
   if (button) button.disabled = true;
-  if (accountStatus) accountStatus.textContent = "saving username...";
+  if (accountSettingsStatus) accountSettingsStatus.textContent = "saving username...";
   try {
     const response = await fetch("/api/contributor-account", {
       method: "POST",
@@ -2445,9 +2525,9 @@ async function updateContributorProfile(event) {
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || `account ${response.status}`);
     applyContributorAccount(data);
-    if (accountStatus) accountStatus.textContent = "username saved";
+    if (accountSettingsStatus) accountSettingsStatus.textContent = "username saved";
   } catch (error) {
-    if (accountStatus) accountStatus.textContent = error.message || "username update failed";
+    if (accountSettingsStatus) accountSettingsStatus.textContent = error.message || "username update failed";
   } finally {
     if (button) button.disabled = false;
   }
@@ -2459,7 +2539,6 @@ async function logoutContributorAccount() {
     await fetch("/api/contributor-account", { method: "DELETE" });
     applyContributorAccount(null);
     setAccountMode("log-in");
-    await refreshContributionReceipts();
   } finally {
     if (accountLogoutButton) accountLogoutButton.disabled = false;
   }
@@ -3900,6 +3979,8 @@ accountResetForm?.addEventListener("submit", (event) => submitContributorAccount
 accountUpdatePasswordForm?.addEventListener("submit", (event) => submitContributorAccount(event, "update-password"));
 accountProfileForm?.addEventListener("submit", updateContributorProfile);
 accountLogoutButton?.addEventListener("click", logoutContributorAccount);
+contributionsGridView?.addEventListener?.("click", () => setContributionView("grid"));
+contributionsListView?.addEventListener?.("click", () => setContributionView("list"));
 mapLocationButton?.addEventListener("click", locateUserOnMap);
 azulejoViewerClose?.addEventListener("click", closeAzulejoViewer);
 azulejoViewerImage?.addEventListener("load", () => {
@@ -3957,6 +4038,7 @@ gridToggle.addEventListener("change", drawGrid);
 gridDensity.addEventListener("input", () => {
   drawGrid();
   refreshTileVisibility();
+  scheduleRecordedAzulejoLoad();
 });
 mosaicToggle.addEventListener("change", setMosaicVisibility);
 sampleToggle.addEventListener("change", setSampleVisibility);
@@ -3974,7 +4056,7 @@ map.on("zoomend", () => {
 map.on("mousemove", (event) => {
   const { lat, lng } = event.latlng;
   const cell = cellForLatLng(lat, lng);
-  cursorReadout.textContent = `${cell.words} · ${lat.toFixed(5)}, ${lng.toFixed(5)} · ${cell.code}`;
+  cursorReadout.textContent = `${lat.toFixed(5)}, ${lng.toFixed(5)} · ${cell.code}`;
 });
 map.on("click", (event) => {
   latInput.value = event.latlng.lat.toFixed(6);
@@ -4002,8 +4084,9 @@ if ("serviceWorker" in navigator) {
   });
 }
 restoreMosaicState();
+restoreContributionView();
 const initialCell = cellForLatLng(LISBON[0], LISBON[1]);
-cursorReadout.textContent = `${initialCell.words} · Lisboa · grille 3 m · ${initialCell.code}`;
+cursorReadout.textContent = `Lisboa · grille 3 m · ${initialCell.code}`;
 const hashCell = cellFromHash(window.location.hash);
 if (hashCell) {
   highlightCell(hashCell, { hash: false });
@@ -4020,7 +4103,6 @@ window.AzulejoAtlas = {
   encodeCanvasForMobileUpload,
   fitTilesOnMap,
   flushOfflineContributions,
-  findCellByWords,
   gpsDistanceMeters,
   readGpsFromExif,
   readCurrentBrowserPosition,
@@ -4028,6 +4110,7 @@ window.AzulejoAtlas = {
   requestLocationPermission,
   archiveFilteredTiles,
   activeCellText,
+  allocateFineGridDisplayCells,
   fragmentToGeoJsonFeature,
   fragmentToPointGeoJsonFeature,
   fragmentsToCsv,
@@ -4057,6 +4140,7 @@ window.AzulejoAtlas = {
   parseCellCode,
   rowToTile,
   sceneAzulejoCounts,
+  selectionCellForTile,
   searchCell,
   boundsForSnappedGridSquare,
   tileVisibleAtZoom,
@@ -4065,6 +4149,7 @@ window.AzulejoAtlas = {
   tilesInMapScene,
   viewerMosaicCells,
   viewerMosaicRotation,
+  viewerTileFromContribution,
   visibleTiles,
   getState: () => ({
     markerIndex,
