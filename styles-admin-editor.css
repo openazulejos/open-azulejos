@@ -56,8 +56,16 @@ textarea {
   pointer-events: auto;
 }
 
-.about-trigger {
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 18px;
   margin-left: auto;
+  pointer-events: auto;
+}
+
+.about-trigger,
+.account-trigger {
   border: 0;
   background: transparent;
   color: #8a8a8a;
@@ -1197,7 +1205,8 @@ pre {
   cursor: pointer;
 }
 
-.about-sheet {
+.about-sheet,
+.account-sheet {
   position: fixed;
   inset: 0;
   z-index: 1400;
@@ -1208,11 +1217,13 @@ pre {
   text-transform: none;
 }
 
-.about-sheet.is-open {
+.about-sheet.is-open,
+.account-sheet.is-open {
   display: block;
 }
 
-.about-close {
+.about-close,
+.account-close {
   position: fixed;
   top: 14px;
   right: 16px;
@@ -1251,6 +1262,115 @@ pre {
   font-size: clamp(19px, 2.1vw, 26px);
   font-weight: 400;
   line-height: 1.38;
+}
+
+.account-content {
+  width: min(640px, calc(100vw - 40px));
+  margin: 0 auto;
+  padding: max(82px, 12vh) 0 80px;
+}
+
+.account-content h1 {
+  margin: 0 0 34px;
+  font-size: clamp(34px, 5vw, 64px);
+  font-weight: 300;
+  line-height: 1.02;
+}
+
+.account-modes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin-bottom: 28px;
+  border-bottom: 1px solid var(--line);
+}
+
+.account-modes button {
+  min-height: 46px;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  font-size: 16px;
+  font-weight: 300;
+  cursor: pointer;
+}
+
+.account-modes button.is-active {
+  margin-bottom: -1px;
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.account-form {
+  display: none;
+  grid-template-columns: 1fr;
+  gap: 18px;
+}
+
+.account-form.is-active {
+  display: grid;
+}
+
+.account-form label {
+  display: grid;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.account-form input {
+  width: 100%;
+  height: 46px;
+  border: 1px solid var(--line);
+  border-radius: 0;
+  padding: 0 12px;
+  background: #fff;
+  color: var(--ink);
+  font-size: 16px;
+  text-transform: none;
+}
+
+.account-form button,
+.account-identity button {
+  min-height: 46px;
+  border: 1px solid var(--ink);
+  border-radius: 0;
+  background: var(--ink);
+  color: #fff;
+  cursor: pointer;
+}
+
+.account-form button:disabled {
+  opacity: 0.45;
+  cursor: wait;
+}
+
+.account-status {
+  min-height: 18px;
+  margin: 16px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.account-identity {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.account-identity strong {
+  overflow-wrap: anywhere;
+  font-size: 24px;
+  font-weight: 300;
+}
+
+.account-identity button {
+  min-width: 110px;
+  padding: 0 18px;
+  background: #fff;
+  color: var(--ink);
 }
 
 .my-contributions {
@@ -1310,6 +1430,19 @@ pre {
 
 .my-contributions li strong.is-rejected {
   color: #9f1f1f;
+}
+
+.my-contributions li img {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  object-fit: cover;
+}
+
+.my-contributions li div {
+  display: grid;
+  flex: 1;
+  gap: 3px;
 }
 
 .neighborhood-cut {
@@ -2372,6 +2505,15 @@ pre {
   .about-trigger {
     font-size: 24px;
     line-height: 1.05;
+  }
+
+  .account-trigger {
+    font-size: 24px;
+    line-height: 1.05;
+  }
+
+  .topbar-actions {
+    gap: 10px;
   }
 
   .nav {

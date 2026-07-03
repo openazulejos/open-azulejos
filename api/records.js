@@ -1,5 +1,6 @@
 const crypto = require("node:crypto");
 const { authorizeAdminRequest } = require("./_admin-auth");
+const { authorizeContributorRequest } = require("./_contributor-auth");
 const { issueContributionReceipt } = require("./_contribution-receipt");
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const FINGERPRINT_PATTERN = /^[01]{64}$/;
@@ -724,7 +725,12 @@ module.exports = async function handler(req, res) {
   const [record] = await insert.json();
   let receiptToken;
   try {
-    receiptToken = await issueContributionReceipt(supabaseUrl, headers, id);
+    receiptToken = await issueContributionReceipt(
+      supabaseUrl,
+      headers,
+      id,
+      authorizeContributorRequest(req)?.userId,
+    );
   } catch (error) {
     return json(res, 502, { error: "contribution receipt failed", detail: error.message });
   }

@@ -4,6 +4,7 @@ const ALLOWED_MIME_TYPES = new Map([
   ["image/webp", "webp"],
 ]);
 const { issueContributionReceipt } = require("./_contribution-receipt");
+const { authorizeContributorRequest } = require("./_contributor-auth");
 
 const json = (response, status, payload) => {
   response.statusCode = status;
@@ -108,6 +109,7 @@ module.exports = async function handler(request, response) {
   const originalsBucket = process.env.SUPABASE_ORIGINALS_BUCKET || "azulejos-originals";
   if (!supabaseUrl || !serviceRoleKey) return json(response, 503, { error: "upload service unavailable" });
   const headers = { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}` };
+  const contributor = authorizeContributorRequest(request);
 
   let body;
   try {
@@ -191,7 +193,7 @@ module.exports = async function handler(request, response) {
     });
     if (!insert.ok) return json(response, insert.status, { error: "database insert failed", detail: await insert.text() });
     const [record] = await insert.json();
-    const receiptToken = await issueContributionReceipt(supabaseUrl, headers, id);
+    const receiptToken = await issueContributionReceipt(supabaseUrl, headers, id, contributor?.userId);
     return json(response, 200, {
       record,
       receiptToken,

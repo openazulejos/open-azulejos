@@ -10,14 +10,17 @@
     <link rel="apple-touch-icon" href="./assets/azulejo-field-photo-1-crop.png" />
     <link rel="preconnect" href="https://unpkg.com" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="./styles-admin-editor.css?v=20260703-private-receipts" />
+    <link rel="stylesheet" href="./styles-admin-editor.css?v=20260703-contributor-accounts" />
   </head>
   <body>
     <header class="topbar" aria-label="Navigation principale">
       <a class="brand" href="./" aria-label="open azulejos">open azulejos</a>
       <nav class="nav">
       </nav>
-      <button class="about-trigger" id="aboutOpenButton" type="button">about</button>
+      <div class="topbar-actions">
+        <button class="account-trigger" id="accountOpenButton" type="button">log in</button>
+        <button class="about-trigger" id="aboutOpenButton" type="button">about</button>
+      </div>
     </header>
 
     <main class="app-shell">
@@ -301,12 +304,63 @@ azulejo-002.jpg,38.71072,-9.13908,Baixa</code></pre>
         <p>
           The goal is not to produce a complete inventory at once, but to build an evolving public memory of Lisbon's ceramic landscape. Over time, the archive can support historical analysis, material conservation, pattern study, and local stewardship by making the city readable through its smallest repeatable surfaces.
         </p>
+      </article>
+    </section>
+
+    <section class="account-sheet" id="accountSheet" aria-hidden="true" aria-label="contributor account">
+      <button class="account-close" id="accountCloseButton" type="button" aria-label="close">×</button>
+      <main class="account-content">
+        <h1>account</h1>
+
+        <section class="account-guest" id="accountGuest">
+          <div class="account-modes" role="tablist" aria-label="account mode">
+            <button class="is-active" id="accountLoginMode" type="button" role="tab" aria-selected="true">log in</button>
+            <button id="accountSignupMode" type="button" role="tab" aria-selected="false">sign up</button>
+          </div>
+
+          <form class="account-form is-active" id="accountLoginForm">
+            <label>
+              email
+              <input id="accountLoginEmail" type="email" autocomplete="email" required />
+            </label>
+            <label>
+              password
+              <input id="accountLoginPassword" type="password" autocomplete="current-password" minlength="10" required />
+            </label>
+            <button type="submit">log in</button>
+          </form>
+
+          <form class="account-form" id="accountSignupForm">
+            <label>
+              pseudonym
+              <input id="accountSignupPseudonym" type="text" autocomplete="nickname" minlength="2" maxlength="32" required />
+            </label>
+            <label>
+              email
+              <input id="accountSignupEmail" type="email" autocomplete="email" required />
+            </label>
+            <label>
+              password
+              <input id="accountSignupPassword" type="password" autocomplete="new-password" minlength="10" required />
+            </label>
+            <button type="submit">create account</button>
+          </form>
+          <p class="account-status" id="accountStatus" aria-live="polite"></p>
+        </section>
+
+        <section class="account-member" id="accountMember" hidden>
+          <div class="account-identity">
+            <strong id="accountPseudonym"></strong>
+            <button id="accountLogoutButton" type="button">log out</button>
+          </div>
+        </section>
+
         <section class="my-contributions" aria-label="my contributions">
           <h2>my contributions</h2>
           <p id="myContributionsStatus">no contribution receipt on this device</p>
           <ol id="myContributionsList"></ol>
         </section>
-      </article>
+      </main>
     </section>
 
     <template id="tilePopupTemplate">
@@ -319,6 +373,6 @@ azulejo-002.jpg,38.71072,-9.13908,Baixa</code></pre>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="./offline-queue.js?v=20260702-contribution-rights"></script>
-    <script src="./app-source-capture.js?v=20260703-private-receipts"></script>
+    <script src="./app-source-capture.js?v=20260703-contributor-accounts"></script>
   </body>
 </html>

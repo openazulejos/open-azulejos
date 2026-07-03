@@ -161,6 +161,23 @@ const azulejoViewerClose = document.querySelector("#azulejoViewerClose");
 const aboutOpenButton = document.querySelector("#aboutOpenButton");
 const aboutSheet = document.querySelector("#aboutSheet");
 const aboutCloseButton = document.querySelector("#aboutCloseButton");
+const accountOpenButton = document.querySelector("#accountOpenButton");
+const accountSheet = document.querySelector("#accountSheet");
+const accountCloseButton = document.querySelector("#accountCloseButton");
+const accountGuest = document.querySelector("#accountGuest");
+const accountMember = document.querySelector("#accountMember");
+const accountLoginMode = document.querySelector("#accountLoginMode");
+const accountSignupMode = document.querySelector("#accountSignupMode");
+const accountLoginForm = document.querySelector("#accountLoginForm");
+const accountSignupForm = document.querySelector("#accountSignupForm");
+const accountLoginEmail = document.querySelector("#accountLoginEmail");
+const accountLoginPassword = document.querySelector("#accountLoginPassword");
+const accountSignupPseudonym = document.querySelector("#accountSignupPseudonym");
+const accountSignupEmail = document.querySelector("#accountSignupEmail");
+const accountSignupPassword = document.querySelector("#accountSignupPassword");
+const accountStatus = document.querySelector("#accountStatus");
+const accountPseudonym = document.querySelector("#accountPseudonym");
+const accountLogoutButton = document.querySelector("#accountLogoutButton");
 const myContributionsStatus = document.querySelector("#myContributionsStatus");
 const myContributionsList = document.querySelector("#myContributionsList");
 const recordHistoryButton = document.querySelector("#recordHistoryButton");
@@ -236,6 +253,7 @@ let userLocationWatchId = null;
 let latestUserLocation = null;
 let userLocationSearchTimer = null;
 const CONTRIBUTION_RECEIPTS_KEY = "open-azulejos-contribution-receipts";
+let contributorAccount = null;
 let serverTilesById = new Map();
 let serverTileCacheById = new Map();
 let serverViewportCount = 0;
@@ -940,14 +958,35 @@ function stepAzulejoViewer(direction) {
 function openAboutSheet() {
   aboutSheet?.classList.add("is-open");
   aboutSheet?.setAttribute("aria-hidden", "false");
-  refreshContributionReceipts().catch(() => {
-    if (myContributionsStatus) myContributionsStatus.textContent = "status temporarily unavailable";
-  });
 }
 
 function closeAboutSheet() {
   aboutSheet?.classList.remove("is-open");
   aboutSheet?.setAttribute("aria-hidden", "true");
+}
+
+function setAccountMode(mode) {
+  const login = mode !== "sign-up";
+  accountLoginMode?.classList.toggle("is-active", login);
+  accountLoginMode?.setAttribute("aria-selected", String(login));
+  accountSignupMode?.classList.toggle("is-active", !login);
+  accountSignupMode?.setAttribute("aria-selected", String(!login));
+  accountLoginForm?.classList.toggle("is-active", login);
+  accountSignupForm?.classList.toggle("is-active", !login);
+  if (accountStatus) accountStatus.textContent = "";
+}
+
+function openAccountSheet() {
+  accountSheet?.classList.add("is-open");
+  accountSheet?.setAttribute("aria-hidden", "false");
+  refreshContributorAccount().catch(() => {
+    if (accountStatus) accountStatus.textContent = "account temporarily unavailable";
+  });
+}
+
+function closeAccountSheet() {
+  accountSheet?.classList.remove("is-open");
+  accountSheet?.setAttribute("aria-hidden", "true");
 }
 
 function boundsArrayForTiles(tiles) {
@@ -2106,6 +2145,35 @@ function contributionStatusLabel(record) {
   return "pending review";
 }
 
+function renderContributionRecords(records, statusCopy) {
+  if (!myContributionsList || !myContributionsStatus) return;
+  myContributionsList.textContent = "";
+  records.forEach((record) => {
+    const item = document.createElement("li");
+    if (record.imageUrl) {
+      const image = document.createElement("img");
+      image.src = record.imageUrl;
+      image.alt = "";
+      image.loading = "lazy";
+      item.append(image);
+    }
+    const details = document.createElement("div");
+    const date = new Date(record.submittedAt);
+    const dateLabel = Number.isFinite(date.getTime())
+      ? new Intl.DateTimeFormat("en-GB", { dateStyle: "medium" }).format(date)
+      : "date unavailable";
+    const identifier = document.createElement("span");
+    identifier.textContent = `${dateLabel} · ${String(record.id || "").slice(0, 8)}`;
+    const status = document.createElement("strong");
+    status.className = `is-${record.status || "unavailable"}`;
+    status.textContent = record.status ? contributionStatusLabel(record) : "receipt unavailable";
+    details.append(identifier, status);
+    item.append(details);
+    myContributionsList.append(item);
+  });
+  myContributionsStatus.textContent = statusCopy;
+}
+
 async function refreshContributionReceipts() {
   if (!myContributionsList || !myContributionsStatus) return;
   const receipts = readContributionReceipts();
@@ -2123,22 +2191,106 @@ async function refreshContributionReceipts() {
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data.error || `status ${response.status}`);
   const records = new Map((data.records || []).map((record) => [record.id, record]));
-  receipts.forEach((receipt) => {
-    const item = document.createElement("li");
-    const record = records.get(receipt.id);
-    const date = new Date(record?.submittedAt || receipt.submittedAt);
-    const dateLabel = Number.isFinite(date.getTime())
-      ? new Intl.DateTimeFormat("en-GB", { dateStyle: "medium" }).format(date)
-      : "date unavailable";
-    const identifier = document.createElement("span");
-    identifier.textContent = `${dateLabel} · ${receipt.id.slice(0, 8)}`;
-    const status = document.createElement("strong");
-    status.className = `is-${record?.status || "unavailable"}`;
-    status.textContent = record ? contributionStatusLabel(record) : "receipt unavailable";
-    item.append(identifier, status);
-    myContributionsList.append(item);
-  });
-  myContributionsStatus.textContent = `${receipts.length} contribution${receipts.length > 1 ? "s" : ""} recorded on this device`;
+  renderContributionRecords(receipts.map((receipt) => ({
+    ...(records.get(receipt.id) || {}),
+    id: receipt.id,
+    submittedAt: records.get(receipt.id)?.submittedAt || receipt.submittedAt,
+  })), `${receipts.length} contribution${receipts.length > 1 ? "s" : ""} recorded on this device`);
+}
+
+function receiptRequestPayload() {
+  return readContributionReceipts().map(({ id, token }) => ({ id, token }));
+}
+
+function applyContributorAccount(data) {
+  contributorAccount = data?.authenticated ? data : null;
+  const authenticated = Boolean(contributorAccount);
+  if (accountGuest) accountGuest.hidden = authenticated;
+  if (accountMember) accountMember.hidden = !authenticated;
+  if (accountOpenButton) accountOpenButton.textContent = authenticated ? "account" : "log in";
+  if (accountPseudonym) accountPseudonym.textContent = contributorAccount?.profile?.pseudonym || "";
+  if (authenticated) {
+    const records = contributorAccount.records || [];
+    renderContributionRecords(records, `${records.length} contribution${records.length === 1 ? "" : "s"} linked to this account`);
+  }
+}
+
+async function refreshContributorAccount() {
+  const response = await fetch("/api/contributor-account", { headers: { Accept: "application/json" } });
+  if (response.status === 401) {
+    applyContributorAccount(null);
+    await refreshContributionReceipts();
+    return null;
+  }
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || `account ${response.status}`);
+  let current = data;
+  const receipts = receiptRequestPayload();
+  if (receipts.length) {
+    const claim = await fetch("/api/contributor-account", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "claim", receipts }),
+    });
+    if (claim.ok) current = await claim.json();
+  }
+  applyContributorAccount(current);
+  return current;
+}
+
+async function submitContributorAccount(event, action) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const button = form.querySelector("button[type='submit']");
+  if (button) button.disabled = true;
+  if (accountStatus) accountStatus.textContent = action === "sign-up" ? "creating account..." : "logging in...";
+  const payload = action === "sign-up"
+    ? {
+      action,
+      pseudonym: accountSignupPseudonym?.value,
+      email: accountSignupEmail?.value,
+      password: accountSignupPassword?.value,
+      receipts: receiptRequestPayload(),
+    }
+    : {
+      action,
+      email: accountLoginEmail?.value,
+      password: accountLoginPassword?.value,
+      receipts: receiptRequestPayload(),
+    };
+  try {
+    const response = await fetch("/api/contributor-account", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok && response.status !== 202) throw new Error(data.error || `account ${response.status}`);
+    if (data.confirmationRequired) {
+      setAccountMode("log-in");
+      if (accountLoginEmail) accountLoginEmail.value = payload.email || "";
+      if (accountStatus) accountStatus.textContent = "check your email to confirm the account, then log in here";
+      return;
+    }
+    applyContributorAccount(data);
+    if (accountStatus) accountStatus.textContent = "";
+  } catch (error) {
+    if (accountStatus) accountStatus.textContent = error.message || "account request failed";
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
+async function logoutContributorAccount() {
+  if (accountLogoutButton) accountLogoutButton.disabled = true;
+  try {
+    await fetch("/api/contributor-account", { method: "DELETE" });
+    applyContributorAccount(null);
+    setAccountMode("log-in");
+    await refreshContributionReceipts();
+  } finally {
+    if (accountLogoutButton) accountLogoutButton.disabled = false;
+  }
 }
 
 function isQueueableUploadFailure(error) {
@@ -3500,6 +3652,13 @@ fitMosaicButton.addEventListener("click", () => fitTilesOnMap());
 copyActiveCellButton.addEventListener("click", copyActiveCell);
 aboutOpenButton?.addEventListener("click", openAboutSheet);
 aboutCloseButton?.addEventListener("click", closeAboutSheet);
+accountOpenButton?.addEventListener("click", openAccountSheet);
+accountCloseButton?.addEventListener("click", closeAccountSheet);
+accountLoginMode?.addEventListener("click", () => setAccountMode("log-in"));
+accountSignupMode?.addEventListener("click", () => setAccountMode("sign-up"));
+accountLoginForm?.addEventListener("submit", (event) => submitContributorAccount(event, "sign-in"));
+accountSignupForm?.addEventListener("submit", (event) => submitContributorAccount(event, "sign-up"));
+accountLogoutButton?.addEventListener("click", logoutContributorAccount);
 mapLocationButton?.addEventListener("click", locateUserOnMap);
 azulejoViewerClose?.addEventListener("click", closeAzulejoViewer);
 azulejoViewerImage?.addEventListener("load", () => {
@@ -3518,6 +3677,7 @@ document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
     closeAzulejoViewer();
     closeAboutSheet();
+    closeAccountSheet();
     closeLocationPermissionSheet();
     return;
   }
@@ -3589,6 +3749,9 @@ window.addEventListener?.("online", () => {
   flushOfflineContributions().catch((error) => console.error("Offline contribution sync failed:", error));
 });
 flushOfflineContributions().catch((error) => console.error("Offline contribution sync failed:", error));
+if (typeof fetch === "function") {
+  refreshContributorAccount().catch(() => applyContributorAccount(null));
+}
 if ("serviceWorker" in navigator) {
   window.addEventListener?.("load", () => {
     navigator.serviceWorker.register("/service-worker.js").catch((error) => {

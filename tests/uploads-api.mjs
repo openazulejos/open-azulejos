@@ -3,22 +3,25 @@ import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
 const handler = require("../api/uploads.js");
+const contributorAuth = require("../api/_contributor-auth.js");
 const originalFetch = global.fetch;
 const originalEnv = {
   SUPABASE_URL: process.env.SUPABASE_URL,
   SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+  ADMIN_SESSION_SECRET: process.env.ADMIN_SESSION_SECRET,
 };
 process.env.SUPABASE_URL = "https://example.supabase.co";
 process.env.SUPABASE_SERVICE_ROLE_KEY = "service-test";
+process.env.ADMIN_SESSION_SECRET = "test-session-secret-with-enough-entropy";
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
 
-async function invoke(body) {
+async function invoke(body, cookie = "") {
   const request = Readable.from([JSON.stringify(body)]);
   request.method = "POST";
-  request.headers = {};
+  request.headers = cookie ? { cookie } : {};
   let responseBody = "";
   const response = {
     statusCode: 200,
@@ -68,6 +71,7 @@ const missingRights = await invoke({
 assert(missingRights.status === 400, "finalization must reject a contribution without explicit photo rights");
 
 let insertedRecord = null;
+let contributionPatch = null;
 global.fetch = async (url, options = {}) => {
   const requestUrl = String(url);
   if (requestUrl.includes("/storage/v1/object/info/")) {
@@ -78,10 +82,17 @@ global.fetch = async (url, options = {}) => {
     return { ok: true, json: async () => [insertedRecord], text: async () => "" };
   }
   if (requestUrl.includes("/rest/v1/contributions?") && options.method === "PATCH") {
+    contributionPatch = JSON.parse(options.body);
     return { ok: true, json: async () => [{ id: "contribution-test" }], text: async () => "" };
   }
   throw new Error(`unexpected request ${requestUrl}`);
 };
+const contributorId = "22222222-2222-4222-8222-222222222222";
+const contributorSession = contributorAuth.createContributorSession({
+  userId: contributorId,
+  email: "contributor@example.org",
+  pseudonym: "contributor",
+});
 const finalized = await invoke({
   action: "finalize",
   uploadId,
@@ -97,7 +108,7 @@ const finalized = await invoke({
   photoLicense: "CC-BY-4.0",
   contributorConsent: true,
   contributorConsentAt: "2026-07-02T10:00:00Z",
-});
+}, `open_azulejos_contributor=${contributorSession}`);
 assert(finalized.status === 200, "finalization should succeed after object verification");
 assert(insertedRecord.moderation_status === "pending", "new contribution must be pending");
 assert(insertedRecord.original_image_bucket === "azulejos-originals", "database must retain private source bucket");
@@ -105,6 +116,7 @@ assert(insertedRecord.original_image_url === null, "private source URL must not 
 assert(insertedRecord.photographer_credit === "Test contributor", "finalization should retain photographer attribution");
 assert(insertedRecord.photo_license === "CC-BY-4.0", "finalization should retain explicit photo rights");
 assert(/^[A-Za-z0-9_-]{43}$/.test(finalized.body.receiptToken), "finalization should issue a private contribution receipt");
+assert(contributionPatch.contributor_id === contributorId, "signed-in uploads should attach to the contributor account");
 
 global.fetch = originalFetch;
 for (const [key, value] of Object.entries(originalEnv)) {
