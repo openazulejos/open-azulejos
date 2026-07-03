@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>open azulejos admin</title>
-    <link rel="stylesheet" href="./styles-admin-editor.css?v=20260703-persist-similarity" />
+    <link rel="stylesheet" href="./styles-admin-editor.css?v=20260703-review-evidence" />
   </head>
   <body class="admin-page">
     <header class="admin-header">
@@ -91,6 +91,16 @@
           <label>saturation <output>0</output><input name="saturation" type="range" min="-100" max="100" value="0" /></label>
           <label>warmth <output>0</output><input name="warmth" type="range" min="-100" max="100" value="0" /></label>
           <label>tint <output>0</output><input name="tint" type="range" min="-100" max="100" value="0" /></label>
+          <fieldset class="admin-condition-codes" id="adminConditionCodes">
+            <legend>observed condition</legend>
+            <label><input type="checkbox" value="intact" /> intact</label>
+            <label><input type="checkbox" value="crazed" /> crazed</label>
+            <label><input type="checkbox" value="chipped" /> chipped</label>
+            <label><input type="checkbox" value="missing" /> missing</label>
+            <label><input type="checkbox" value="painted-covered" /> painted / covered</label>
+            <label><input type="checkbox" value="repaired" /> repaired</label>
+            <label><input type="checkbox" value="unknown" /> unknown</label>
+          </fieldset>
           <button id="adminResetAdjustments" type="button">reset image</button>
         </div>
       </div>
@@ -112,6 +122,32 @@
         <button id="adminEditorSave" type="button">save treatment</button>
       </footer>
     </section>
+    <section class="admin-moderation-dialog" id="adminModerationDialog" aria-hidden="true" aria-label="reject contribution">
+      <form id="adminModerationForm">
+        <strong>reject contribution</strong>
+        <label>
+          reason
+          <select id="adminModerationReason" required>
+            <option value="">choose a reason</option>
+            <option value="image is too blurred or poorly framed">image quality</option>
+            <option value="location metadata is inaccurate">location issue</option>
+            <option value="this is not an azulejo observation">not an azulejo</option>
+            <option value="this observation duplicates an existing submission">duplicate submission</option>
+            <option value="photograph or licensing information is invalid">rights issue</option>
+            <option value="other">other</option>
+          </select>
+        </label>
+        <label>
+          details
+          <textarea id="adminModerationDetails" maxlength="160" rows="3" placeholder="optional concise explanation"></textarea>
+        </label>
+        <p id="adminModerationStatus" role="status"></p>
+        <div>
+          <button id="adminModerationCancel" type="button">cancel</button>
+          <button type="submit">reject</button>
+        </div>
+      </form>
+    </section>
     <section class="admin-nearby-viewer" id="adminNearbyViewer" aria-hidden="true" aria-label="nearby submission comparison">
       <button id="adminNearbyViewerClose" type="button" aria-label="close">×</button>
       <img id="adminNearbyViewerImage" alt="nearby azulejo" />
@@ -130,6 +166,6 @@
     </section>
     <script src="./admin-image.js?v=20260630-expand-border"></script>
     <script src="./admin-similarity.js?v=20260703-persist-similarity"></script>
-    <script src="./admin.js?v=20260703-temporal-observations"></script>
+    <script src="./admin.js?v=20260703-review-evidence"></script>
   </body>
 </html>

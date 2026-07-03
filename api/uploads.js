@@ -3,6 +3,7 @@ const ALLOWED_MIME_TYPES = new Map([
   ["image/png", "png"],
   ["image/webp", "webp"],
 ]);
+const { issueContributionReceipt } = require("./_contribution-receipt");
 
 const json = (response, status, payload) => {
   response.statusCode = status;
@@ -190,8 +191,10 @@ module.exports = async function handler(request, response) {
     });
     if (!insert.ok) return json(response, insert.status, { error: "database insert failed", detail: await insert.text() });
     const [record] = await insert.json();
+    const receiptToken = await issueContributionReceipt(supabaseUrl, headers, id);
     return json(response, 200, {
       record,
+      receiptToken,
       imageUrl: publicUrl,
       assets: {
         square: { bytes: Number(squareInfo?.metadata?.size || squareInfo?.size) || null },

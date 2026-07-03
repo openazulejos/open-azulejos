@@ -1,8 +1,10 @@
 const crypto = require("node:crypto");
 const { authorizeAdminRequest } = require("./_admin-auth");
+const { issueContributionReceipt } = require("./_contribution-receipt");
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const FINGERPRINT_PATTERN = /^[01]{64}$/;
 const REVIEWED_RELATIONS = new Set(["duplicate", "same-pattern", "variation", "possibly-related"]);
+const CONDITION_CODES = new Set(["intact", "crazed", "chipped", "missing", "painted-covered", "repaired", "unknown"]);
 
 const json = (res, status, payload) => {
   res.statusCode = status;
@@ -466,11 +468,20 @@ module.exports = async function handler(req, res) {
       return json(res, 400, { error: "valid id is required" });
     }
     const status = String(body.moderation_status || body.status || "").trim();
+    const moderationReason = String(body.moderation_reason || "").trim();
+    const conditionRequested = Array.isArray(body.condition_codes);
+    const conditionCodes = conditionRequested ? [...new Set(body.condition_codes.map(String))] : null;
     const editedImage = decodeDataUrl(body.imageData);
     if (status && !["pending", "approved", "rejected"].includes(status)) {
       return json(res, 400, { error: "invalid moderation_status" });
     }
-    if (!status && !editedImage) return json(res, 400, { error: "moderation_status or imageData is required" });
+    if (status === "rejected" && (!moderationReason || moderationReason.length > 240)) {
+      return json(res, 400, { error: "a concise rejection reason is required" });
+    }
+    if (conditionRequested && conditionCodes.some((code) => !CONDITION_CODES.has(code))) {
+      return json(res, 400, { error: "invalid condition code" });
+    }
+    if (!status && !editedImage && !conditionRequested) return json(res, 400, { error: "moderation_status, imageData or condition_codes is required" });
     if (editedImage && editedImage.buffer.length > 3_000_000) {
       return json(res, 413, { error: "edited image is too large" });
     }
@@ -489,9 +500,11 @@ module.exports = async function handler(req, res) {
     const updatePayload = {};
     if (status) {
       updatePayload.moderation_status = status;
+      updatePayload.moderation_reason = status === "rejected" ? moderationReason : null;
       updatePayload.last_admin_actor_id = adminAuthorization.userId;
       updatePayload.last_admin_actor_label = adminAuthorization.actor;
     }
+    if (conditionRequested) updatePayload.condition_codes = conditionCodes;
     if (editedImage) {
       const editedPath = `captures/${id}-edited.${editedImage.ext}`;
       const upload = await fetch(`${supabaseUrl}/storage/v1/object/${bucket}/${editedPath}`, {
@@ -709,5 +722,11 @@ module.exports = async function handler(req, res) {
   }
 
   const [record] = await insert.json();
-  return json(res, 200, { record, imageUrl: publicUrl });
+  let receiptToken;
+  try {
+    receiptToken = await issueContributionReceipt(supabaseUrl, headers, id);
+  } catch (error) {
+    return json(res, 502, { error: "contribution receipt failed", detail: error.message });
+  }
+  return json(res, 200, { record, receiptToken, imageUrl: publicUrl });
 };

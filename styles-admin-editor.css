@@ -1253,6 +1253,65 @@ pre {
   line-height: 1.38;
 }
 
+.my-contributions {
+  margin-top: 64px;
+  padding-top: 28px;
+  border-top: 1px solid var(--line);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.my-contributions h2 {
+  margin: 0 0 10px;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 20px;
+  font-weight: 300;
+  text-transform: lowercase;
+}
+
+.my-contributions > p {
+  margin: 0 0 18px;
+  color: var(--muted);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.my-contributions ol {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.my-contributions li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+  font-size: 11px;
+}
+
+.my-contributions li span {
+  color: var(--muted);
+}
+
+.my-contributions li strong {
+  max-width: 60%;
+  font-weight: 400;
+  text-align: right;
+}
+
+.my-contributions li strong.is-approved {
+  color: #27703d;
+}
+
+.my-contributions li strong.is-rejected {
+  color: #9f1f1f;
+}
+
 .neighborhood-cut {
   vector-effect: non-scaling-stroke;
 }
@@ -1755,6 +1814,108 @@ pre {
   width: 100%;
 }
 
+.admin-condition-codes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px 10px;
+  margin: 0;
+  padding: 12px 0 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+}
+
+.admin-condition-codes legend {
+  padding: 0 0 8px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.admin-condition-codes label {
+  display: flex;
+  grid-template-columns: none;
+  align-items: center;
+  gap: 6px;
+}
+
+.admin-condition-codes input {
+  grid-column: auto;
+  width: auto;
+}
+
+.admin-moderation-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 1800;
+  display: none;
+  place-items: center;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.94);
+}
+
+.admin-moderation-dialog.is-open {
+  display: grid;
+}
+
+.admin-moderation-dialog form {
+  display: grid;
+  gap: 16px;
+  width: min(100%, 420px);
+  padding: 20px;
+  border: 1px solid var(--ink);
+  background: #fff;
+}
+
+.admin-moderation-dialog strong {
+  font-size: 18px;
+  font-weight: 300;
+}
+
+.admin-moderation-dialog label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.admin-moderation-dialog select,
+.admin-moderation-dialog textarea {
+  width: 100%;
+  padding: 9px;
+  border: 1px solid var(--line);
+  border-radius: 0;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  resize: vertical;
+}
+
+.admin-moderation-dialog p {
+  min-height: 14px;
+  margin: 0;
+  color: #9f1f1f;
+  font-size: 11px;
+}
+
+.admin-moderation-dialog form > div {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.admin-moderation-dialog button {
+  min-height: 42px;
+  border: 1px solid var(--ink);
+  border-radius: 0;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+}
+
+.admin-moderation-dialog button[type="submit"] {
+  background: var(--ink);
+  color: #fff;
+}
+
 .admin-card-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -2086,6 +2247,14 @@ pre {
 
   .admin-editor-adjustments input {
     min-height: 28px;
+  }
+
+  .admin-condition-codes {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .admin-condition-codes input {
+    min-height: auto;
   }
 
   .admin-editor-footer {

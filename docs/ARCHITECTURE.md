@@ -24,6 +24,9 @@ PostGIS, Storage, and named administrator identities.
 10. A reviewed same-tile decision moves only the newer observation to the
     canonical physical instance. Its contribution, media, location, credit, and
     timestamps remain independent and available through observation history.
+11. Finalization issues a random contribution receipt. Only its SHA-256 hash is
+    stored; the browser keeps the token locally and exchanges it through a POST
+    request to read that contribution's status and moderation reason.
 
 The legacy `azulejos` table remains the write contract during migration. The v2
 tables distinguish site, physical instance, observation, contribution, media,
@@ -42,4 +45,6 @@ have migrated.
 - Named moderation actions retain the administrator UUID in the audit event.
 - Duplicate decisions preserve both physical instances and both contributions.
 - Compatibility updates never undo a reviewed observation attachment.
-- Public APIs never return private paths or moderation records.
+- Unauthenticated public APIs never return private paths or moderation records.
+- A contribution receipt grants access only to its matching status record and
+  is never transported in a URL.

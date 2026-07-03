@@ -35,6 +35,7 @@ const adminRecoverBorder = document.querySelector("#adminRecoverBorder");
 const adminResetCrop = document.querySelector("#adminResetCrop");
 const adminResetAdjustments = document.querySelector("#adminResetAdjustments");
 const adminAdjustments = document.querySelector("#adminAdjustments");
+const adminConditionCodes = document.querySelector("#adminConditionCodes");
 const adminNearbyStatus = document.querySelector("#adminNearbyStatus");
 const adminNearbyRadius = document.querySelector("#adminNearbyRadius");
 const adminNearbyRadiusValue = document.querySelector("#adminNearbyRadiusValue");
@@ -47,6 +48,12 @@ const adminNearbyViewerMeta = document.querySelector("#adminNearbyViewerMeta");
 const adminNearbyViewerMap = document.querySelector("#adminNearbyViewerMap");
 const adminNearbyViewerRelation = document.querySelector("#adminNearbyViewerRelation");
 const adminNearbyViewerDuplicate = document.querySelector("#adminNearbyViewerDuplicate");
+const adminModerationDialog = document.querySelector("#adminModerationDialog");
+const adminModerationForm = document.querySelector("#adminModerationForm");
+const adminModerationReason = document.querySelector("#adminModerationReason");
+const adminModerationDetails = document.querySelector("#adminModerationDetails");
+const adminModerationStatus = document.querySelector("#adminModerationStatus");
+const adminModerationCancel = document.querySelector("#adminModerationCancel");
 
 const ADMIN_INITIAL_BATCH_SIZE = 18;
 const ADMIN_BATCH_SIZE = 24;
@@ -70,6 +77,7 @@ const editorState = {
   nearbyController: null,
   nearbyTimer: null,
   nearbyRecord: null,
+  moderationTarget: null,
 };
 
 function setAdminStatus(message) {
@@ -244,7 +252,7 @@ function appendRecordCard(record, index) {
     rejectButton.type = "button";
     rejectButton.className = "admin-reject";
     rejectButton.textContent = "reject";
-    rejectButton.addEventListener("click", () => moderateRecord(record, card, "rejected"));
+    rejectButton.addEventListener("click", () => openModerationDialog(record, card));
 
     const deleteButton = document.createElement("button");
     deleteButton.type = "button";
@@ -337,7 +345,22 @@ async function deleteRecord(record, card) {
   if (editorState.record?.id === record.id) closeEditor();
 }
 
-async function moderateRecord(record, card, moderationStatus) {
+function openModerationDialog(record, card) {
+  editorState.moderationTarget = { record, card };
+  adminModerationReason.value = "";
+  adminModerationDetails.value = "";
+  adminModerationStatus.textContent = "";
+  adminModerationDialog.classList.add("is-open");
+  adminModerationDialog.setAttribute("aria-hidden", "false");
+}
+
+function closeModerationDialog() {
+  editorState.moderationTarget = null;
+  adminModerationDialog.classList.remove("is-open");
+  adminModerationDialog.setAttribute("aria-hidden", "true");
+}
+
+async function moderateRecord(record, card, moderationStatus, moderationReason = "") {
   const button = card.querySelector(moderationStatus === "approved" ? ".admin-approve" : ".admin-reject");
   button.disabled = true;
   button.textContent = moderationStatus === "approved" ? "approving..." : "rejecting...";
@@ -345,7 +368,7 @@ async function moderateRecord(record, card, moderationStatus) {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     credentials: "same-origin",
-    body: JSON.stringify({ id: record.id, moderation_status: moderationStatus }),
+    body: JSON.stringify({ id: record.id, moderation_status: moderationStatus, moderation_reason: moderationReason || null }),
   });
   const data = await response.json().catch(() => ({}));
   button.disabled = false;
@@ -358,6 +381,29 @@ async function moderateRecord(record, card, moderationStatus) {
   renderRecords(adminRecords, `${moderationStatus} ${record.id}`);
   if (editorState.record?.id === record.id) updateEditorNavigation();
 }
+
+adminModerationForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const target = editorState.moderationTarget;
+  if (!target) return;
+  const category = adminModerationReason.value;
+  const details = adminModerationDetails.value.trim();
+  if (!category) {
+    adminModerationStatus.textContent = "choose a reason";
+    return;
+  }
+  const reason = category === "other" ? details : [category, details].filter(Boolean).join(": ");
+  if (!reason) {
+    adminModerationStatus.textContent = "add a concise explanation";
+    return;
+  }
+  adminModerationForm.querySelector('button[type="submit"]').disabled = true;
+  await moderateRecord(target.record, target.card, "rejected", reason);
+  adminModerationForm.querySelector('button[type="submit"]').disabled = false;
+  if (recordStatus(target.record) === "rejected") closeModerationDialog();
+});
+
+adminModerationCancel.addEventListener("click", closeModerationDialog);
 
 function loadEditorImage(url) {
   return new Promise((resolve, reject) => {
@@ -460,6 +506,17 @@ function syncAdjustmentControls() {
     input.value = String(editorState.settings[input.name] || 0);
     input.closest("label").querySelector("output").value = input.value;
   });
+}
+
+function syncConditionControls() {
+  const selected = new Set(editorState.record?.condition_codes || []);
+  adminConditionCodes.querySelectorAll('input[type="checkbox"]').forEach((input) => {
+    input.checked = selected.has(input.value);
+  });
+}
+
+function selectedConditionCodes() {
+  return [...adminConditionCodes.querySelectorAll('input[type="checkbox"]:checked')].map((input) => input.value);
 }
 
 function setWhitePointMode(enabled) {
@@ -606,6 +663,7 @@ async function openEditor(record, card) {
   adminNearbyRadius.value = String(nearbyRadius);
   adminNearbyRadiusValue.value = `${nearbyRadius} m`;
   adminNearbyList.textContent = "";
+  syncConditionControls();
   loadNearbyRecords();
   try {
     const sourceUrl = record.original_image_url || record.image_url;
@@ -758,6 +816,20 @@ adminAdjustments.querySelectorAll('input[type="range"]').forEach((input) => {
   });
 });
 
+adminConditionCodes.querySelectorAll('input[type="checkbox"]').forEach((input) => {
+  input.addEventListener("change", () => {
+    if (input.value === "unknown" && input.checked) {
+      adminConditionCodes.querySelectorAll('input[type="checkbox"]').forEach((candidate) => {
+        if (candidate !== input) candidate.checked = false;
+      });
+    } else if (input.checked) {
+      const unknown = adminConditionCodes.querySelector('input[value="unknown"]');
+      if (unknown) unknown.checked = false;
+    }
+    markEditorDirty();
+  });
+});
+
 adminRecoverBorder.addEventListener("click", () => {
   if (!editorState.record?.original_image_url) {
     adminEditorStatus.textContent = "no source margin available";
@@ -855,6 +927,7 @@ adminEditorSave.addEventListener("click", async () => {
         id: editorState.record.id,
         imageData,
         image_fingerprint: imageFingerprint,
+        condition_codes: selectedConditionCodes(),
         crop_points: editorState.record.original_image_url ? editorState.points : null,
         edit_settings: editorState.record.original_image_url ? editorState.settings : imageTools.normalizeSettings(),
       }),
@@ -878,7 +951,8 @@ adminEditorClose.addEventListener("click", closeEditor);
 document.addEventListener("keydown", (event) => {
   if (!adminEditor.classList.contains("is-open")) return;
   if (event.key === "Escape") {
-    if (adminNearbyViewer.classList.contains("is-open")) closeNearbyViewer();
+    if (adminModerationDialog.classList.contains("is-open")) closeModerationDialog();
+    else if (adminNearbyViewer.classList.contains("is-open")) closeNearbyViewer();
     else closeEditor();
     return;
   }

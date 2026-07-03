@@ -161,6 +161,8 @@ const azulejoViewerClose = document.querySelector("#azulejoViewerClose");
 const aboutOpenButton = document.querySelector("#aboutOpenButton");
 const aboutSheet = document.querySelector("#aboutSheet");
 const aboutCloseButton = document.querySelector("#aboutCloseButton");
+const myContributionsStatus = document.querySelector("#myContributionsStatus");
+const myContributionsList = document.querySelector("#myContributionsList");
 const recordHistoryButton = document.querySelector("#recordHistoryButton");
 const recordCameraInput = document.querySelector("#recordCameraInput");
 const squareCamera = document.querySelector("#squareCamera");
@@ -233,6 +235,7 @@ let userLocationMarker = null;
 let userLocationWatchId = null;
 let latestUserLocation = null;
 let userLocationSearchTimer = null;
+const CONTRIBUTION_RECEIPTS_KEY = "open-azulejos-contribution-receipts";
 let serverTilesById = new Map();
 let serverTileCacheById = new Map();
 let serverViewportCount = 0;
@@ -937,6 +940,9 @@ function stepAzulejoViewer(direction) {
 function openAboutSheet() {
   aboutSheet?.classList.add("is-open");
   aboutSheet?.setAttribute("aria-hidden", "false");
+  refreshContributionReceipts().catch(() => {
+    if (myContributionsStatus) myContributionsStatus.textContent = "status temporarily unavailable";
+  });
 }
 
 function closeAboutSheet() {
@@ -2070,6 +2076,71 @@ async function saveRecordedAzulejo(payload) {
   throw lastError || new Error("upload failed");
 }
 
+function readContributionReceipts() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(CONTRIBUTION_RECEIPTS_KEY) || "[]");
+    return Array.isArray(stored)
+      ? stored.filter((item) => item && item.id && item.token).slice(0, 50)
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function rememberContributionReceipt(result) {
+  const id = result?.record?.id;
+  const token = result?.receiptToken;
+  if (!id || !token) return;
+  try {
+    const receipts = readContributionReceipts().filter((item) => item.id !== id);
+    receipts.unshift({ id, token, submittedAt: new Date().toISOString() });
+    localStorage.setItem(CONTRIBUTION_RECEIPTS_KEY, JSON.stringify(receipts.slice(0, 50)));
+  } catch {
+    // A successful contribution does not depend on local receipt storage.
+  }
+}
+
+function contributionStatusLabel(record) {
+  if (record.status === "approved") return "accepted";
+  if (record.status === "rejected") return record.reason ? `rejected · ${record.reason}` : "rejected";
+  return "pending review";
+}
+
+async function refreshContributionReceipts() {
+  if (!myContributionsList || !myContributionsStatus) return;
+  const receipts = readContributionReceipts();
+  myContributionsList.textContent = "";
+  if (!receipts.length) {
+    myContributionsStatus.textContent = "no contribution receipt on this device";
+    return;
+  }
+  myContributionsStatus.textContent = "checking status...";
+  const response = await fetch("/api/contributions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ receipts: receipts.map(({ id, token }) => ({ id, token })) }),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || `status ${response.status}`);
+  const records = new Map((data.records || []).map((record) => [record.id, record]));
+  receipts.forEach((receipt) => {
+    const item = document.createElement("li");
+    const record = records.get(receipt.id);
+    const date = new Date(record?.submittedAt || receipt.submittedAt);
+    const dateLabel = Number.isFinite(date.getTime())
+      ? new Intl.DateTimeFormat("en-GB", { dateStyle: "medium" }).format(date)
+      : "date unavailable";
+    const identifier = document.createElement("span");
+    identifier.textContent = `${dateLabel} · ${receipt.id.slice(0, 8)}`;
+    const status = document.createElement("strong");
+    status.className = `is-${record?.status || "unavailable"}`;
+    status.textContent = record ? contributionStatusLabel(record) : "receipt unavailable";
+    item.append(identifier, status);
+    myContributionsList.append(item);
+  });
+  myContributionsStatus.textContent = `${receipts.length} contribution${receipts.length > 1 ? "s" : ""} recorded on this device`;
+}
+
 function isQueueableUploadFailure(error) {
   if (navigator.onLine === false) return true;
   const message = String(error?.message || "");
@@ -2103,7 +2174,8 @@ async function flushOfflineContributions() {
     let sent = 0;
     for (const entry of entries) {
       try {
-        await saveRecordedAzulejo(entry.payload);
+        const stored = await saveRecordedAzulejo(entry.payload);
+        rememberContributionReceipt(stored);
         await queue.remove(entry.id);
         sent += 1;
       } catch (error) {
@@ -2505,6 +2577,7 @@ async function placeRecordedAzulejo(squareImage, gps = null, uploadId = null, or
       stored = await queueRecordedAzulejo(payload);
     }
   }
+  rememberContributionReceipt(stored);
   addAzulejoTile({
     id: stored.record.id,
     title: "recorded azulejo",
@@ -2775,8 +2848,8 @@ async function sendPendingCapture() {
     captureSendButton.disabled = false;
     if (!keepStatus) captureSendButton.textContent = "send";
     recordHistoryButton.disabled = false;
-    recordHistoryButton.textContent = queuedOffline ? "saved offline" : "record azulejos now";
-    if (queuedOffline) {
+    recordHistoryButton.textContent = queuedOffline ? "saved offline" : "pending review";
+    if (!keepStatus) {
       window.setTimeout(() => {
         if (recordHistoryButton && !recordHistoryButton.disabled) recordHistoryButton.textContent = "record azulejos now";
       }, 2600);

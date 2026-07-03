@@ -77,6 +77,9 @@ global.fetch = async (url, options = {}) => {
     insertedRecord = JSON.parse(options.body);
     return { ok: true, json: async () => [insertedRecord], text: async () => "" };
   }
+  if (requestUrl.includes("/rest/v1/contributions?") && options.method === "PATCH") {
+    return { ok: true, json: async () => [{ id: "contribution-test" }], text: async () => "" };
+  }
   throw new Error(`unexpected request ${requestUrl}`);
 };
 const finalized = await invoke({
@@ -101,6 +104,7 @@ assert(insertedRecord.original_image_bucket === "azulejos-originals", "database 
 assert(insertedRecord.original_image_url === null, "private source URL must not be persisted publicly");
 assert(insertedRecord.photographer_credit === "Test contributor", "finalization should retain photographer attribution");
 assert(insertedRecord.photo_license === "CC-BY-4.0", "finalization should retain explicit photo rights");
+assert(/^[A-Za-z0-9_-]{43}$/.test(finalized.body.receiptToken), "finalization should issue a private contribution receipt");
 
 global.fetch = originalFetch;
 for (const [key, value] of Object.entries(originalEnv)) {
