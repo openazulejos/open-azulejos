@@ -300,7 +300,9 @@ assert(capturePoints[0].y < capturePoints[2].y, "capture metadata should preserv
 const gpsNow = Date.now();
 assert(api.isReliableGpsFix({ lat: 38.706083, lng: -9.1455, accuracy: 12, timestamp: gpsNow }, gpsNow), "fresh accurate Lisbon GPS should be accepted");
 assert(!api.isReliableGpsFix({ lat: 38.706083, lng: -9.1455, accuracy: 90, timestamp: gpsNow }, gpsNow), "imprecise GPS should be rejected");
-assert(!api.isReliableGpsFix({ lat: 38.706083, lng: -9.1455, accuracy: 12, timestamp: gpsNow - 20_000 }, gpsNow), "stale GPS should be rejected");
+assert(!api.isReliableGpsFix({ lat: 38.706083, lng: -9.1455, accuracy: 12, timestamp: gpsNow - 45_000 }, gpsNow), "stale GPS should be rejected");
+assert(api.isUsableUploadGpsFix({ lat: 38.706083, lng: -9.1455, accuracy: 90, timestamp: gpsNow }, gpsNow), "fresh 100 m Lisbon GPS should be usable for uploads");
+assert(!api.isUsableUploadGpsFix({ lat: 38.706083, lng: -9.1455, accuracy: 120, timestamp: gpsNow }, gpsNow), "GPS worse than 100 m should be rejected for uploads");
 assert(api.gpsDistanceMeters(
   { lat: 38.7060732862235, lng: -9.14551055735526 },
   { lat: 38.7060833333333, lng: -9.1455 },
@@ -310,7 +312,7 @@ assert(api.locationPermissionCopy("Mozilla/5.0 (Linux; Android 15)").helpUrl.inc
 const permissionRequestCount = api.__currentGpsRequestCount();
 const deniedPermissionPromise = api.requestLocationPermission();
 await Promise.resolve();
-assert(api.__currentGpsRequestCount() === permissionRequestCount + 1, "recording should explicitly request geolocation permission");
+assert(api.__currentGpsRequestCount() === permissionRequestCount + 2, "recording should explicitly request precise geolocation and a Safari fallback");
 api.__denyLatestGps(1);
 assert((await deniedPermissionPromise).state === "denied", "permission denial should be reported to the location guidance UI");
 assert(api.tileMatchesArchiveQuery({

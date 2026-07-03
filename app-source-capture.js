@@ -15,9 +15,9 @@ const MAX_LQIP_CACHE_ENTRIES = 1200;
 const MAX_LOADED_IMAGE_URLS = 1800;
 const MAX_INACTIVE_SERVER_TILES = 360;
 const FRAGMENT_INDEX_RENDER_LIMIT = 150;
-const MAX_UPLOAD_GPS_ACCURACY_METERS = 50;
-const MAX_UPLOAD_GPS_AGE_MS = 12_000;
-const RELIABLE_GPS_TIMEOUT_MS = 18_000;
+const MAX_UPLOAD_GPS_ACCURACY_METERS = 100;
+const MAX_UPLOAD_GPS_AGE_MS = 120_000;
+const RELIABLE_GPS_TIMEOUT_MS = 25_000;
 const lqipStageCache = new Map();
 const loadedImageUrls = new Map();
 const FREGUESIAS_LAYER_URL = "./assets/lisbon-freguesias.geojson";
@@ -2587,6 +2587,17 @@ function isReliableGpsFix(gps, now = Date.now()) {
   if (!isInsideLisbonBounds(Number(gps.lat), Number(gps.lng))) return false;
   const accuracy = Number(gps.accuracy);
   const timestamp = Number(gps.timestamp);
+  if (!Number.isFinite(accuracy) || accuracy <= 0 || accuracy > 50) return false;
+  if (!Number.isFinite(timestamp)) return false;
+  const age = now - timestamp;
+  return age >= -5_000 && age <= 30_000;
+}
+
+function isUsableUploadGpsFix(gps, now = Date.now()) {
+  if (!gps || !Number.isFinite(Number(gps.lat)) || !Number.isFinite(Number(gps.lng))) return false;
+  if (!isInsideLisbonBounds(Number(gps.lat), Number(gps.lng))) return false;
+  const accuracy = Number(gps.accuracy);
+  const timestamp = Number(gps.timestamp);
   if (!Number.isFinite(accuracy) || accuracy <= 0 || accuracy > MAX_UPLOAD_GPS_ACCURACY_METERS) return false;
   if (!Number.isFinite(timestamp)) return false;
   const age = now - timestamp;
@@ -2627,22 +2638,47 @@ async function requestLocationPermission() {
   const currentState = await geolocationPermissionState();
   if (currentState === "denied") return { state: "denied", gps: null };
   return new Promise((resolve) => {
+    let settled = false;
+    let failures = 0;
+    const succeed = (position) => {
+      if (settled) return;
+      const gps = browserGpsFromPosition(position);
+      if (!isUsableUploadGpsFix(gps)) {
+        failures += 1;
+        if (failures >= 2) {
+          settled = true;
+          resolve({ state: "unavailable", gps: null });
+        }
+        return;
+      }
+      settled = true;
+      resolve({ state: "granted", gps });
+    };
+    const fail = async (error) => {
+      if (settled) return;
+      const state = await geolocationPermissionState();
+      if (Number(error?.code) === 1 || state === "denied") {
+        settled = true;
+        resolve({ state: "denied", gps: null });
+        return;
+      }
+      failures += 1;
+      if (failures >= 2) {
+        settled = true;
+        resolve({ state: "unavailable", gps: null });
+      }
+    };
     try {
-      navigator.geolocation.getCurrentPosition(
-        (position) => resolve({ state: "granted", gps: browserGpsFromPosition(position) }),
-        async (error) => {
-          const state = await geolocationPermissionState();
-          resolve({
-            state: Number(error?.code) === 1 || state === "denied" ? "denied" : "unavailable",
-            gps: null,
-          });
-        },
-        {
-          enableHighAccuracy: true,
-          maximumAge: 0,
-          timeout: 15_000,
-        },
-      );
+      navigator.geolocation.getCurrentPosition(succeed, fail, {
+        enableHighAccuracy: true,
+        maximumAge: 0,
+        timeout: 20_000,
+      });
+      navigator.geolocation.getCurrentPosition(succeed, fail, {
+        enableHighAccuracy: false,
+        maximumAge: 120_000,
+        timeout: 10_000,
+      });
     } catch {
       resolve({ state: "unavailable", gps: null });
     }
@@ -2734,6 +2770,7 @@ function readReliableBrowserPosition(timeoutMs = RELIABLE_GPS_TIMEOUT_MS) {
     let watchId = null;
     let previousFix = null;
     let bestFix = null;
+    let bestUsableFix = null;
     let consistentFixes = 0;
     const finish = (gps) => {
       if (settled) return;
@@ -2746,6 +2783,8 @@ function readReliableBrowserPosition(timeoutMs = RELIABLE_GPS_TIMEOUT_MS) {
     };
     const consider = (position) => {
       const fix = browserGpsFromPosition(position);
+      if (!isUsableUploadGpsFix(fix)) return;
+      if (!bestUsableFix || Number(fix.accuracy) < Number(bestUsableFix.accuracy)) bestUsableFix = fix;
       if (!isReliableGpsFix(fix)) return;
       if (!bestFix || Number(fix.accuracy) < Number(bestFix.accuracy)) bestFix = fix;
       const stabilityRadius = previousFix
@@ -2760,7 +2799,7 @@ function readReliableBrowserPosition(timeoutMs = RELIABLE_GPS_TIMEOUT_MS) {
     const fail = (error) => {
       if (Number(error?.code) === 1) finish(null);
     };
-    const timeout = window.setTimeout(() => finish(bestFix), timeoutMs);
+    const timeout = window.setTimeout(() => finish(bestFix || bestUsableFix), timeoutMs);
     try {
       if (typeof navigator.geolocation.watchPosition === "function") {
         watchId = navigator.geolocation.watchPosition(consider, fail, {
@@ -3997,6 +4036,7 @@ window.AzulejoAtlas = {
   gridStepForZoom,
   isInsideLisbonBounds,
   isReliableGpsFix,
+  isUsableUploadGpsFix,
   installOverlayImageRecovery,
   isImageUrlLoaded,
   lqipPixelCounts,

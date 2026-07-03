@@ -42,8 +42,8 @@ const validateLocation = (body) => {
   }
   if (source === "browser") {
     const age = Date.now() - timestamp;
-    if (!Number.isFinite(accuracy) || accuracy <= 0 || accuracy > 50) {
-      return { error: "a browser GPS accuracy of 50 meters or better is required" };
+    if (!Number.isFinite(accuracy) || accuracy <= 0 || accuracy > 100) {
+      return { error: "a browser GPS accuracy of 100 meters or better is required" };
     }
     if (!Number.isFinite(timestamp) || age < -5_000 || age > 120_000) {
       return { error: "a recent browser GPS position is required" };

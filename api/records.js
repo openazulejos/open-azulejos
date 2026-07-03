@@ -639,8 +639,8 @@ module.exports = async function handler(req, res) {
   const gpsTimestamp = body.gpsTimestamp === null || body.gpsTimestamp === undefined ? null : Number(body.gpsTimestamp);
   if (locationSource === "browser") {
     const gpsAge = Date.now() - gpsTimestamp;
-    if (!Number.isFinite(gpsAccuracy) || gpsAccuracy <= 0 || gpsAccuracy > 50) {
-      return json(res, 400, { error: "a browser GPS accuracy of 50 meters or better is required" });
+    if (!Number.isFinite(gpsAccuracy) || gpsAccuracy <= 0 || gpsAccuracy > 100) {
+      return json(res, 400, { error: "a browser GPS accuracy of 100 meters or better is required" });
     }
     if (!Number.isFinite(gpsTimestamp) || gpsAge < -5_000 || gpsAge > 120_000) {
       return json(res, 400, { error: "a recent browser GPS position is required" });
