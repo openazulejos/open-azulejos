@@ -237,6 +237,30 @@ module.exports = async function handler(request, response) {
     }
   }
 
+  if (action === "update-profile") {
+    const claims = authorizeContributorRequest(request);
+    if (!claims) return json(response, 401, { authenticated: false });
+    const pseudonym = String(body.pseudonym || "").trim().replace(/\s+/g, " ");
+    if (!validPseudonym(pseudonym)) return json(response, 400, { error: "pseudonym must contain 2 to 32 letters, numbers, spaces, dots, dashes or underscores" });
+    const normalized = normalizedPseudonym(pseudonym);
+    const headers = serviceHeaders(serviceKey);
+    const available = await fetch(`${supabaseUrl}/rest/v1/contributor_profiles?select=user_id&normalized_pseudonym=eq.${encodeURIComponent(normalized)}&user_id=neq.${claims.userId}&limit=1`, {
+      headers,
+    });
+    if (!available.ok) return json(response, 502, { error: "pseudonym lookup failed" });
+    if ((await available.json()).length) return json(response, 409, { error: "this pseudonym is already in use" });
+    const update = await fetch(`${supabaseUrl}/rest/v1/contributor_profiles?user_id=eq.${claims.userId}`, {
+      method: "PATCH",
+      headers: { ...headers, "Content-Type": "application/json", Prefer: "return=representation" },
+      body: JSON.stringify({ pseudonym, normalized_pseudonym: normalized }),
+    });
+    if (!update.ok) return json(response, 502, { error: "username update failed" });
+    const [profile] = await update.json();
+    if (!profile) return json(response, 404, { error: "contributor profile not found" });
+    response.setHeader("Set-Cookie", contributorSessionCookie(createContributorSession({ ...claims, pseudonym: profile.pseudonym })));
+    return json(response, 200, await accountPayload(supabaseUrl, serviceKey, claims, profile));
+  }
+
   const email = String(body.email || "").trim().toLowerCase();
   const password = String(body.password || "");
   if (!validEmail(email) || password.length < 10) {

@@ -79,8 +79,8 @@ const normalizedEditSettings = (value) => {
   return settings;
 };
 
-const normalizedContributionRights = (body) => {
-  const photographerCredit = String(body.photographerCredit || "").trim();
+const normalizedContributionRights = (body, contributor = null) => {
+  const photographerCredit = String(body.photographerCredit || contributor?.pseudonym || "anonymous").trim();
   const consentAt = body.contributorConsentAt ? new Date(body.contributorConsentAt) : null;
   if (body.contributorConsent !== true
     || body.photoLicense !== "CC-BY-4.0"
@@ -625,7 +625,8 @@ module.exports = async function handler(req, res) {
   if (!image || !Number.isFinite(lat) || !Number.isFinite(lng)) {
     return json(res, 400, { error: "imageData, lat and lng are required" });
   }
-  const rights = normalizedContributionRights(body);
+  const contributor = authorizeContributorRequest(req);
+  const rights = normalizedContributionRights(body, contributor);
   if (rights.error) return json(res, 400, { error: rights.error });
   if (image.buffer.length > 3_000_000) {
     return json(res, 413, { error: "image is too large" });
@@ -729,7 +730,7 @@ module.exports = async function handler(req, res) {
       supabaseUrl,
       headers,
       id,
-      authorizeContributorRequest(req)?.userId,
+      contributor?.userId,
     );
   } catch (error) {
     return json(res, 502, { error: "contribution receipt failed", detail: error.message });

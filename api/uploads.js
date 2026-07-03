@@ -61,8 +61,8 @@ const normalizedCropPoints = (value) => Array.isArray(value)
   }))
   : null;
 
-const normalizedContributionRights = (body) => {
-  const photographerCredit = String(body.photographerCredit || "").trim();
+const normalizedContributionRights = (body, contributor = null) => {
+  const photographerCredit = String(body.photographerCredit || contributor?.pseudonym || "anonymous").trim();
   const consentAt = body.contributorConsentAt ? new Date(body.contributorConsentAt) : null;
   if (body.contributorConsent !== true
     || body.photoLicense !== "CC-BY-4.0"
@@ -147,7 +147,7 @@ module.exports = async function handler(request, response) {
 
   const location = validateLocation(body);
   if (location.error) return json(response, 400, { error: location.error });
-  const rights = normalizedContributionRights(body);
+  const rights = normalizedContributionRights(body, contributor);
   if (rights.error) return json(response, 400, { error: rights.error });
   const { lat, lng, accuracy: gpsAccuracy, timestamp: gpsTimestamp, source: locationSource } = location;
   const squarePath = String(body.squarePath || "");

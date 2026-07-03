@@ -10,7 +10,7 @@
     <link rel="apple-touch-icon" href="./assets/azulejo-field-photo-1-crop.png" />
     <link rel="preconnect" href="https://unpkg.com" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="./styles-admin-editor.css?v=20260703-contributors" />
+    <link rel="stylesheet" href="./styles-admin-editor.css?v=20260703-camera-flow" />
   </head>
   <body>
     <header class="topbar" aria-label="Navigation principale">
@@ -42,9 +42,9 @@
           <div class="square-camera-guide" aria-hidden="true"></div>
         </div>
         <div class="square-camera-controls">
-          <button id="squareCameraCancel" type="button">cancel</button>
-          <button id="squareCameraCapture" type="button">capture</button>
-          <button id="squareCameraFallback" type="button">choose photo</button>
+          <button class="square-camera-secondary" id="squareCameraCancel" type="button">cancel</button>
+          <button class="square-camera-shutter" id="squareCameraCapture" type="button" aria-label="capture"><span>capture</span></button>
+          <button class="square-camera-secondary" id="squareCameraFallback" type="button">choose photo</button>
         </div>
       </section>
 
@@ -52,30 +52,7 @@
         <div class="capture-preview-frame">
           <canvas id="captureCropCanvas" width="1200" height="1200"></canvas>
         </div>
-        <div class="capture-crop-controls" aria-label="crop controls">
-          <label>
-            zoom
-            <input id="captureCropZoom" type="range" min="122" max="260" value="122" />
-          </label>
-          <label>
-            x
-            <input id="captureCropX" type="range" min="-100" max="100" value="0" />
-          </label>
-          <label>
-            y
-            <input id="captureCropY" type="range" min="-100" max="100" value="0" />
-          </label>
-        </div>
-        <div class="capture-rights">
-          <label class="capture-credit">
-            credit
-            <input id="capturePhotographerCredit" type="text" maxlength="120" autocomplete="nickname" placeholder="name or pseudonym" />
-          </label>
-          <label class="capture-license">
-            <input id="captureLicenseConsent" type="checkbox" />
-            <span>i took this photograph and publish it under cc by 4.0</span>
-          </label>
-        </div>
+        <p class="capture-rights" id="captureRightsNotice"></p>
         <div class="capture-preview-controls">
           <button id="captureRetakeButton" type="button">retake</button>
           <button id="captureSendButton" type="button">send</button>
@@ -376,6 +353,13 @@ azulejo-002.jpg,38.71072,-9.13908,Baixa</code></pre>
             <strong id="accountPseudonym"></strong>
             <button id="accountLogoutButton" type="button">log out</button>
           </div>
+          <form class="account-profile-form" id="accountProfileForm">
+            <label>
+              username
+              <input id="accountProfilePseudonym" type="text" autocomplete="nickname" minlength="2" maxlength="32" />
+            </label>
+            <button type="submit">save username</button>
+          </form>
         </section>
 
         <section class="my-contributions" aria-label="my contributions">
@@ -396,6 +380,6 @@ azulejo-002.jpg,38.71072,-9.13908,Baixa</code></pre>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="./offline-queue.js?v=20260702-contribution-rights"></script>
-    <script src="./app-source-capture.js?v=20260703-contributors"></script>
+    <script src="./app-source-capture.js?v=20260703-camera-flow"></script>
   </body>
 </html>

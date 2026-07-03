@@ -185,6 +185,8 @@ const accountNewPassword = document.querySelector("#accountNewPassword");
 const accountStatus = document.querySelector("#accountStatus");
 const accountPseudonym = document.querySelector("#accountPseudonym");
 const accountLogoutButton = document.querySelector("#accountLogoutButton");
+const accountProfileForm = document.querySelector("#accountProfileForm");
+const accountProfilePseudonym = document.querySelector("#accountProfilePseudonym");
 const myContributionsStatus = document.querySelector("#myContributionsStatus");
 const myContributionsList = document.querySelector("#myContributionsList");
 const recordHistoryButton = document.querySelector("#recordHistoryButton");
@@ -203,6 +205,7 @@ const captureRetakeButton = document.querySelector("#captureRetakeButton");
 const captureSendButton = document.querySelector("#captureSendButton");
 const capturePhotographerCredit = document.querySelector("#capturePhotographerCredit");
 const captureLicenseConsent = document.querySelector("#captureLicenseConsent");
+const captureRightsNotice = document.querySelector("#captureRightsNotice");
 const locationPermissionSheet = document.querySelector("#locationPermissionSheet");
 const locationPermissionClose = document.querySelector("#locationPermissionClose");
 const locationPermissionMessage = document.querySelector("#locationPermissionMessage");
@@ -2051,14 +2054,8 @@ async function openCapturePreview(imageSource, gps = null) {
   }
   if (captureCropX) captureCropX.value = "0";
   if (captureCropY) captureCropY.value = "0";
-  if (capturePhotographerCredit && !capturePhotographerCredit.value) {
-    try {
-      capturePhotographerCredit.value = localStorage.getItem("open-azulejos-photographer-credit") || "";
-    } catch {
-      capturePhotographerCredit.value = "";
-    }
-  }
   if (captureLicenseConsent) captureLicenseConsent.checked = false;
+  updateCaptureRightsNotice();
   drawPendingCapture();
   capturePreview?.classList.add("is-open");
   capturePreview?.setAttribute("aria-hidden", "false");
@@ -2223,7 +2220,7 @@ function maybeInviteContributorAccount(receiptCount) {
   }
   openAccountSheet({
     mode: "sign-up",
-    message: "you have recorded 3 azulejos. create an account to keep your contributions linked across devices.",
+    message: "you have recorded 3 azulejos. create an account to become a top contributor and keep your photographs linked.",
   });
 }
 
@@ -2297,10 +2294,22 @@ function applyContributorAccount(data) {
   if (accountMember) accountMember.hidden = !authenticated;
   if (accountOpenButton) accountOpenButton.textContent = authenticated ? "account" : "log in";
   if (accountPseudonym) accountPseudonym.textContent = contributorAccount?.profile?.pseudonym || "";
+  if (accountProfilePseudonym) accountProfilePseudonym.value = contributorAccount?.profile?.pseudonym || "";
   if (authenticated) {
     const records = contributorAccount.records || [];
     renderContributionRecords(records, `${records.length} contribution${records.length === 1 ? "" : "s"} linked to this account`);
   }
+}
+
+function captureCreditName() {
+  return contributorAccount?.profile?.pseudonym || "anonymous";
+}
+
+function updateCaptureRightsNotice() {
+  if (!captureRightsNotice) return;
+  captureRightsNotice.textContent = contributorAccount?.profile?.pseudonym
+    ? `published under cc by 4.0 as ${contributorAccount.profile.pseudonym}`
+    : "published under cc by 4.0 as anonymous. create an account to become a top contributor.";
 }
 
 async function refreshContributorAccount() {
@@ -2393,6 +2402,32 @@ async function submitContributorAccount(event, action) {
     if (accountStatus) accountStatus.textContent = "";
   } catch (error) {
     if (accountStatus) accountStatus.textContent = error.message || "account request failed";
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
+async function updateContributorProfile(event) {
+  event.preventDefault();
+  if (!accountProfileForm || !accountProfilePseudonym) return;
+  const button = accountProfileForm.querySelector("button[type='submit']");
+  if (button) button.disabled = true;
+  if (accountStatus) accountStatus.textContent = "saving username...";
+  try {
+    const response = await fetch("/api/contributor-account", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "update-profile",
+        pseudonym: accountProfilePseudonym.value,
+      }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || `account ${response.status}`);
+    applyContributorAccount(data);
+    if (accountStatus) accountStatus.textContent = "username saved";
+  } catch (error) {
+    if (accountStatus) accountStatus.textContent = error.message || "username update failed";
   } finally {
     if (button) button.disabled = false;
   }
@@ -3073,12 +3108,7 @@ async function sendPendingCapture() {
   let keepStatus = false;
   let queuedOffline = false;
   try {
-    const photographerCredit = String(capturePhotographerCredit?.value || "").trim();
-    if (!photographerCredit || !captureLicenseConsent?.checked) {
-      keepStatus = true;
-      showCaptureSendStatus("credit and consent required", 3200);
-      return;
-    }
+    const photographerCredit = captureCreditName();
     const squareImage = drawPendingCapture(true);
     if (!squareImage) throw new Error("image encoding failed");
     const originalImageData = encodeSourceImageForAdmin(pendingCapture.image);
@@ -3102,11 +3132,6 @@ async function sendPendingCapture() {
       contributorConsentAt: new Date().toISOString(),
     };
     const stored = await placeRecordedAzulejo(squareImage, gps, pendingCapture.uploadId, originalImageData, cropPoints, rights);
-    try {
-      localStorage.setItem("open-azulejos-photographer-credit", photographerCredit);
-    } catch {
-      // Submission does not depend on local preference storage.
-    }
     queuedOffline = Boolean(stored?.queued);
     closeCapturePreview();
   } catch (error) {
@@ -3784,6 +3809,7 @@ accountLoginForm?.addEventListener("submit", (event) => submitContributorAccount
 accountSignupForm?.addEventListener("submit", (event) => submitContributorAccount(event, "sign-up"));
 accountResetForm?.addEventListener("submit", (event) => submitContributorAccount(event, "reset-password"));
 accountUpdatePasswordForm?.addEventListener("submit", (event) => submitContributorAccount(event, "update-password"));
+accountProfileForm?.addEventListener("submit", updateContributorProfile);
 accountLogoutButton?.addEventListener("click", logoutContributorAccount);
 mapLocationButton?.addEventListener("click", locateUserOnMap);
 azulejoViewerClose?.addEventListener("click", closeAzulejoViewer);

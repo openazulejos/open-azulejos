@@ -130,6 +130,30 @@ global.fetch = async (url) => {
 const account = await invoke("GET", null, accountCookie);
 assert(account.status === 200 && account.body.profile.pseudonym === profile.pseudonym, "valid session should read contributor profile");
 
+let updatedProfilePayload = null;
+global.fetch = async (url, options = {}) => {
+  const requestUrl = String(url);
+  if (requestUrl.includes("contributor_profiles?select=user_id") && requestUrl.includes("user_id=neq.")) {
+    return { ok: true, status: 200, json: async () => [] };
+  }
+  if (requestUrl.includes(`contributor_profiles?user_id=eq.${userId}`) && options.method === "PATCH") {
+    updatedProfilePayload = JSON.parse(options.body);
+    return {
+      ok: true,
+      status: 200,
+      json: async () => [{ ...profile, pseudonym: "new-walker", normalized_pseudonym: "new-walker" }],
+    };
+  }
+  if (requestUrl.includes("contributions?select=legacy_azulejo_id%2Cstatus")) {
+    return { ok: true, status: 200, json: async () => [] };
+  }
+  throw new Error(`unexpected profile update request: ${requestUrl}`);
+};
+const updatedProfile = await invoke("POST", { action: "update-profile", pseudonym: "new-walker" }, accountCookie);
+assert(updatedProfile.status === 200 && updatedProfile.body.profile.pseudonym === "new-walker", "contributor should be able to update username");
+assert(updatedProfilePayload.normalized_pseudonym === "new-walker", "updated username should be normalized");
+assert(/HttpOnly/.test(updatedProfile.headers["set-cookie"]), "profile update should refresh the contributor session");
+
 const loggedOut = await invoke("DELETE", null, accountCookie);
 assert(loggedOut.status === 200 && /Max-Age=0/.test(loggedOut.headers["set-cookie"]), "logout should clear contributor session");
 
