@@ -3,9 +3,23 @@ import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
 const auth = require("../api/_admin-auth.js");
+const contributorAuth = require("../api/_contributor-auth.js");
 const sessionHandler = require("../api/admin-session.js");
-const originalKey = process.env.ADMIN_KEY;
-process.env.ADMIN_KEY = "correct horse battery staple";
+const originalFetch = global.fetch;
+const originalEnv = {
+  ADMIN_KEY: process.env.ADMIN_KEY,
+  ADMIN_SESSION_SECRET: process.env.ADMIN_SESSION_SECRET,
+  CONTRIBUTOR_SESSION_SECRET: process.env.CONTRIBUTOR_SESSION_SECRET,
+  SUPABASE_URL: process.env.SUPABASE_URL,
+  SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+};
+Object.assign(process.env, {
+  ADMIN_KEY: "correct horse battery staple",
+  ADMIN_SESSION_SECRET: "test-session-secret",
+  CONTRIBUTOR_SESSION_SECRET: "test-session-secret",
+  SUPABASE_URL: "https://example.supabase.co",
+  SUPABASE_SERVICE_ROLE_KEY: "service-test",
+});
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -46,6 +60,31 @@ const checkResponse = responseCapture();
 await sessionHandler(checkRequest, checkResponse);
 assert(checkResponse.statusCode === 200 && JSON.parse(checkResponse.body).authenticated, "session check should succeed");
 
-if (originalKey === undefined) delete process.env.ADMIN_KEY;
-else process.env.ADMIN_KEY = originalKey;
+const contributorToken = contributorAuth.createContributorSession({
+  userId: "22222222-2222-4222-8222-222222222222",
+  email: "orson@example.org",
+  pseudonym: "orson",
+});
+let profileLookupUrl = "";
+global.fetch = async (url, options = {}) => {
+  profileLookupUrl = String(url);
+  assert(options.headers.Authorization === "Bearer service-test", "contributor admin lookup should use service role");
+  return { ok: true, json: async () => [{ display_name: "Orson", role: "owner" }] };
+};
+const contributorCheckRequest = {
+  method: "GET",
+  headers: { cookie: `open_azulejos_contributor=${contributorToken}` },
+};
+const contributorCheckResponse = responseCapture();
+await sessionHandler(contributorCheckRequest, contributorCheckResponse);
+const contributorCheck = JSON.parse(contributorCheckResponse.body);
+assert(contributorCheckResponse.statusCode === 200 && contributorCheck.authenticated, "admin contributor account should authorize beta capture");
+assert(contributorCheck.method === "contributor-admin", "contributor admin authorization should identify its method");
+assert(profileLookupUrl.includes("admin_profiles?"), "contributor admin check should query admin_profiles");
+
+global.fetch = originalFetch;
+for (const [key, value] of Object.entries(originalEnv)) {
+  if (value === undefined) delete process.env[key];
+  else process.env[key] = value;
+}
 console.log("security api tests passed");
