@@ -338,6 +338,12 @@ assert(!api.isReliableGpsFix({ lat: 38.706083, lng: -9.1455, accuracy: 90, times
 assert(!api.isReliableGpsFix({ lat: 38.706083, lng: -9.1455, accuracy: 12, timestamp: gpsNow - 45_000 }, gpsNow), "stale GPS should be rejected");
 assert(api.isUsableUploadGpsFix({ lat: 38.706083, lng: -9.1455, accuracy: 90, timestamp: gpsNow }, gpsNow), "fresh 100 m Lisbon GPS should be usable for uploads");
 assert(!api.isUsableUploadGpsFix({ lat: 38.706083, lng: -9.1455, accuracy: 120, timestamp: gpsNow }, gpsNow), "GPS worse than 100 m should be rejected for uploads");
+assert(!api.isUsableUploadGpsFix({ lat: 50.8467, lng: 4.3525, accuracy: 12, timestamp: gpsNow }, gpsNow), "non-admin uploads outside Lisbon should be rejected");
+assert(api.isUsableUploadGpsFixForContext(
+  { lat: 50.8467, lng: 4.3525, accuracy: 12, timestamp: gpsNow },
+  gpsNow,
+  { allowOutsideLisbon: true },
+), "admin beta uploads outside Lisbon should be accepted");
 assert(api.gpsDistanceMeters(
   { lat: 38.7060732862235, lng: -9.14551055735526 },
   { lat: 38.7060833333333, lng: -9.1455 },
@@ -355,6 +361,15 @@ await Promise.resolve();
 api.__emitLowAccuracyGps(38.706083, -9.1455, 160);
 const imprecisePermission = await imprecisePermissionPromise;
 assert(imprecisePermission.state === "granted" && imprecisePermission.gps === null, "imprecise iOS permission fix should allow camera flow without upload GPS");
+const outsidePermissionPromise = api.requestLocationPermissionForContext();
+await Promise.resolve();
+api.__emitLowAccuracyGps(50.8467, 4.3525, 12);
+assert((await outsidePermissionPromise).state === "outside-lisbon", "public capture should explain valid GPS outside Lisbon");
+const outsideAdminPermissionPromise = api.requestLocationPermissionForContext({ allowOutsideLisbon: true });
+await Promise.resolve();
+api.__emitLowAccuracyGps(50.8467, 4.3525, 12);
+const outsideAdminPermission = await outsideAdminPermissionPromise;
+assert(outsideAdminPermission.state === "granted" && outsideAdminPermission.gps?.lat === 50.8467, "admin capture should allow beta GPS outside Lisbon");
 assert(api.tileMatchesArchiveQuery({
   id: "x",
   title: "Alfama",

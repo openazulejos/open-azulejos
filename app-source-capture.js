@@ -280,6 +280,7 @@ let userLocationMarker = null;
 let userLocationWatchId = null;
 let latestUserLocation = null;
 let userLocationSearchTimer = null;
+let adminCaptureSession = false;
 const CONTRIBUTION_RECEIPTS_KEY = "open-azulejos-contribution-receipts";
 const CONTRIBUTION_VIEW_KEY = "open-azulejos-contribution-view";
 const ACCOUNT_INVITE_COUNT_KEY = "open-azulejos-account-invite-count";
@@ -2078,7 +2079,7 @@ async function openCapturePreview(imageSource, gps = null) {
   pendingCapture = {
     image,
     gps,
-    gpsPromise: gps ? null : readReliableBrowserPosition(),
+    gpsPromise: gps ? null : readReliableBrowserPosition(RELIABLE_GPS_TIMEOUT_MS, { allowOutsideLisbon: adminCaptureSession }),
     crop: null,
     uploadId,
   };
@@ -2673,8 +2674,12 @@ function isReliableGpsFix(gps, now = Date.now()) {
 }
 
 function isUsableUploadGpsFix(gps, now = Date.now()) {
+  return isUsableUploadGpsFixForContext(gps, now, { allowOutsideLisbon: false });
+}
+
+function isUsableUploadGpsFixForContext(gps, now = Date.now(), { allowOutsideLisbon = false } = {}) {
   if (!gps || !Number.isFinite(Number(gps.lat)) || !Number.isFinite(Number(gps.lng))) return false;
-  if (!isInsideLisbonBounds(Number(gps.lat), Number(gps.lng))) return false;
+  if (!allowOutsideLisbon && !isInsideLisbonBounds(Number(gps.lat), Number(gps.lng))) return false;
   const accuracy = Number(gps.accuracy);
   const timestamp = Number(gps.timestamp);
   if (!Number.isFinite(accuracy) || accuracy <= 0 || accuracy > MAX_UPLOAD_GPS_ACCURACY_METERS) return false;
@@ -2712,7 +2717,27 @@ async function geolocationPermissionState() {
   }
 }
 
+async function refreshAdminCaptureSession() {
+  if (typeof fetch !== "function") return adminCaptureSession;
+  try {
+    const response = await fetch("/api/admin-session", {
+      credentials: "same-origin",
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+    });
+    const data = response.ok ? await response.json() : null;
+    adminCaptureSession = Boolean(data?.authenticated);
+  } catch {
+    adminCaptureSession = false;
+  }
+  return adminCaptureSession;
+}
+
 async function requestLocationPermission() {
+  return requestLocationPermissionForContext({ allowOutsideLisbon: false });
+}
+
+async function requestLocationPermissionForContext({ allowOutsideLisbon = false } = {}) {
   if (!navigator.geolocation?.getCurrentPosition) return { state: "unsupported", gps: null };
   const currentState = await geolocationPermissionState();
   if (currentState === "denied") return { state: "denied", gps: null };
@@ -2722,7 +2747,7 @@ async function requestLocationPermission() {
     const succeed = (position) => {
       if (settled) return;
       const gps = browserGpsFromPosition(position);
-      if (!gps || !isInsideLisbonBounds(Number(gps.lat), Number(gps.lng))) {
+      if (!gps) {
         failures += 1;
         if (failures >= 2) {
           settled = true;
@@ -2730,8 +2755,13 @@ async function requestLocationPermission() {
         }
         return;
       }
+      if (!allowOutsideLisbon && !isInsideLisbonBounds(Number(gps.lat), Number(gps.lng))) {
+        settled = true;
+        resolve({ state: "outside-lisbon", gps: null });
+        return;
+      }
       settled = true;
-      resolve({ state: "granted", gps: isUsableUploadGpsFix(gps) ? gps : null });
+      resolve({ state: "granted", gps: isUsableUploadGpsFixForContext(gps, Date.now(), { allowOutsideLisbon }) ? gps : null });
     };
     const fail = async (error) => {
       if (settled) return;
@@ -2771,7 +2801,9 @@ function showLocationPermissionSheet(reason = "unavailable") {
     ? "location access is blocked. you must enable location permission to record an azulejo."
     : reason === "unsupported"
       ? "this browser cannot provide the location required to record an azulejo."
-      : "an accurate location could not be found. check location permission and device location services before sending.";
+      : reason === "outside-lisbon"
+        ? "recording is only available in Lisbon for now."
+        : "an accurate location could not be found. check location permission and device location services before sending.";
   locationPermissionInstructions.textContent = copy.instructions;
   locationPermissionHelp.href = copy.helpUrl;
   locationPermissionSheet.classList.add("is-open");
@@ -2803,9 +2835,10 @@ function closePermissionCameraShell() {
 
 async function retryLocationPermission() {
   if (!locationPermissionRetry) return;
+  const allowOutsideLisbon = await refreshAdminCaptureSession();
   locationPermissionRetry.disabled = true;
   locationPermissionRetry.textContent = "checking location...";
-  const result = await requestLocationPermission();
+  const result = await requestLocationPermissionForContext({ allowOutsideLisbon });
   locationPermissionRetry.disabled = false;
   locationPermissionRetry.textContent = "retry location";
   if (result.state !== "granted") {
@@ -2815,7 +2848,7 @@ async function retryLocationPermission() {
   if (result.gps) focusUserLocation(result.gps, false);
   closeLocationPermissionSheet();
   if (pendingCapture) {
-    pendingCapture.gpsPromise = readReliableBrowserPosition();
+    pendingCapture.gpsPromise = readReliableBrowserPosition(RELIABLE_GPS_TIMEOUT_MS, { allowOutsideLisbon });
     showCaptureSendStatus("locating...", 1800);
   } else {
     openSquareCamera();
@@ -2824,14 +2857,15 @@ async function retryLocationPermission() {
 
 async function beginRecordingFlow() {
   if (!recordHistoryButton || recordHistoryButton.disabled) return;
+  const allowOutsideLisbon = await refreshAdminCaptureSession();
   openPermissionCameraShell();
   await new Promise((resolve) => window.setTimeout(resolve, 900));
   recordHistoryButton.disabled = true;
   recordHistoryButton.textContent = "checking location...";
-  const result = await requestLocationPermission();
+  const result = await requestLocationPermissionForContext({ allowOutsideLisbon });
   recordHistoryButton.disabled = false;
   recordHistoryButton.textContent = "record azulejos now";
-  if (result.state === "denied" || result.state === "unsupported") {
+  if (result.state === "denied" || result.state === "unsupported" || result.state === "outside-lisbon") {
     setCameraPermissionStep(locationPermissionStep, "denied");
     closeSquareCamera();
     showLocationPermissionSheet(result.state);
@@ -2843,10 +2877,12 @@ async function beginRecordingFlow() {
 }
 
 function latestUsableUploadGps() {
-  return isUsableUploadGpsFix(latestUserLocation) ? latestUserLocation : null;
+  return isUsableUploadGpsFixForContext(latestUserLocation, Date.now(), { allowOutsideLisbon: adminCaptureSession })
+    ? latestUserLocation
+    : null;
 }
 
-function readReliableBrowserPosition(timeoutMs = RELIABLE_GPS_TIMEOUT_MS) {
+function readReliableBrowserPosition(timeoutMs = RELIABLE_GPS_TIMEOUT_MS, { allowOutsideLisbon = false } = {}) {
   if (!navigator.geolocation) return Promise.resolve(null);
   return new Promise((resolve) => {
     let settled = false;
@@ -2866,7 +2902,7 @@ function readReliableBrowserPosition(timeoutMs = RELIABLE_GPS_TIMEOUT_MS) {
     };
     const consider = (position) => {
       const fix = browserGpsFromPosition(position);
-      if (!isUsableUploadGpsFix(fix)) return;
+      if (!isUsableUploadGpsFixForContext(fix, Date.now(), { allowOutsideLisbon })) return;
       if (!bestUsableFix || Number(fix.accuracy) < Number(bestUsableFix.accuracy)) bestUsableFix = fix;
       if (!isReliableGpsFix(fix)) return;
       if (!bestFix || Number(fix.accuracy) < Number(bestFix.accuracy)) bestFix = fix;
@@ -3285,13 +3321,18 @@ async function sendPendingCapture() {
     if (!squareImage) throw new Error("image encoding failed");
     const originalImageData = encodeSourceImageForAdmin(pendingCapture.image);
     const cropPoints = normalizedCropPoints(pendingCapture.crop, pendingCapture.image);
-    const gps = pendingCapture.gps || latestUsableUploadGps() || await (pendingCapture.gpsPromise || readReliableBrowserPosition());
+    const allowOutsideLisbon = await refreshAdminCaptureSession();
+    const gpsCandidate = pendingCapture.gps
+      || latestUsableUploadGps()
+      || await (pendingCapture.gpsPromise || readReliableBrowserPosition(RELIABLE_GPS_TIMEOUT_MS, { allowOutsideLisbon }));
+    const gps = isUsableUploadGpsFixForContext(gpsCandidate, Date.now(), { allowOutsideLisbon }) ? gpsCandidate : null;
     pendingCapture.gpsPromise = null;
     if (!gps) {
       keepStatus = true;
       const permissionState = await geolocationPermissionState();
       showCaptureSendStatus("location permission required", 3200);
-      showLocationPermissionSheet(permissionState === "denied" ? "denied" : "unavailable");
+      const outsideLisbon = gpsCandidate && !allowOutsideLisbon && !isInsideLisbonBounds(Number(gpsCandidate.lat), Number(gpsCandidate.lng));
+      showLocationPermissionSheet(permissionState === "denied" ? "denied" : outsideLisbon ? "outside-lisbon" : "unavailable");
       return;
     }
     captureSendButton.textContent = "sending...";
@@ -4112,6 +4153,7 @@ window.AzulejoAtlas = {
   readCurrentBrowserPosition,
   readReliableBrowserPosition,
   requestLocationPermission,
+  requestLocationPermissionForContext,
   archiveFilteredTiles,
   activeCellText,
   allocateFineGridDisplayCells,
@@ -4124,6 +4166,7 @@ window.AzulejoAtlas = {
   isInsideLisbonBounds,
   isReliableGpsFix,
   isUsableUploadGpsFix,
+  isUsableUploadGpsFixForContext,
   installOverlayImageRecovery,
   isImageUrlLoaded,
   lqipPixelCounts,
