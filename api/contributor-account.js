@@ -96,7 +96,7 @@ async function contributionRecords(supabaseUrl, serviceKey, userId) {
   const ids = records.map((record) => record.legacy_azulejo_id).filter(Boolean);
   if (!ids.length) return [];
   const tileQuery = new URLSearchParams({
-    select: "id,title,image_url",
+    select: "id,title,image_url,lat,lng,moderation_status",
     id: `in.(${ids.join(",")})`,
   });
   const tileResponse = await fetch(`${supabaseUrl}/rest/v1/azulejos?${tileQuery}`, { headers });
@@ -110,6 +110,8 @@ async function contributionRecords(supabaseUrl, serviceKey, userId) {
     updatedAt: record.updated_at,
     title: tilesById.get(record.legacy_azulejo_id)?.title || "azulejo",
     imageUrl: tilesById.get(record.legacy_azulejo_id)?.image_url || null,
+    lat: tilesById.get(record.legacy_azulejo_id)?.lat ?? null,
+    lng: tilesById.get(record.legacy_azulejo_id)?.lng ?? null,
   }));
 }
 

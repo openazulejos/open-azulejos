@@ -188,6 +188,7 @@ const accountLogoutButton = document.querySelector("#accountLogoutButton");
 const accountProfileForm = document.querySelector("#accountProfileForm");
 const accountProfilePseudonym = document.querySelector("#accountProfilePseudonym");
 const myContributionsStatus = document.querySelector("#myContributionsStatus");
+const myContributionsTitle = document.querySelector("#myContributionsTitle");
 const myContributionsList = document.querySelector("#myContributionsList");
 const recordHistoryButton = document.querySelector("#recordHistoryButton");
 const recordCameraInput = document.querySelector("#recordCameraInput");
@@ -196,6 +197,9 @@ const squareCameraVideo = document.querySelector("#squareCameraVideo");
 const squareCameraCapture = document.querySelector("#squareCameraCapture");
 const squareCameraCancel = document.querySelector("#squareCameraCancel");
 const squareCameraFallback = document.querySelector("#squareCameraFallback");
+const squareCameraPermissions = document.querySelector("#squareCameraPermissions");
+const cameraPermissionStep = document.querySelector("#cameraPermissionStep");
+const locationPermissionStep = document.querySelector("#locationPermissionStep");
 const capturePreview = document.querySelector("#capturePreview");
 const captureCropCanvas = document.querySelector("#captureCropCanvas");
 const captureCropZoom = document.querySelector("#captureCropZoom");
@@ -991,22 +995,25 @@ function renderContributorStats(contributors) {
   }
   contributors.forEach((contributor) => {
     const item = document.createElement("li");
+    const rank = document.createElement("span");
+    rank.className = "contributor-rank";
+    rank.textContent = `${aboutContributorsList.children.length + 1}.`;
     const name = document.createElement("strong");
     name.textContent = contributor.pseudonym || "anonymous contributor";
     const count = document.createElement("span");
+    count.className = "contributor-count";
     const approved = Number(contributor.approvedCount) || 0;
-    const total = Number(contributor.totalCount) || approved;
-    count.textContent = `${approved}/${total} accepted`;
-    item.append(name, count);
+    count.textContent = String(approved);
+    item.append(rank, name, count);
     aboutContributorsList.append(item);
   });
-  aboutContributorsStatus.textContent = `${contributors.length} active contributor${contributors.length === 1 ? "" : "s"}`;
+  aboutContributorsStatus.textContent = "";
 }
 
 async function loadContributorStats() {
   if (contributorStatsLoaded || !aboutContributorsList || !aboutContributorsStatus || typeof fetch !== "function") return;
   aboutContributorsStatus.textContent = "loading contributors...";
-  const response = await fetch("/api/contributors?limit=10", { headers: { Accept: "application/json" } });
+  const response = await fetch("/api/contributors?limit=20", { headers: { Accept: "application/json" } });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data.error || `contributors ${response.status}`);
   contributorStatsLoaded = true;
@@ -2232,31 +2239,43 @@ function contributionStatusLabel(record) {
 
 function renderContributionRecords(records, statusCopy) {
   if (!myContributionsList || !myContributionsStatus) return;
+  if (myContributionsTitle) myContributionsTitle.textContent = `my contributions (${records.length})`;
   myContributionsList.textContent = "";
   records.forEach((record) => {
     const item = document.createElement("li");
+    const button = document.createElement("button");
+    button.type = "button";
+    button.disabled = record.status !== "approved" || !Number.isFinite(Number(record.lat)) || !Number.isFinite(Number(record.lng));
+    button.title = record.status === "approved" ? "show on map" : contributionStatusLabel(record);
     if (record.imageUrl) {
       const image = document.createElement("img");
       image.src = record.imageUrl;
       image.alt = "";
       image.loading = "lazy";
-      item.append(image);
+      button.append(image);
     }
-    const details = document.createElement("div");
-    const date = new Date(record.submittedAt);
-    const dateLabel = Number.isFinite(date.getTime())
-      ? new Intl.DateTimeFormat("en-GB", { dateStyle: "medium" }).format(date)
-      : "date unavailable";
-    const identifier = document.createElement("span");
-    identifier.textContent = `${dateLabel} · ${String(record.id || "").slice(0, 8)}`;
     const status = document.createElement("strong");
     status.className = `is-${record.status || "unavailable"}`;
     status.textContent = record.status ? contributionStatusLabel(record) : "receipt unavailable";
-    details.append(identifier, status);
-    item.append(details);
+    button.append(status);
+    button.addEventListener("click", () => focusContributionRecord(record));
+    item.append(button);
     myContributionsList.append(item);
   });
-  myContributionsStatus.textContent = statusCopy;
+  myContributionsStatus.textContent = statusCopy || "";
+}
+
+function focusContributionRecord(record) {
+  const lat = Number(record.lat);
+  const lng = Number(record.lng);
+  if (record.status !== "approved" || !Number.isFinite(lat) || !Number.isFinite(lng)) return;
+  closeAccountSheet();
+  map.setView([lat, lng], Math.max(map.getZoom(), 19), { animate: true });
+  const tile = displayedTiles.find((candidate) => candidate.id === record.id);
+  if (tile) {
+    setActiveCell(tile.cell);
+    openAzulejoViewer(tile);
+  }
 }
 
 async function refreshContributionReceipts() {
@@ -2264,6 +2283,7 @@ async function refreshContributionReceipts() {
   const receipts = readContributionReceipts();
   myContributionsList.textContent = "";
   if (!receipts.length) {
+    if (myContributionsTitle) myContributionsTitle.textContent = "my contributions (0)";
     myContributionsStatus.textContent = "no contribution receipt on this device";
     return;
   }
@@ -2280,7 +2300,7 @@ async function refreshContributionReceipts() {
     ...(records.get(receipt.id) || {}),
     id: receipt.id,
     submittedAt: records.get(receipt.id)?.submittedAt || receipt.submittedAt,
-  })), `${receipts.length} contribution${receipts.length > 1 ? "s" : ""} recorded on this device`);
+  })), "");
 }
 
 function receiptRequestPayload() {
@@ -2297,7 +2317,7 @@ function applyContributorAccount(data) {
   if (accountProfilePseudonym) accountProfilePseudonym.value = contributorAccount?.profile?.pseudonym || "";
   if (authenticated) {
     const records = contributorAccount.records || [];
-    renderContributionRecords(records, `${records.length} contribution${records.length === 1 ? "" : "s"} linked to this account`);
+    renderContributionRecords(records, "");
   }
 }
 
@@ -2648,6 +2668,24 @@ function closeLocationPermissionSheet() {
   locationPermissionSheet?.setAttribute("aria-hidden", "true");
 }
 
+function setCameraPermissionStep(step, state) {
+  step?.classList.remove("is-pending", "is-granted", "is-denied");
+  step?.classList.add(`is-${state}`);
+}
+
+function openPermissionCameraShell() {
+  if (!squareCamera) return;
+  squareCamera.classList.add("is-open", "is-permission");
+  squareCamera.setAttribute("aria-hidden", "false");
+  squareCameraCapture.disabled = true;
+  setCameraPermissionStep(cameraPermissionStep, "pending");
+  setCameraPermissionStep(locationPermissionStep, "pending");
+}
+
+function closePermissionCameraShell() {
+  squareCamera?.classList.remove("is-permission");
+}
+
 async function retryLocationPermission() {
   if (!locationPermissionRetry) return;
   locationPermissionRetry.disabled = true;
@@ -2671,15 +2709,20 @@ async function retryLocationPermission() {
 
 async function beginRecordingFlow() {
   if (!recordHistoryButton || recordHistoryButton.disabled) return;
+  openPermissionCameraShell();
+  await new Promise((resolve) => window.setTimeout(resolve, 900));
   recordHistoryButton.disabled = true;
   recordHistoryButton.textContent = "checking location...";
   const result = await requestLocationPermission();
   recordHistoryButton.disabled = false;
   recordHistoryButton.textContent = "record azulejos now";
   if (result.state !== "granted") {
+    setCameraPermissionStep(locationPermissionStep, "denied");
+    closeSquareCamera();
     showLocationPermissionSheet(result.state);
     return;
   }
+  setCameraPermissionStep(locationPermissionStep, "granted");
   if (result.gps) focusUserLocation(result.gps, false);
   openSquareCamera();
 }
@@ -3035,10 +3078,14 @@ async function recordAzulejoFromCameraFile(file) {
 
 async function openSquareCamera() {
   if (!navigator.mediaDevices?.getUserMedia || !squareCamera || !squareCameraVideo) {
+    closeSquareCamera();
     recordCameraInput?.click();
     return;
   }
   try {
+    squareCamera.classList.add("is-open", "is-permission");
+    squareCamera.setAttribute("aria-hidden", "false");
+    setCameraPermissionStep(cameraPermissionStep, "pending");
     squareCameraCapture.disabled = true;
     squareCameraStream = await navigator.mediaDevices.getUserMedia({
       video: {
@@ -3049,7 +3096,9 @@ async function openSquareCamera() {
       },
       audio: false,
     });
+    setCameraPermissionStep(cameraPermissionStep, "granted");
     squareCameraVideo.srcObject = squareCameraStream;
+    closePermissionCameraShell();
     squareCamera.classList.add("is-open");
     squareCamera.setAttribute("aria-hidden", "false");
     await squareCameraVideo.play().catch(() => {});
@@ -3065,6 +3114,7 @@ async function openSquareCamera() {
     squareCameraCapture.disabled = false;
   } catch (error) {
     console.warn("Square camera unavailable:", error.message);
+    setCameraPermissionStep(cameraPermissionStep, "denied");
     closeSquareCamera();
     squareCameraCapture.disabled = false;
     recordCameraInput?.click();
@@ -3075,7 +3125,7 @@ function closeSquareCamera() {
   squareCameraStream?.getTracks().forEach((track) => track.stop());
   squareCameraStream = null;
   if (squareCameraVideo) squareCameraVideo.srcObject = null;
-  squareCamera?.classList.remove("is-open");
+  squareCamera?.classList.remove("is-open", "is-permission");
   squareCamera?.setAttribute("aria-hidden", "true");
 }
 

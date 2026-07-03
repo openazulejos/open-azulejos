@@ -10,7 +10,7 @@
     <link rel="apple-touch-icon" href="./assets/azulejo-field-photo-1-crop.png" />
     <link rel="preconnect" href="https://unpkg.com" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="./styles-admin-editor.css?v=20260703-camera-flow" />
+    <link rel="stylesheet" href="./styles-admin-editor.css?v=20260703-account-grid-permissions" />
   </head>
   <body>
     <header class="topbar" aria-label="Navigation principale">
@@ -40,6 +40,13 @@
         <div class="square-camera-view">
           <video id="squareCameraVideo" autoplay muted playsinline></video>
           <div class="square-camera-guide" aria-hidden="true"></div>
+          <div class="square-camera-permissions" id="squareCameraPermissions" aria-live="polite">
+            <p>before recording</p>
+            <ul>
+              <li id="cameraPermissionStep">grant camera authorization</li>
+              <li id="locationPermissionStep">grant geolocation authorization</li>
+            </ul>
+          </div>
         </div>
         <div class="square-camera-controls">
           <button class="square-camera-secondary" id="squareCameraCancel" type="button">cancel</button>
@@ -363,7 +370,7 @@ azulejo-002.jpg,38.71072,-9.13908,Baixa</code></pre>
         </section>
 
         <section class="my-contributions" aria-label="my contributions">
-          <h2>my contributions</h2>
+          <h2 id="myContributionsTitle">my contributions</h2>
           <p id="myContributionsStatus">no contribution receipt on this device</p>
           <ol id="myContributionsList"></ol>
         </section>
@@ -380,6 +387,6 @@ azulejo-002.jpg,38.71072,-9.13908,Baixa</code></pre>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="./offline-queue.js?v=20260702-contribution-rights"></script>
-    <script src="./app-source-capture.js?v=20260703-camera-flow"></script>
+    <script src="./app-source-capture.js?v=20260703-account-grid-permissions"></script>
   </body>
 </html>
