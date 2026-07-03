@@ -48,6 +48,13 @@ const validPseudonym = (value) => {
 
 const serviceHeaders = (serviceKey) => ({ apikey: serviceKey, Authorization: `Bearer ${serviceKey}` });
 
+function requestOrigin(request) {
+  const host = request.headers["x-forwarded-host"] || request.headers.host;
+  if (!host) return "https://openazulejos.vercel.app";
+  const proto = request.headers["x-forwarded-proto"] || "https";
+  return `${proto}://${host}`;
+}
+
 async function profileForUser(supabaseUrl, serviceKey, user) {
   const headers = serviceHeaders(serviceKey);
   const response = await fetch(`${supabaseUrl}/rest/v1/contributor_profiles?select=*&user_id=eq.${user.id}&limit=1`, { headers });
@@ -180,6 +187,43 @@ module.exports = async function handler(request, response) {
     return json(response, 400, { error: "invalid request" });
   }
   const action = String(body.action || "");
+
+  if (action === "reset-password") {
+    const email = String(body.email || "").trim().toLowerCase();
+    if (!validEmail(email)) return json(response, 400, { error: "valid email is required" });
+    const redirectTo = `${requestOrigin(request)}/?account=recovery`;
+    await fetch(`${supabaseUrl}/auth/v1/recover?redirect_to=${encodeURIComponent(redirectTo)}`, {
+      method: "POST",
+      headers: { apikey: publishableKey, "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    }).catch(() => null);
+    return json(response, 200, { resetRequested: true });
+  }
+
+  if (action === "update-password") {
+    const accessToken = String(body.accessToken || "");
+    const password = String(body.password || "");
+    if (!accessToken || /\s/.test(accessToken) || accessToken.length > 4096 || password.length < 10) {
+      return json(response, 400, { error: "valid recovery session and a password of at least 10 characters are required" });
+    }
+    const update = await fetch(`${supabaseUrl}/auth/v1/user`, {
+      method: "PUT",
+      headers: { apikey: publishableKey, Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ password }),
+    });
+    const updated = await update.json().catch(() => ({}));
+    const user = updated.user || updated;
+    if (!update.ok || !user?.id) return json(response, 401, { error: "password reset link is invalid or expired" });
+    try {
+      const profile = await profileForUser(supabaseUrl, serviceKey, user);
+      const claims = { userId: user.id, email: user.email || "" };
+      response.setHeader("Set-Cookie", contributorSessionCookie(createContributorSession({ ...claims, pseudonym: profile.pseudonym })));
+      const claimed = await claimReceipts(supabaseUrl, serviceKey, user.id, body.receipts);
+      return json(response, 200, await accountPayload(supabaseUrl, serviceKey, claims, profile, { claimed }));
+    } catch {
+      return json(response, 502, { error: "account setup failed" });
+    }
+  }
 
   if (action === "claim") {
     const claims = authorizeContributorRequest(request);

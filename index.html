@@ -10,7 +10,7 @@
     <link rel="apple-touch-icon" href="./assets/azulejo-field-photo-1-crop.png" />
     <link rel="preconnect" href="https://unpkg.com" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="./styles-admin-editor.css?v=20260703-account-invite" />
+    <link rel="stylesheet" href="./styles-admin-editor.css?v=20260703-password-reset" />
   </head>
   <body>
     <header class="topbar" aria-label="Navigation principale">
@@ -328,6 +328,7 @@ azulejo-002.jpg,38.71072,-9.13908,Baixa</code></pre>
               <input id="accountLoginPassword" type="password" autocomplete="current-password" minlength="10" required />
             </label>
             <button type="submit">log in</button>
+            <button class="account-link-button" id="accountForgotButton" type="button">forgot password</button>
           </form>
 
           <form class="account-form" id="accountSignupForm">
@@ -344,6 +345,23 @@ azulejo-002.jpg,38.71072,-9.13908,Baixa</code></pre>
               <input id="accountSignupPassword" type="password" autocomplete="new-password" minlength="10" required />
             </label>
             <button type="submit">create account</button>
+          </form>
+
+          <form class="account-form" id="accountResetForm">
+            <label>
+              email
+              <input id="accountResetEmail" type="email" autocomplete="email" required />
+            </label>
+            <button type="submit">send reset email</button>
+            <button class="account-link-button" type="button" data-account-mode="log-in">back to log in</button>
+          </form>
+
+          <form class="account-form" id="accountUpdatePasswordForm">
+            <label>
+              new password
+              <input id="accountNewPassword" type="password" autocomplete="new-password" minlength="10" required />
+            </label>
+            <button type="submit">save new password</button>
           </form>
           <p class="account-status" id="accountStatus" aria-live="polite"></p>
         </section>
@@ -373,6 +391,6 @@ azulejo-002.jpg,38.71072,-9.13908,Baixa</code></pre>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="./offline-queue.js?v=20260702-contribution-rights"></script>
-    <script src="./app-source-capture.js?v=20260703-account-invite"></script>
+    <script src="./app-source-capture.js?v=20260703-password-reset"></script>
   </body>
 </html>

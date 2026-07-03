@@ -26,7 +26,11 @@ function assert(condition, message) {
 async function invoke(method, body, cookie = "") {
   const request = body == null ? Readable.from([]) : Readable.from([JSON.stringify(body)]);
   request.method = method;
-  request.headers = cookie ? { cookie } : {};
+  request.headers = {
+    "x-forwarded-host": "openazulejos.test",
+    "x-forwarded-proto": "https",
+    ...(cookie ? { cookie } : {}),
+  };
   const headers = {};
   let responseBody = "";
   const response = {
@@ -128,6 +132,43 @@ assert(account.status === 200 && account.body.profile.pseudonym === profile.pseu
 
 const loggedOut = await invoke("DELETE", null, accountCookie);
 assert(loggedOut.status === 200 && /Max-Age=0/.test(loggedOut.headers["set-cookie"]), "logout should clear contributor session");
+
+let resetRedirect = "";
+global.fetch = async (url, options = {}) => {
+  const requestUrl = String(url);
+  if (requestUrl.includes("/auth/v1/recover")) {
+    resetRedirect = new URL(requestUrl).searchParams.get("redirect_to") || "";
+    assert(JSON.parse(options.body).email === "walker@example.org", "password reset should send normalized email");
+    return { ok: true, status: 200, json: async () => ({}) };
+  }
+  throw new Error(`unexpected reset request: ${requestUrl}`);
+};
+const reset = await invoke("POST", { action: "reset-password", email: "Walker@Example.org" });
+assert(reset.status === 200 && reset.body.resetRequested, "password reset requests should be accepted");
+assert(resetRedirect === "https://openazulejos.test/?account=recovery", "password reset should return to the app");
+
+global.fetch = async (url, options = {}) => {
+  const requestUrl = String(url);
+  if (requestUrl.includes("/auth/v1/user") && options.method === "PUT") {
+    assert(options.headers.Authorization === "Bearer recovery-token", "password update should use the recovery access token");
+    assert(JSON.parse(options.body).password === "new-long-password", "password update should submit the new password");
+    return { ok: true, status: 200, json: async () => ({ id: userId, email: "walker@example.org" }) };
+  }
+  if (requestUrl.includes("contributor_profiles?select=*&user_id=")) {
+    return { ok: true, status: 200, json: async () => [profile] };
+  }
+  if (requestUrl.includes("contributions?select=legacy_azulejo_id%2Cstatus")) {
+    return { ok: true, status: 200, json: async () => [] };
+  }
+  throw new Error(`unexpected password update request: ${requestUrl}`);
+};
+const updatedPassword = await invoke("POST", {
+  action: "update-password",
+  accessToken: "recovery-token",
+  password: "new-long-password",
+});
+assert(updatedPassword.status === 200 && updatedPassword.body.authenticated, "password update should sign the contributor in");
+assert(/HttpOnly/.test(updatedPassword.headers["set-cookie"]), "password update should create an app session");
 
 global.fetch = async (url, options = {}) => {
   const requestUrl = String(url);

@@ -1340,6 +1340,16 @@ pre {
   cursor: pointer;
 }
 
+.account-form .account-link-button {
+  min-height: auto;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  text-align: left;
+}
+
 .account-form button:disabled {
   opacity: 0.45;
   cursor: wait;
