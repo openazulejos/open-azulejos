@@ -26,9 +26,14 @@ jobs:
           node-version: 22
       - name: Back up records and media
         run: node scripts/backup-open-azulejos.mjs --output "$RUNNER_TEMP/openazulejos"
+      - name: Install PostgreSQL 17 client
+        if: env.SUPABASE_DB_URL != ''
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client-17
       - name: Back up PostgreSQL
         if: env.SUPABASE_DB_URL != ''
-        run: pg_dump "$SUPABASE_DB_URL" --format=custom --file="$RUNNER_TEMP/openazulejos/database.backup"
+        run: /usr/lib/postgresql/17/bin/pg_dump "$SUPABASE_DB_URL" --format=custom --file="$RUNNER_TEMP/openazulejos/database.backup"
       - name: Verify media backup
         run: node scripts/verify-backup.mjs "$(find "$RUNNER_TEMP/openazulejos" -mindepth 1 -maxdepth 1 -type d | sort | tail -1)"
       - uses: actions/upload-artifact@v4
