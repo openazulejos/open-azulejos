@@ -202,6 +202,18 @@ module.exports = async function handler(request, response) {
     return json(response, 200, { resetRequested: true });
   }
 
+  if (action === "magic-link") {
+    const email = String(body.email || "").trim().toLowerCase();
+    if (!validEmail(email)) return json(response, 400, { error: "valid email is required" });
+    const redirectTo = `${requestOrigin(request)}/?account=magic`;
+    await fetch(`${supabaseUrl}/auth/v1/otp?redirect_to=${encodeURIComponent(redirectTo)}`, {
+      method: "POST",
+      headers: { apikey: publishableKey, "Content-Type": "application/json" },
+      body: JSON.stringify({ email, create_user: true }),
+    }).catch(() => null);
+    return json(response, 200, { magicLinkRequested: true });
+  }
+
   if (action === "update-password") {
     const accessToken = String(body.accessToken || "");
     const password = String(body.password || "");
@@ -227,16 +239,16 @@ module.exports = async function handler(request, response) {
     }
   }
 
-  if (action === "oauth-session") {
+  if (action === "auth-session") {
     const accessToken = String(body.accessToken || "");
     if (!accessToken || /\s/.test(accessToken) || accessToken.length > 4096) {
-      return json(response, 400, { error: "valid oauth session is required" });
+      return json(response, 400, { error: "valid login session is required" });
     }
     const userResponse = await fetch(`${supabaseUrl}/auth/v1/user`, {
       headers: { apikey: publishableKey, Authorization: `Bearer ${accessToken}` },
     });
     const user = await userResponse.json().catch(() => ({}));
-    if (!userResponse.ok || !user?.id) return json(response, 401, { error: "oauth session is invalid or expired" });
+    if (!userResponse.ok || !user?.id) return json(response, 401, { error: "login session is invalid or expired" });
     try {
       const profile = await profileForUser(supabaseUrl, serviceKey, user);
       const claims = { userId: user.id, email: user.email || "" };

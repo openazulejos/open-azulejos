@@ -183,8 +183,7 @@ const accountLoginForm = document.querySelector("#accountLoginForm");
 const accountSignupForm = document.querySelector("#accountSignupForm");
 const accountResetForm = document.querySelector("#accountResetForm");
 const accountUpdatePasswordForm = document.querySelector("#accountUpdatePasswordForm");
-const accountGoogleButton = document.querySelector("#accountGoogleButton");
-const accountAppleButton = document.querySelector("#accountAppleButton");
+const accountPasswordLoginButton = document.querySelector("#accountPasswordLoginButton");
 const accountForgotButton = document.querySelector("#accountForgotButton");
 const accountLoginEmail = document.querySelector("#accountLoginEmail");
 const accountLoginPassword = document.querySelector("#accountLoginPassword");
@@ -1122,13 +1121,13 @@ function recoveryParamsFromUrl() {
   return type === "recovery" && accessToken ? { accessToken } : null;
 }
 
-function oauthParamsFromUrl() {
+function magicLinkParamsFromUrl() {
   const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
   const query = new URLSearchParams(window.location.search);
   const accessToken = hash.get("access_token") || query.get("access_token");
   const error = hash.get("error_description") || hash.get("error") || query.get("error_description") || query.get("error");
   if (error) return { error };
-  return query.get("account") === "oauth" && accessToken ? { accessToken } : null;
+  return query.get("account") === "magic" && accessToken ? { accessToken } : null;
 }
 
 function clearRecoveryUrl() {
@@ -1143,11 +1142,11 @@ function openRecoveryAccountFlow() {
   openAccountSheet({ mode: "recovery", message: "choose a new password for your account" });
 }
 
-async function openOauthAccountFlow() {
-  const oauth = oauthParamsFromUrl();
-  if (!oauth) return;
-  openAccountSheet({ mode: "log-in", message: oauth.error ? "login was cancelled or unavailable" : "finishing login..." });
-  if (oauth.error) {
+async function openMagicLinkAccountFlow() {
+  const magic = magicLinkParamsFromUrl();
+  if (!magic) return;
+  openAccountSheet({ mode: "log-in", message: magic.error ? "magic link is invalid or expired" : "finishing login..." });
+  if (magic.error) {
     clearRecoveryUrl();
     return;
   }
@@ -1156,8 +1155,8 @@ async function openOauthAccountFlow() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        action: "oauth-session",
-        accessToken: oauth.accessToken,
+        action: "auth-session",
+        accessToken: magic.accessToken,
         receipts: receiptRequestPayload(),
       }),
     });
@@ -2477,11 +2476,15 @@ async function refreshContributorAccount() {
 
 async function submitContributorAccount(event, action) {
   event.preventDefault();
-  const form = event.currentTarget;
+  const form = event.currentTarget?.tagName === "FORM"
+    ? event.currentTarget
+    : event.currentTarget?.closest?.("form") || accountLoginForm;
   const button = form.querySelector("button[type='submit']");
   if (button) button.disabled = true;
   const statusLabel = action === "sign-up"
     ? "creating account..."
+    : action === "magic-link"
+      ? "sending magic link..."
     : action === "reset-password"
       ? "sending reset email..."
       : action === "update-password"
@@ -2501,6 +2504,11 @@ async function submitContributorAccount(event, action) {
         action,
         email: accountResetEmail?.value || accountLoginEmail?.value,
       }
+      : action === "magic-link"
+        ? {
+          action,
+          email: accountLoginEmail?.value,
+        }
       : action === "update-password"
         ? {
           action,
@@ -2527,6 +2535,10 @@ async function submitContributorAccount(event, action) {
       if (accountStatus) accountStatus.textContent = "if this email has an account, a reset link has been sent";
       return;
     }
+    if (data.magicLinkRequested) {
+      if (accountStatus) accountStatus.textContent = "check your email for a magic login link";
+      return;
+    }
     if (data.confirmationRequired) {
       setAccountMode("log-in");
       if (accountLoginEmail) accountLoginEmail.value = payload.email || "";
@@ -2545,16 +2557,6 @@ async function submitContributorAccount(event, action) {
   } finally {
     if (button) button.disabled = false;
   }
-}
-
-function startContributorOauth(provider) {
-  const normalized = String(provider || "").toLowerCase();
-  if (!["google", "apple"].includes(normalized)) return;
-  if (accountStatus) accountStatus.textContent = `opening ${normalized} login...`;
-  [accountGoogleButton, accountAppleButton].forEach((button) => {
-    if (button) button.disabled = true;
-  });
-  window.location.assign(`/api/contributor-oauth?provider=${encodeURIComponent(normalized)}`);
 }
 
 async function updateContributorProfile(event) {
@@ -4070,8 +4072,7 @@ accountOpenButton?.addEventListener("click", openAccountSheet);
 accountCloseButton?.addEventListener("click", closeAccountSheet);
 accountLoginMode?.addEventListener("click", () => setAccountMode("log-in"));
 accountSignupMode?.addEventListener("click", () => setAccountMode("sign-up"));
-accountGoogleButton?.addEventListener("click", () => startContributorOauth("google"));
-accountAppleButton?.addEventListener("click", () => startContributorOauth("apple"));
+accountPasswordLoginButton?.addEventListener("click", (event) => submitContributorAccount(event, "sign-in"));
 accountForgotButton?.addEventListener("click", () => {
   if (accountResetEmail && accountLoginEmail) accountResetEmail.value = accountLoginEmail.value;
   setAccountMode("reset");
@@ -4079,7 +4080,7 @@ accountForgotButton?.addEventListener("click", () => {
 document.querySelectorAll("[data-account-mode]").forEach((button) => {
   button.addEventListener("click", () => setAccountMode(button.dataset.accountMode || "log-in"));
 });
-accountLoginForm?.addEventListener("submit", (event) => submitContributorAccount(event, "sign-in"));
+accountLoginForm?.addEventListener("submit", (event) => submitContributorAccount(event, "magic-link"));
 accountSignupForm?.addEventListener("submit", (event) => submitContributorAccount(event, "sign-up"));
 accountResetForm?.addEventListener("submit", (event) => submitContributorAccount(event, "reset-password"));
 accountUpdatePasswordForm?.addEventListener("submit", (event) => submitContributorAccount(event, "update-password"));
@@ -4182,7 +4183,7 @@ if (typeof fetch === "function") {
   refreshContributorAccount().catch(() => applyContributorAccount(null));
 }
 openRecoveryAccountFlow();
-openOauthAccountFlow();
+openMagicLinkAccountFlow();
 if ("serviceWorker" in navigator) {
   window.addEventListener?.("load", () => {
     navigator.serviceWorker.register("/service-worker.js").catch((error) => {

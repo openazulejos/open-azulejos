@@ -105,8 +105,8 @@ Target: 1 to 3 months.
   browser restarts, and account creation.
 - Refine the three-observation invitation so it feels playful rather than
   coercive; never block the fourth contribution.
-- Evaluate whether password-based accounts should stay or whether magic-link
-  login is simpler for the public contributor workflow.
+- Treat magic-link login as the main public contributor workflow, with
+  password-based access kept only as a compatibility fallback.
 - Expand the private contribution page with moderation dates, concise rejection
   reasons, and direct map links for approved observations.
 - Make public profiles opt-in and never expose email, precise movement history,

@@ -306,11 +306,6 @@ azulejo-002.jpg,38.71072,-9.13908,Baixa</code></pre>
             <button id="accountSignupMode" type="button" role="tab" aria-selected="false">sign up</button>
           </div>
 
-          <div class="account-oauth" aria-label="quick account access">
-            <button id="accountGoogleButton" type="button" data-provider="google">continue with Google</button>
-            <button id="accountAppleButton" type="button" data-provider="apple">continue with Apple</button>
-          </div>
-
           <form class="account-form is-active" id="accountLoginForm">
             <label>
               email
@@ -318,9 +313,10 @@ azulejo-002.jpg,38.71072,-9.13908,Baixa</code></pre>
             </label>
             <label>
               password
-              <input id="accountLoginPassword" type="password" autocomplete="current-password" minlength="10" required />
+              <input id="accountLoginPassword" type="password" autocomplete="current-password" minlength="10" />
             </label>
-            <button type="submit">log in</button>
+            <button type="submit">send magic link</button>
+            <button class="account-link-button" id="accountPasswordLoginButton" type="button">log in with password</button>
             <button class="account-link-button" id="accountForgotButton" type="button">forgot password</button>
           </form>
 
@@ -402,6 +398,6 @@ azulejo-002.jpg,38.71072,-9.13908,Baixa</code></pre>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="./offline-queue.js?v=20260702-contribution-rights"></script>
-    <script src="./app-source-capture.js?v=20260704-oauth-login"></script>
+    <script src="./app-source-capture.js?v=20260704-magic-link"></script>
   </body>
 </html>
