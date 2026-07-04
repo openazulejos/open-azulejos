@@ -36,10 +36,14 @@ The core loop is:
 
 ## Foundation completed
 
-- Verified off-provider backups and documented restoration.
+- Canonical production domain at `openazulejos.com`, with Vercel/GitHub
+  deployment automation and redirects from older Vercel hosts.
+- Verified GitHub Actions media-and-record backups and documented restoration.
 - Private original photographs and explicit public derivatives.
 - PostGIS-backed locations and normalized archival entities.
-- Named Supabase Auth accounts with a temporary recovery bridge.
+- Named Supabase Auth admin accounts with a temporary recovery bridge.
+- Contributor accounts with pseudonyms, private emails, contribution claiming,
+  password recovery, and editable usernames.
 - Installable PWA shell and offline-resilient contribution queue.
 - Stable JSON-LD, IIIF Presentation 3, and LIDO 1.1 representations.
 - Explicit CC BY 4.0 consent and photographer attribution for new contributions.
@@ -47,10 +51,31 @@ The core loop is:
   100,000 records.
 - Nearby perceptual-similarity ranking and persisted 64-bit image fingerprints.
 - Administrator-reviewed duplicate relationships without destructive merging.
+- Mobile-first square capture with preview, source-margin preservation,
+  mandatory geolocation, iOS-oriented permission guidance, and admin-only
+  outside-Lisbon beta capture.
+- Account page contribution mosaic and About-page top-contributor list based on
+  approved observations.
+- Minimal admin image treatment tools: crop correction, four-point perspective
+  rectification, white-point sampling, exposure/highlight adjustments, condition
+  tags, source-margin recovery, adjacent-record navigation, and rejection
+  workflow.
+
+## Operational gaps
+
+- Add `SUPABASE_DB_URL` to GitHub Actions so the native PostgreSQL `pg_dump`
+  step runs in addition to the current record/media backup.
+- Add independent S3-compatible backup storage, not only 30-day GitHub Actions
+  artifacts.
+- Run and document a monthly restore drill into an isolated Supabase project.
+- Confirm that the founder contributor account and named admin profile remain
+  linked in production, so admin-only beta capture works from the public map.
+- Add lightweight monitoring for failed uploads, backup completion, pending
+  moderation count, and API errors.
 
 ## Phase 1: temporal observation core
 
-Target: next 6 to 10 weeks.
+Target: next 4 to 8 weeks.
 
 - Make repeated observations first-class: remove the remaining one-observation
   assumptions from compatibility tables and APIs.
@@ -72,16 +97,18 @@ Success signals:
 
 ## Phase 2: progressive contributor identity
 
-Target: 2 to 4 months.
+Target: 1 to 3 months.
 
-- Give every installation a random guest identity and a recoverable claim token.
-- Keep capture account-free and retain guest contributions across offline retry.
-- After three successfully submitted observations, invite the contributor to
-  choose a pseudonym and provide an email; never block the fourth contribution.
-- Use passwordless email authentication and allow earlier guest contributions to
-  be claimed by the new account.
-- Provide a private contribution page showing pending, approved, and rejected
-  observations, moderation dates, and concise rejection reasons.
+- Give every installation a more durable random guest identity and recoverable
+  claim token.
+- Keep capture account-free and retain guest contributions across offline retry,
+  browser restarts, and account creation.
+- Refine the three-observation invitation so it feels playful rather than
+  coercive; never block the fourth contribution.
+- Evaluate whether password-based accounts should stay or whether magic-link
+  login is simpler for the public contributor workflow.
+- Expand the private contribution page with moderation dates, concise rejection
+  reasons, and direct map links for approved observations.
 - Make public profiles opt-in and never expose email, precise movement history,
   device identifiers, or rejected contributions.
 
@@ -97,8 +124,8 @@ Target: 4 to 8 months.
 
 - Count newly documented physical instances and verified temporal revisits as
   separate forms of recognition; never count submitted photos directly.
-- Add opt-in contributor pages and a restrained top-ten acknowledgements
-  leaderboard.
+- Refine the About-page top-contributor list into an opt-in recognition system
+  that can distinguish monthly, neighbourhood, and lifetime contributions.
 - Offer monthly and neighbourhood views so new contributors can participate
   without competing against lifetime totals.
 - Reward useful behaviours: first observation in a grid cell, a verified revisit,
@@ -165,10 +192,14 @@ Target: 12 to 24 months, triggered by measured use.
 
 ## Immediate implementation order
 
-1. Finish the many-observations-per-instance data contract.
-2. Add reviewed relation types and non-destructive instance attachment in admin.
-3. Add moderation reasons and contributor-visible status APIs.
-4. Design the guest identity and contribution-claim security model in an ADR.
-5. Implement progressive identity before public leaderboards.
-6. Pilot repeated observations and condition vocabulary on existing records.
-7. Build the timeline only after the temporal dataset is credible.
+1. Harden backups: add `SUPABASE_DB_URL`, independent object storage, and a
+   documented restore drill.
+2. Confirm and, if needed, repair the `orson` contributor/admin account link in
+   production.
+3. Finish the many-observations-per-instance data contract.
+4. Add reviewed relation types and non-destructive instance attachment in admin.
+5. Add contributor-visible moderation dates and rejection reasons.
+6. Design the durable guest identity and contribution-claim security model in an
+   ADR.
+7. Pilot repeated observations and condition vocabulary on existing records.
+8. Build the timeline only after the temporal dataset is credible.
