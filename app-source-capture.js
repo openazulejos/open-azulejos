@@ -227,9 +227,6 @@ const captureCropX = document.querySelector("#captureCropX");
 const captureCropY = document.querySelector("#captureCropY");
 const captureRetakeButton = document.querySelector("#captureRetakeButton");
 const captureSendButton = document.querySelector("#captureSendButton");
-const capturePhotographerCredit = document.querySelector("#capturePhotographerCredit");
-const captureLicenseConsent = document.querySelector("#captureLicenseConsent");
-const captureRightsNotice = document.querySelector("#captureRightsNotice");
 const locationPermissionSheet = document.querySelector("#locationPermissionSheet");
 const locationPermissionClose = document.querySelector("#locationPermissionClose");
 const locationPermissionMessage = document.querySelector("#locationPermissionMessage");
@@ -2103,8 +2100,6 @@ async function openCapturePreview(imageSource, gps = null) {
   }
   if (captureCropX) captureCropX.value = "0";
   if (captureCropY) captureCropY.value = "0";
-  if (captureLicenseConsent) captureLicenseConsent.checked = false;
-  updateCaptureRightsNotice();
   drawPendingCapture();
   capturePreview?.classList.add("is-open");
   capturePreview?.setAttribute("aria-hidden", "false");
@@ -2419,13 +2414,6 @@ function applyContributorAccount(data) {
 
 function captureCreditName() {
   return contributorAccount?.profile?.pseudonym || "anonymous";
-}
-
-function updateCaptureRightsNotice() {
-  if (!captureRightsNotice) return;
-  captureRightsNotice.textContent = contributorAccount?.profile?.pseudonym
-    ? `published under cc by 4.0 as ${contributorAccount.profile.pseudonym}`
-    : "published under cc by 4.0 as anonymous. create an account to become a top contributor.";
 }
 
 async function refreshContributorAccount() {
@@ -3410,6 +3398,7 @@ function showCaptureSendStatus(label, duration = 2200) {
 async function sendPendingCapture() {
   if (!pendingCapture) return;
   captureSendButton.disabled = true;
+  if (captureRetakeButton) captureRetakeButton.disabled = true;
   captureSendButton.textContent = "locating...";
   let keepStatus = false;
   let queuedOffline = false;
@@ -3451,6 +3440,7 @@ async function sendPendingCapture() {
     showCaptureSendStatus("try again", 2800);
   } finally {
     captureSendButton.disabled = false;
+    if (captureRetakeButton) captureRetakeButton.disabled = false;
     if (!keepStatus) captureSendButton.textContent = "send";
     recordHistoryButton.disabled = false;
     recordHistoryButton.textContent = queuedOffline ? "saved offline" : "pending review";
