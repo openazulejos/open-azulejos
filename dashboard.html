@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>open azulejos dashboard</title>
+    <link rel="stylesheet" href="./styles-admin-editor.css?v=20260704-smart-dashboard" />
+  </head>
+  <body class="dashboard-page">
+    <div class="dashboard-refresh-indicator" id="dashboardRefreshIndicator" aria-hidden="true">pull to refresh</div>
+    <main class="dashboard-shell">
+      <header class="dashboard-topbar">
+        <a href="./" class="dashboard-brand">open azulejos</a>
+        <span>beta dashboard</span>
+      </header>
+
+      <section class="dashboard-login" id="dashboardLoginPanel">
+        <h1>dashboard</h1>
+        <p>admin access is required to see beta launch activity.</p>
+        <form id="dashboardAccountLogin">
+          <label>
+            email
+            <input id="dashboardEmail" type="email" autocomplete="username" required />
+          </label>
+          <label>
+            password
+            <input id="dashboardPassword" type="password" autocomplete="current-password" minlength="12" required />
+          </label>
+          <button id="dashboardLoginButton" type="submit">open dashboard</button>
+          <p id="dashboardLoginStatus" role="status"></p>
+        </form>
+        <details>
+          <summary>temporary key</summary>
+          <form id="dashboardKeyLogin">
+            <label>
+              admin key
+              <input id="dashboardAdminKey" type="password" autocomplete="current-password" />
+            </label>
+            <button id="dashboardKeyButton" type="submit">open</button>
+            <p id="dashboardKeyStatus" role="status"></p>
+          </form>
+        </details>
+      </section>
+
+      <section class="dashboard-content" id="dashboardContent" hidden>
+        <header class="dashboard-hero">
+          <div>
+            <p id="dashboardPeriod">since beta launch</p>
+            <h1>launch pulse</h1>
+          </div>
+          <button id="dashboardRefreshButton" type="button">refresh</button>
+        </header>
+
+        <p class="dashboard-status" id="dashboardStatus" role="status">loading stats...</p>
+
+        <section class="dashboard-primary-grid" aria-label="headline metrics">
+          <article class="dashboard-primary-card">
+            <span>new contributors</span>
+            <strong id="dashboardNewContributors">—</strong>
+          </article>
+          <article class="dashboard-primary-card">
+            <span>published since beta</span>
+            <strong id="dashboardPublished">—</strong>
+          </article>
+        </section>
+
+        <section class="dashboard-metrics" aria-label="beta launch metrics">
+          <article><span>submissions</span><strong id="dashboardSubmissions">—</strong></article>
+          <article><span>pending review</span><strong id="dashboardPending">—</strong></article>
+          <article><span>approval rate</span><strong id="dashboardApprovalRate">—</strong></article>
+          <article><span>active contributors</span><strong id="dashboardActiveContributors">—</strong></article>
+          <article><span>last 24 hours</span><strong id="dashboardLast24Hours">—</strong></article>
+          <article><span>guest submissions</span><strong id="dashboardGuestSubmissions">—</strong></article>
+        </section>
+
+        <section class="dashboard-activity" aria-labelledby="dashboardActivityTitle">
+          <h2 id="dashboardActivityTitle">last 7 days</h2>
+          <div id="dashboardActivityChart"></div>
+        </section>
+
+        <section class="dashboard-summary" aria-label="archive totals">
+          <p><span>total published</span><strong id="dashboardTotalPublished">—</strong></p>
+          <p><span>registered accounts</span><strong id="dashboardTotalContributors">—</strong></p>
+          <p><span>latest submission</span><strong id="dashboardLatestSubmission">—</strong></p>
+        </section>
+
+        <footer class="dashboard-actions">
+          <a href="./admin">open moderation</a>
+          <button id="dashboardLockButton" type="button">lock</button>
+        </footer>
+      </section>
+    </main>
+    <script src="./dashboard.js?v=20260704-smart-dashboard"></script>
+  </body>
+</html>

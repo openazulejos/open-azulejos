@@ -2258,6 +2258,364 @@ pre {
   margin-bottom: 12px;
 }
 
+.dashboard-page {
+  --dashboard-pull: 0px;
+  min-height: 100dvh;
+  margin: 0;
+  background: #f8f8f6;
+  color: var(--ink);
+  font-family: var(--font-sans);
+  overscroll-behavior-y: contain;
+}
+
+.dashboard-refresh-indicator {
+  position: fixed;
+  top: calc(env(safe-area-inset-top) + 10px);
+  left: 50%;
+  z-index: 20;
+  transform: translate(-50%, -140%);
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--muted);
+  font-size: 12px;
+  opacity: 0;
+  transition: opacity 160ms ease, transform 160ms ease, color 160ms ease, border-color 160ms ease;
+  pointer-events: none;
+}
+
+.dashboard-refresh-indicator.is-visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.dashboard-refresh-indicator.is-ready {
+  border-color: var(--azul);
+  color: var(--azul);
+}
+
+.dashboard-shell {
+  width: min(100%, 560px);
+  margin: 0 auto;
+  padding: calc(env(safe-area-inset-top) + 18px) 16px calc(env(safe-area-inset-bottom) + 28px);
+  transform: translateY(var(--dashboard-pull));
+  transition: transform 140ms ease;
+}
+
+.dashboard-topbar {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.dashboard-brand,
+.dashboard-topbar span,
+.dashboard-hero h1,
+.dashboard-login h1 {
+  color: var(--ink);
+  font-size: 28px;
+  font-weight: 300;
+  letter-spacing: 0;
+  line-height: 1;
+  text-decoration: none;
+}
+
+.dashboard-topbar span {
+  color: var(--muted);
+  font-size: 15px;
+}
+
+.dashboard-login,
+.dashboard-content {
+  min-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 46px);
+}
+
+.dashboard-login {
+  display: grid;
+  align-content: start;
+  gap: 18px;
+}
+
+.dashboard-login h1,
+.dashboard-login p {
+  margin: 0;
+}
+
+.dashboard-login > p,
+.dashboard-login summary,
+.dashboard-login label,
+.dashboard-login form p,
+.dashboard-status,
+.dashboard-hero p,
+.dashboard-primary-card span,
+.dashboard-metrics span,
+.dashboard-summary span,
+.dashboard-actions a,
+.dashboard-actions button {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.dashboard-login form {
+  display: grid;
+  gap: 12px;
+}
+
+.dashboard-login label {
+  display: grid;
+  gap: 7px;
+}
+
+.dashboard-login input {
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid var(--line);
+  border-radius: 0;
+  padding: 0 12px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  box-sizing: border-box;
+}
+
+.dashboard-login button,
+.dashboard-hero button,
+.dashboard-actions button,
+.dashboard-actions a {
+  min-height: 44px;
+  border: 1px solid var(--ink);
+  border-radius: 0;
+  padding: 0 14px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  text-decoration: none;
+}
+
+.dashboard-login details {
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+}
+
+.dashboard-login summary {
+  cursor: pointer;
+}
+
+.dashboard-login details form {
+  margin-top: 14px;
+}
+
+.dashboard-hero {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 10px;
+}
+
+.dashboard-hero h1,
+.dashboard-hero p,
+.dashboard-status {
+  margin: 0;
+}
+
+.dashboard-hero h1 {
+  margin-top: 4px;
+  font-size: clamp(42px, 12vw, 68px);
+}
+
+.dashboard-hero button {
+  flex: 0 0 auto;
+  min-height: 38px;
+  color: var(--azul);
+  border-color: var(--azul);
+}
+
+.dashboard-status {
+  min-height: 18px;
+  margin-bottom: 20px;
+  font-variant-numeric: tabular-nums;
+}
+
+.dashboard-primary-grid,
+.dashboard-metrics {
+  display: grid;
+  gap: 8px;
+}
+
+.dashboard-primary-grid {
+  grid-template-columns: 1fr;
+  margin-bottom: 8px;
+}
+
+.dashboard-primary-card,
+.dashboard-metrics article,
+.dashboard-summary {
+  border: 1px solid var(--line);
+  background: #fff;
+}
+
+.dashboard-primary-card {
+  display: grid;
+  min-height: 150px;
+  align-content: space-between;
+  padding: 16px;
+}
+
+.dashboard-primary-card span,
+.dashboard-metrics span,
+.dashboard-summary span {
+  text-transform: none;
+}
+
+.dashboard-primary-card strong {
+  color: var(--azul);
+  font-size: clamp(76px, 24vw, 124px);
+  font-weight: 300;
+  line-height: 0.88;
+  font-variant-numeric: tabular-nums;
+}
+
+.dashboard-metrics {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.dashboard-metrics article {
+  display: grid;
+  min-height: 96px;
+  align-content: space-between;
+  padding: 12px;
+}
+
+.dashboard-metrics strong {
+  color: var(--ink);
+  font-size: 34px;
+  font-weight: 300;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.dashboard-activity {
+  margin-top: 26px;
+}
+
+.dashboard-activity h2 {
+  margin: 0 0 12px;
+  font-size: 17px;
+  font-weight: 300;
+}
+
+#dashboardActivityChart {
+  display: grid;
+  gap: 10px;
+}
+
+.dashboard-activity-row {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) 34px;
+  align-items: center;
+  gap: 10px;
+}
+
+.dashboard-activity-row time,
+.dashboard-activity-row strong {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 300;
+  font-variant-numeric: tabular-nums;
+}
+
+.dashboard-activity-row strong {
+  color: var(--ink);
+  text-align: right;
+}
+
+.dashboard-activity-track {
+  position: relative;
+  height: 10px;
+  background: #ececea;
+}
+
+.dashboard-activity-track span {
+  position: absolute;
+  inset: 0 auto 0 0;
+}
+
+.dashboard-activity-submitted {
+  background: #c9c9c5;
+}
+
+.dashboard-activity-approved {
+  background: var(--azul);
+}
+
+.dashboard-summary {
+  display: grid;
+  gap: 0;
+  margin-top: 26px;
+}
+
+.dashboard-summary p {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 48px;
+  margin: 0;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.dashboard-summary p:last-child {
+  border-bottom: 0;
+}
+
+.dashboard-summary strong {
+  font-size: 17px;
+  font-weight: 300;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.dashboard-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 26px;
+}
+
+.dashboard-actions a,
+.dashboard-actions button {
+  display: inline-grid;
+  place-items: center;
+  flex: 1;
+  color: var(--ink);
+}
+
+@media (min-width: 520px) {
+  .dashboard-primary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 360px) {
+  .dashboard-brand {
+    font-size: 24px;
+  }
+
+  .dashboard-topbar span {
+    font-size: 13px;
+  }
+
+  .dashboard-metrics strong {
+    font-size: 30px;
+  }
+}
+
 .admin-filters {
   display: flex;
   flex-wrap: wrap;

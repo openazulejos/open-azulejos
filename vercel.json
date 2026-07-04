@@ -71,6 +71,10 @@
     {
       "source": "/exports/azulejos.csv",
       "destination": "/api/archive?format=csv"
+    },
+    {
+      "source": "/dashboard",
+      "destination": "/dashboard.html"
     }
   ],
   "headers": [
@@ -137,6 +141,33 @@
     },
     {
       "source": "/admin.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "private, no-store"
+        }
+      ]
+    },
+    {
+      "source": "/dashboard",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "private, no-store"
+        }
+      ]
+    },
+    {
+      "source": "/dashboard.html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "private, no-store"
+        }
+      ]
+    },
+    {
+      "source": "/dashboard.js",
       "headers": [
         {
           "key": "Cache-Control",
