@@ -2308,8 +2308,13 @@ function maybeInviteContributorAccount(receiptCount) {
 
 function contributionStatusLabel(record) {
   if (record.status === "approved") return "accepted";
-  if (record.status === "rejected") return record.reason ? `rejected · ${record.reason}` : "rejected";
+  if (record.status === "rejected") return "rejected";
   return "pending review";
+}
+
+function contributionReasonLabel(record) {
+  const reason = String(record?.reason || "").trim();
+  return record?.status === "rejected" && reason ? reason : "";
 }
 
 function setContributionView(view, options = {}) {
@@ -2352,10 +2357,14 @@ function renderContributionRecords(records, statusCopy) {
   myContributionsList.textContent = "";
   records.forEach((record) => {
     const item = document.createElement("li");
+    item.className = `is-${record.status || "unavailable"}`;
     const button = document.createElement("button");
     button.type = "button";
     button.disabled = record.status !== "approved" || !Number.isFinite(Number(record.lat)) || !Number.isFinite(Number(record.lng));
-    button.title = record.status === "approved" ? "show on map" : contributionStatusLabel(record);
+    const reasonLabel = contributionReasonLabel(record);
+    button.title = record.status === "approved"
+      ? "show on map"
+      : [contributionStatusLabel(record), reasonLabel].filter(Boolean).join(": ");
     if (record.imageUrl) {
       const image = document.createElement("img");
       image.src = thumbnailImageUrl(record.imageUrl, 160);
@@ -2374,10 +2383,14 @@ function renderContributionRecords(records, statusCopy) {
     const status = document.createElement("strong");
     status.className = `is-${record.status || "unavailable"}`;
     status.textContent = record.status ? contributionStatusLabel(record) : "receipt unavailable";
+    const reason = document.createElement("span");
+    reason.className = "contribution-reason";
+    reason.hidden = !reasonLabel;
+    reason.textContent = reasonLabel ? `reason: ${reasonLabel}` : "";
     const submitted = document.createElement("time");
     submitted.dateTime = record.submittedAt || "";
     submitted.textContent = contributionDateLabel(record.submittedAt);
-    details.append(title, status, submitted);
+    details.append(title, status, reason, submitted);
     button.append(details);
     button.addEventListener("click", () => focusContributionRecord(record));
     item.append(button);

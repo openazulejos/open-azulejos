@@ -213,6 +213,12 @@ function updateCardStatus(card, record) {
   const moderationStatus = recordStatus(record);
   status.className = `admin-status-pill is-${moderationStatus}`;
   status.textContent = moderationStatus;
+  const reason = card.querySelector(".admin-moderation-reason");
+  if (reason) {
+    const reasonText = String(record.moderation_reason || "").trim();
+    reason.hidden = moderationStatus !== "rejected" || !reasonText;
+    reason.textContent = reasonText ? `reason: ${reasonText}` : "";
+  }
   const approve = card.querySelector(".admin-approve");
   approve.hidden = moderationStatus === "approved";
   const reject = card.querySelector(".admin-reject");
@@ -302,6 +308,10 @@ function appendRecordCard(record, index) {
     const status = document.createElement("span");
     status.className = "admin-status-pill";
 
+    const moderationReason = document.createElement("p");
+    moderationReason.className = "admin-moderation-reason";
+    moderationReason.hidden = true;
+
     const mapLink = document.createElement("a");
     mapLink.href = googleMapsUrl(record);
     mapLink.target = "_blank";
@@ -339,7 +349,7 @@ function appendRecordCard(record, index) {
     deleteButton.addEventListener("click", () => deleteRecord(record, card));
 
     actions.append(editButton, approveButton, rejectButton, deleteButton);
-    card.append(image, title, status, meta, submissionDate, mapLink, id, actions);
+    card.append(image, title, status, moderationReason, meta, submissionDate, mapLink, id, actions);
     updateCardStatus(card, record);
     adminGrid.append(card);
 }
