@@ -35,10 +35,20 @@ let refreshInFlight = false;
 let touchStartY = null;
 let pullDistance = 0;
 
+function setVisible(element, visible) {
+  if (!element) return;
+  element.hidden = !visible;
+  element.style.display = visible ? "" : "none";
+}
+
 function setAuthenticated(value) {
   authenticated = value;
-  loginPanel.hidden = value;
-  content.hidden = !value;
+  setVisible(loginPanel, !value);
+  setVisible(content, value);
+}
+
+function setField(element, value) {
+  if (element) element.textContent = value;
 }
 
 function formatDate(value, options = {}) {
@@ -56,6 +66,7 @@ function numberText(value) {
 }
 
 function renderActivity(days) {
+  if (!activityChart) return;
   activityChart.textContent = "";
   const maximum = Math.max(1, ...days.map((day) => Number(day.submitted) || 0));
   days.forEach((day) => {
@@ -81,10 +92,10 @@ function renderActivity(days) {
 }
 
 async function loadStats({ pulled = false } = {}) {
-  if (!authenticated || refreshInFlight) return;
+  if (!authenticated || refreshInFlight) return false;
   refreshInFlight = true;
-  refreshButton.disabled = true;
-  statusText.textContent = pulled ? "refreshing..." : "loading stats...";
+  if (refreshButton) refreshButton.disabled = true;
+  setField(statusText, pulled ? "refreshing..." : "loading stats...");
   try {
     const response = await fetch(`/api/admin-stats?fresh=${Date.now()}`, {
       credentials: "same-origin",
@@ -93,25 +104,27 @@ async function loadStats({ pulled = false } = {}) {
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || `stats failed ${response.status}`);
     const metrics = data.metrics || {};
-    periodText.textContent = `since ${formatDate(data.launch?.startedAt) || "beta launch"}`;
-    fields.newContributors.textContent = numberText(metrics.newContributors);
-    fields.publishedSinceBeta.textContent = numberText(metrics.publishedSinceBeta);
-    fields.submissionsSinceBeta.textContent = numberText(metrics.submissionsSinceBeta);
-    fields.pendingNow.textContent = numberText(metrics.pendingNow);
-    fields.approvalRate.textContent = metrics.approvalRate === null || metrics.approvalRate === undefined ? "—" : `${metrics.approvalRate}%`;
-    fields.activeContributors.textContent = numberText(metrics.activeContributors);
-    fields.submissionsLast24Hours.textContent = numberText(metrics.submissionsLast24Hours);
-    fields.guestSubmissions.textContent = numberText(metrics.guestSubmissions);
-    fields.totalPublished.textContent = numberText(metrics.totalPublished);
-    fields.totalContributors.textContent = numberText(metrics.totalContributors);
-    fields.latestSubmissionAt.textContent = formatDate(metrics.latestSubmissionAt, { dateStyle: "short", timeStyle: "short" }) || "—";
+    setField(periodText, `since ${formatDate(data.launch?.startedAt) || "beta launch"}`);
+    setField(fields.newContributors, numberText(metrics.newContributors));
+    setField(fields.publishedSinceBeta, numberText(metrics.publishedSinceBeta));
+    setField(fields.submissionsSinceBeta, numberText(metrics.submissionsSinceBeta));
+    setField(fields.pendingNow, numberText(metrics.pendingNow));
+    setField(fields.approvalRate, metrics.approvalRate === null || metrics.approvalRate === undefined ? "—" : `${metrics.approvalRate}%`);
+    setField(fields.activeContributors, numberText(metrics.activeContributors));
+    setField(fields.submissionsLast24Hours, numberText(metrics.submissionsLast24Hours));
+    setField(fields.guestSubmissions, numberText(metrics.guestSubmissions));
+    setField(fields.totalPublished, numberText(metrics.totalPublished));
+    setField(fields.totalContributors, numberText(metrics.totalContributors));
+    setField(fields.latestSubmissionAt, formatDate(metrics.latestSubmissionAt, { dateStyle: "short", timeStyle: "short" }) || "—");
     renderActivity(Array.isArray(data.daily) ? data.daily : []);
-    statusText.textContent = `updated ${formatDate(new Date(), { timeStyle: "short" })}`;
+    setField(statusText, `updated ${formatDate(new Date(), { timeStyle: "short" })}`);
+    return true;
   } catch (error) {
-    statusText.textContent = error.message;
+    setField(statusText, error.message || "dashboard stats unavailable");
+    return false;
   } finally {
     refreshInFlight = false;
-    refreshButton.disabled = false;
+    if (refreshButton) refreshButton.disabled = false;
     resetPullIndicator();
   }
 }
@@ -176,12 +189,14 @@ async function signInWithKey(event) {
 
 function resetPullIndicator() {
   pullDistance = 0;
+  if (!refreshIndicator) return;
   refreshIndicator.className = "dashboard-refresh-indicator";
   refreshIndicator.textContent = "pull to refresh";
   document.documentElement.style.setProperty("--dashboard-pull", "0px");
 }
 
 function updatePullIndicator(distance) {
+  if (!refreshIndicator) return;
   pullDistance = Math.max(0, Math.min(110, distance));
   const ready = pullDistance > 76;
   refreshIndicator.classList.toggle("is-visible", pullDistance > 8);
