@@ -755,6 +755,19 @@ function updateTileOpenData(tile, record) {
   tile.photoLicense = record.photo_license || record.photoLicense || tile.photoLicense || "";
 }
 
+function accountPhotographerCredit() {
+  return contributorAccount?.profile?.pseudonym || "";
+}
+
+function applyAccountCredit(tile) {
+  const credit = accountPhotographerCredit();
+  if (!tile || !credit) return tile;
+  if (!tile.photographerCredit && !tile.photographer_credit && !tile.contributor) {
+    tile.photographerCredit = credit;
+  }
+  return tile;
+}
+
 function selectionCellForTile(tile) {
   const lat = Number(tile?.lat);
   const lng = Number(tile?.lng);
@@ -776,7 +789,7 @@ function viewerTileFromContribution(record) {
     minZoom: 12,
     ...selection,
     cell: record.cell || selection.code,
-    photographerCredit: record.photographerCredit || record.photographer_credit || record.contributor || "",
+    photographerCredit: record.photographerCredit || record.photographer_credit || record.contributor || accountPhotographerCredit(),
     photoLicense: record.photoLicense || record.photo_license || "",
   };
 }
@@ -2397,12 +2410,15 @@ function focusContributionRecord(record) {
     || serverTileCacheById.get(record.id)
     || fallbackTile;
   if (!tile) return;
-  openAzulejoViewer(tile);
+  openAzulejoViewer(applyAccountCredit(tile));
   loadRecordedAzulejos().then(() => {
     if (activeViewerTileId !== record.id) return;
     const loadedTile = displayedTiles.find((candidate) => candidate.id === record.id)
       || serverTileCacheById.get(record.id);
-    if (loadedTile) activeViewerTile = loadedTile;
+    if (loadedTile) {
+      activeViewerTile = applyAccountCredit(loadedTile);
+      renderAzulejoViewerTile(activeViewerTile);
+    }
   });
 }
 

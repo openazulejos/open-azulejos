@@ -147,10 +147,11 @@ async function claimReceipts(supabaseUrl, serviceKey, userId, value) {
 }
 
 async function accountPayload(supabaseUrl, serviceKey, claims, profile, extra = {}) {
+  const records = await contributionRecords(supabaseUrl, serviceKey, claims.userId);
   return {
     authenticated: true,
     profile: { pseudonym: profile.pseudonym, joinedAt: profile.created_at },
-    records: await contributionRecords(supabaseUrl, serviceKey, claims.userId),
+    records: records.map((record) => ({ ...record, photographerCredit: profile.pseudonym })),
     ...extra,
   };
 }
