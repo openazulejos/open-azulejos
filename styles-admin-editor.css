@@ -1414,12 +1414,22 @@ pre {
 }
 
 .azulejo-viewer-meta a,
-.azulejo-viewer-meta span {
+.azulejo-viewer-meta span,
+.azulejo-viewer-meta p {
   color: var(--ink);
   font-size: 12px;
   font-weight: 300;
   line-height: 1.35;
   text-align: center;
+}
+
+.azulejo-viewer-meta p {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 5px;
+  margin: 0;
+  flex-wrap: wrap;
 }
 
 .azulejo-viewer-meta a {

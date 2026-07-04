@@ -13,7 +13,7 @@
     <link rel="apple-touch-icon" href="./assets/apple-touch-icon.png" />
     <link rel="preconnect" href="https://unpkg.com" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="./styles-admin-editor.css?v=20260704-viewer-meta-clean" />
+    <link rel="stylesheet" href="./styles-admin-editor.css?v=20260704-viewer-meta-inline" />
   </head>
   <body>
     <header class="topbar" aria-label="Navigation principale">
@@ -302,8 +302,11 @@ azulejo-002.jpg,38.71072,-9.13908,Baixa</code></pre>
       </div>
       <div class="azulejo-viewer-meta" id="azulejoViewerMeta">
         <a id="azulejoViewerCaption" href="#" target="_blank" rel="noopener"></a>
-        <span id="azulejoViewerCredit"></span>
-        <a id="azulejoViewerDownload" href="#" target="_blank" rel="noopener" download>download</a>
+        <p class="azulejo-viewer-credit-line">
+          <span id="azulejoViewerCredit"></span>
+          <span aria-hidden="true">|</span>
+          <a id="azulejoViewerDownload" href="#" target="_blank" rel="noopener" download>download</a>
+        </p>
       </div>
     </section>
 
