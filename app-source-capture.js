@@ -181,17 +181,9 @@ const accountLoginMode = document.querySelector("#accountLoginMode");
 const accountSignupMode = document.querySelector("#accountSignupMode");
 const accountLoginForm = document.querySelector("#accountLoginForm");
 const accountSignupForm = document.querySelector("#accountSignupForm");
-const accountResetForm = document.querySelector("#accountResetForm");
-const accountUpdatePasswordForm = document.querySelector("#accountUpdatePasswordForm");
-const accountPasswordLoginButton = document.querySelector("#accountPasswordLoginButton");
-const accountForgotButton = document.querySelector("#accountForgotButton");
 const accountLoginEmail = document.querySelector("#accountLoginEmail");
-const accountLoginPassword = document.querySelector("#accountLoginPassword");
 const accountSignupPseudonym = document.querySelector("#accountSignupPseudonym");
 const accountSignupEmail = document.querySelector("#accountSignupEmail");
-const accountSignupPassword = document.querySelector("#accountSignupPassword");
-const accountResetEmail = document.querySelector("#accountResetEmail");
-const accountNewPassword = document.querySelector("#accountNewPassword");
 const accountStatus = document.querySelector("#accountStatus");
 const accountSettingsStatus = document.querySelector("#accountSettingsStatus");
 const accountPseudonym = document.querySelector("#accountPseudonym");
@@ -295,7 +287,6 @@ let serverCountsLoaded = false;
 let serverViewportRequest = null;
 let serverViewportSequence = 0;
 let serverViewportTimer = null;
-let accountRecoveryAccessToken = "";
 let contributorStatsLoaded = false;
 
 const sampleTiles = [
@@ -1093,8 +1084,6 @@ function setAccountMode(mode) {
   accountSignupMode?.setAttribute("aria-selected", String(signup));
   accountLoginForm?.classList.toggle("is-active", login);
   accountSignupForm?.classList.toggle("is-active", signup);
-  accountResetForm?.classList.toggle("is-active", mode === "reset");
-  accountUpdatePasswordForm?.classList.toggle("is-active", mode === "recovery");
   if (accountStatus) accountStatus.textContent = "";
 }
 
@@ -1113,14 +1102,6 @@ function closeAccountSheet() {
   accountSheet?.setAttribute("aria-hidden", "true");
 }
 
-function recoveryParamsFromUrl() {
-  const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
-  const query = new URLSearchParams(window.location.search);
-  const type = hash.get("type") || query.get("type");
-  const accessToken = hash.get("access_token") || query.get("access_token");
-  return type === "recovery" && accessToken ? { accessToken } : null;
-}
-
 function magicLinkParamsFromUrl() {
   const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
   const query = new URLSearchParams(window.location.search);
@@ -1133,13 +1114,6 @@ function magicLinkParamsFromUrl() {
 function clearRecoveryUrl() {
   if (!window.history?.replaceState) return;
   window.history.replaceState({}, document.title, `${window.location.origin}${window.location.pathname}`);
-}
-
-function openRecoveryAccountFlow() {
-  const recovery = recoveryParamsFromUrl();
-  if (!recovery) return;
-  accountRecoveryAccessToken = recovery.accessToken;
-  openAccountSheet({ mode: "recovery", message: "choose a new password for your account" });
 }
 
 async function openMagicLinkAccountFlow() {
@@ -2482,44 +2456,21 @@ async function submitContributorAccount(event, action) {
   const button = form.querySelector("button[type='submit']");
   if (button) button.disabled = true;
   const statusLabel = action === "sign-up"
-    ? "creating account..."
+    ? "sending magic link..."
     : action === "magic-link"
       ? "sending magic link..."
-    : action === "reset-password"
-      ? "sending reset email..."
-      : action === "update-password"
-        ? "saving password..."
-        : "logging in...";
+      : "sending magic link...";
   if (accountStatus) accountStatus.textContent = statusLabel;
   const payload = action === "sign-up"
     ? {
       action,
       pseudonym: accountSignupPseudonym?.value,
       email: accountSignupEmail?.value,
-      password: accountSignupPassword?.value,
       receipts: receiptRequestPayload(),
     }
-    : action === "reset-password"
-      ? {
-        action,
-        email: accountResetEmail?.value || accountLoginEmail?.value,
-      }
-      : action === "magic-link"
-        ? {
-          action,
-          email: accountLoginEmail?.value,
-        }
-      : action === "update-password"
-        ? {
-          action,
-          accessToken: accountRecoveryAccessToken,
-          password: accountNewPassword?.value,
-          receipts: receiptRequestPayload(),
-        }
-        : {
+    : {
       action,
       email: accountLoginEmail?.value,
-      password: accountLoginPassword?.value,
       receipts: receiptRequestPayload(),
     };
   try {
@@ -2530,25 +2481,9 @@ async function submitContributorAccount(event, action) {
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok && response.status !== 202) throw new Error(data.error || `account ${response.status}`);
-    if (data.resetRequested) {
-      setAccountMode("log-in");
-      if (accountStatus) accountStatus.textContent = "if this email has an account, a reset link has been sent";
-      return;
-    }
     if (data.magicLinkRequested) {
       if (accountStatus) accountStatus.textContent = "check your email for a magic login link";
       return;
-    }
-    if (data.confirmationRequired) {
-      setAccountMode("log-in");
-      if (accountLoginEmail) accountLoginEmail.value = payload.email || "";
-      if (accountStatus) accountStatus.textContent = "check your email to confirm the account, then log in here";
-      return;
-    }
-    if (action === "update-password") {
-      accountRecoveryAccessToken = "";
-      clearRecoveryUrl();
-      if (accountNewPassword) accountNewPassword.value = "";
     }
     applyContributorAccount(data);
     if (accountStatus) accountStatus.textContent = "";
@@ -4072,18 +4007,11 @@ accountOpenButton?.addEventListener("click", openAccountSheet);
 accountCloseButton?.addEventListener("click", closeAccountSheet);
 accountLoginMode?.addEventListener("click", () => setAccountMode("log-in"));
 accountSignupMode?.addEventListener("click", () => setAccountMode("sign-up"));
-accountPasswordLoginButton?.addEventListener("click", (event) => submitContributorAccount(event, "sign-in"));
-accountForgotButton?.addEventListener("click", () => {
-  if (accountResetEmail && accountLoginEmail) accountResetEmail.value = accountLoginEmail.value;
-  setAccountMode("reset");
-});
 document.querySelectorAll("[data-account-mode]").forEach((button) => {
   button.addEventListener("click", () => setAccountMode(button.dataset.accountMode || "log-in"));
 });
 accountLoginForm?.addEventListener("submit", (event) => submitContributorAccount(event, "magic-link"));
 accountSignupForm?.addEventListener("submit", (event) => submitContributorAccount(event, "sign-up"));
-accountResetForm?.addEventListener("submit", (event) => submitContributorAccount(event, "reset-password"));
-accountUpdatePasswordForm?.addEventListener("submit", (event) => submitContributorAccount(event, "update-password"));
 accountProfileForm?.addEventListener("submit", updateContributorProfile);
 accountLogoutButton?.addEventListener("click", logoutContributorAccount);
 contributionsGridView?.addEventListener?.("click", () => setContributionView("grid"));
@@ -4182,7 +4110,6 @@ flushOfflineContributions().catch((error) => console.error("Offline contribution
 if (typeof fetch === "function") {
   refreshContributorAccount().catch(() => applyContributorAccount(null));
 }
-openRecoveryAccountFlow();
 openMagicLinkAccountFlow();
 if ("serviceWorker" in navigator) {
   window.addEventListener?.("load", () => {

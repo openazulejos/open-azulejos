@@ -43,7 +43,7 @@ The core loop is:
 - PostGIS-backed locations and normalized archival entities.
 - Named Supabase Auth admin accounts with a temporary recovery bridge.
 - Contributor accounts with pseudonyms, private emails, contribution claiming,
-  password recovery, and editable usernames.
+  magic-link access, and editable usernames.
 - Installable PWA shell and offline-resilient contribution queue.
 - Stable JSON-LD, IIIF Presentation 3, and LIDO 1.1 representations.
 - Explicit CC BY 4.0 consent and photographer attribution for new contributions.
@@ -105,8 +105,8 @@ Target: 1 to 3 months.
   browser restarts, and account creation.
 - Refine the three-observation invitation so it feels playful rather than
   coercive; never block the fourth contribution.
-- Treat magic-link login as the main public contributor workflow, with
-  password-based access kept only as a compatibility fallback.
+- Treat magic-link login as the only public contributor workflow; avoid
+  password fields in public contribution flows.
 - Expand the private contribution page with moderation dates, concise rejection
   reasons, and direct map links for approved observations.
 - Make public profiles opt-in and never expose email, precise movement history,

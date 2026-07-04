@@ -190,18 +190,6 @@ module.exports = async function handler(request, response) {
   }
   const action = String(body.action || "");
 
-  if (action === "reset-password") {
-    const email = String(body.email || "").trim().toLowerCase();
-    if (!validEmail(email)) return json(response, 400, { error: "valid email is required" });
-    const redirectTo = `${requestOrigin(request)}/?account=recovery`;
-    await fetch(`${supabaseUrl}/auth/v1/recover?redirect_to=${encodeURIComponent(redirectTo)}`, {
-      method: "POST",
-      headers: { apikey: publishableKey, "Content-Type": "application/json" },
-      body: JSON.stringify({ email }),
-    }).catch(() => null);
-    return json(response, 200, { resetRequested: true });
-  }
-
   if (action === "magic-link") {
     const email = String(body.email || "").trim().toLowerCase();
     if (!validEmail(email)) return json(response, 400, { error: "valid email is required" });
@@ -212,31 +200,6 @@ module.exports = async function handler(request, response) {
       body: JSON.stringify({ email, create_user: true }),
     }).catch(() => null);
     return json(response, 200, { magicLinkRequested: true });
-  }
-
-  if (action === "update-password") {
-    const accessToken = String(body.accessToken || "");
-    const password = String(body.password || "");
-    if (!accessToken || /\s/.test(accessToken) || accessToken.length > 4096 || password.length < 10) {
-      return json(response, 400, { error: "valid recovery session and a password of at least 10 characters are required" });
-    }
-    const update = await fetch(`${supabaseUrl}/auth/v1/user`, {
-      method: "PUT",
-      headers: { apikey: publishableKey, Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ password }),
-    });
-    const updated = await update.json().catch(() => ({}));
-    const user = updated.user || updated;
-    if (!update.ok || !user?.id) return json(response, 401, { error: "password reset link is invalid or expired" });
-    try {
-      const profile = await profileForUser(supabaseUrl, serviceKey, user);
-      const claims = { userId: user.id, email: user.email || "" };
-      response.setHeader("Set-Cookie", contributorSessionCookie(createContributorSession({ ...claims, pseudonym: profile.pseudonym })));
-      const claimed = await claimReceipts(supabaseUrl, serviceKey, user.id, body.receipts);
-      return json(response, 200, await accountPayload(supabaseUrl, serviceKey, claims, profile, { claimed }));
-    } catch {
-      return json(response, 502, { error: "account setup failed" });
-    }
   }
 
   if (action === "auth-session") {
@@ -296,13 +259,9 @@ module.exports = async function handler(request, response) {
     return json(response, 200, await accountPayload(supabaseUrl, serviceKey, claims, profile));
   }
 
-  const email = String(body.email || "").trim().toLowerCase();
-  const password = String(body.password || "");
-  if (!validEmail(email) || password.length < 10) {
-    return json(response, 400, { error: "valid email and a password of at least 10 characters are required" });
-  }
-
   if (action === "sign-up") {
+    const email = String(body.email || "").trim().toLowerCase();
+    if (!validEmail(email)) return json(response, 400, { error: "valid email is required" });
     const pseudonym = String(body.pseudonym || "").trim().replace(/\s+/g, " ");
     if (!validPseudonym(pseudonym)) return json(response, 400, { error: "pseudonym must contain 2 to 32 letters, numbers, spaces, dots, dashes or underscores" });
     const normalized = normalizedPseudonym(pseudonym);
@@ -312,52 +271,44 @@ module.exports = async function handler(request, response) {
     if (!available.ok) return json(response, 502, { error: "pseudonym lookup failed" });
     if ((await available.json()).length) return json(response, 409, { error: "this pseudonym is already in use" });
 
-    const signUp = await fetch(`${supabaseUrl}/auth/v1/signup`, {
+    const create = await fetch(`${supabaseUrl}/auth/v1/admin/users`, {
       method: "POST",
-      headers: { apikey: publishableKey, "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password, data: { pseudonym } }),
+      headers: { ...serviceHeaders(serviceKey), "Content-Type": "application/json" },
+      body: JSON.stringify({ email, email_confirm: true, user_metadata: { pseudonym } }),
     });
-    const signedUp = await signUp.json().catch(() => ({}));
-    if (!signUp.ok) return json(response, signUp.status, { error: signedUp.msg || signedUp.message || "sign up failed" });
-    const user = signedUp.user || signedUp;
-    if (!user?.id || (Array.isArray(user.identities) && !user.identities.length)) {
-      return json(response, 202, { authenticated: false, confirmationRequired: true });
+    const created = await create.json().catch(() => ({}));
+    const user = created.user || created;
+    if (!create.ok || !user?.id) {
+      if (create.status !== 422 && create.status !== 400 && create.status !== 409) {
+        return json(response, create.status || 502, { error: created.msg || created.message || "account creation failed" });
+      }
+      const redirectTo = `${requestOrigin(request)}/?account=magic`;
+      await fetch(`${supabaseUrl}/auth/v1/otp?redirect_to=${encodeURIComponent(redirectTo)}`, {
+        method: "POST",
+        headers: { apikey: publishableKey, "Content-Type": "application/json" },
+        body: JSON.stringify({ email, create_user: true }),
+      }).catch(() => null);
+      return json(response, 200, { magicLinkRequested: true });
     }
-    let profile;
     try {
-      const create = await fetch(`${supabaseUrl}/rest/v1/contributor_profiles`, {
+      const createProfile = await fetch(`${supabaseUrl}/rest/v1/contributor_profiles`, {
         method: "POST",
         headers: { ...serviceHeaders(serviceKey), "Content-Type": "application/json", Prefer: "return=representation" },
         body: JSON.stringify({ user_id: user.id, pseudonym, normalized_pseudonym: normalized }),
       });
-      if (!create.ok) throw new Error("profile creation failed");
-      [profile] = await create.json();
+      if (!createProfile.ok) throw new Error("profile creation failed");
     } catch {
       await fetch(`${supabaseUrl}/auth/v1/admin/users/${user.id}`, { method: "DELETE", headers: serviceHeaders(serviceKey) }).catch(() => {});
       return json(response, 409, { error: "could not create this contributor profile" });
     }
-    if (!signedUp.access_token) return json(response, 202, { authenticated: false, confirmationRequired: true });
-    const claims = { userId: user.id, email };
-    response.setHeader("Set-Cookie", contributorSessionCookie(createContributorSession({ ...claims, pseudonym })));
-    await claimReceipts(supabaseUrl, serviceKey, user.id, body.receipts);
-    return json(response, 200, await accountPayload(supabaseUrl, serviceKey, claims, profile));
+    const redirectTo = `${requestOrigin(request)}/?account=magic`;
+    await fetch(`${supabaseUrl}/auth/v1/otp?redirect_to=${encodeURIComponent(redirectTo)}`, {
+      method: "POST",
+      headers: { apikey: publishableKey, "Content-Type": "application/json" },
+      body: JSON.stringify({ email, create_user: false }),
+    }).catch(() => null);
+    return json(response, 200, { magicLinkRequested: true });
   }
 
-  if (action !== "sign-in") return json(response, 400, { error: "invalid action" });
-  const signIn = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=password`, {
-    method: "POST",
-    headers: { apikey: publishableKey, "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
-  });
-  const signedIn = await signIn.json().catch(() => ({}));
-  if (!signIn.ok || !signedIn.user?.id) return json(response, 401, { error: "invalid email or password" });
-  try {
-    const profile = await profileForUser(supabaseUrl, serviceKey, signedIn.user);
-    const claims = { userId: signedIn.user.id, email };
-    response.setHeader("Set-Cookie", contributorSessionCookie(createContributorSession({ ...claims, pseudonym: profile.pseudonym })));
-    const claimed = await claimReceipts(supabaseUrl, serviceKey, signedIn.user.id, body.receipts);
-    return json(response, 200, await accountPayload(supabaseUrl, serviceKey, claims, profile, { claimed }));
-  } catch {
-    return json(response, 502, { error: "account setup failed" });
-  }
+  return json(response, 400, { error: "invalid action" });
 };
