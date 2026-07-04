@@ -183,6 +183,8 @@ const accountLoginForm = document.querySelector("#accountLoginForm");
 const accountSignupForm = document.querySelector("#accountSignupForm");
 const accountResetForm = document.querySelector("#accountResetForm");
 const accountUpdatePasswordForm = document.querySelector("#accountUpdatePasswordForm");
+const accountGoogleButton = document.querySelector("#accountGoogleButton");
+const accountAppleButton = document.querySelector("#accountAppleButton");
 const accountForgotButton = document.querySelector("#accountForgotButton");
 const accountLoginEmail = document.querySelector("#accountLoginEmail");
 const accountLoginPassword = document.querySelector("#accountLoginPassword");
@@ -1120,6 +1122,15 @@ function recoveryParamsFromUrl() {
   return type === "recovery" && accessToken ? { accessToken } : null;
 }
 
+function oauthParamsFromUrl() {
+  const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+  const query = new URLSearchParams(window.location.search);
+  const accessToken = hash.get("access_token") || query.get("access_token");
+  const error = hash.get("error_description") || hash.get("error") || query.get("error_description") || query.get("error");
+  if (error) return { error };
+  return query.get("account") === "oauth" && accessToken ? { accessToken } : null;
+}
+
 function clearRecoveryUrl() {
   if (!window.history?.replaceState) return;
   window.history.replaceState({}, document.title, `${window.location.origin}${window.location.pathname}`);
@@ -1130,6 +1141,34 @@ function openRecoveryAccountFlow() {
   if (!recovery) return;
   accountRecoveryAccessToken = recovery.accessToken;
   openAccountSheet({ mode: "recovery", message: "choose a new password for your account" });
+}
+
+async function openOauthAccountFlow() {
+  const oauth = oauthParamsFromUrl();
+  if (!oauth) return;
+  openAccountSheet({ mode: "log-in", message: oauth.error ? "login was cancelled or unavailable" : "finishing login..." });
+  if (oauth.error) {
+    clearRecoveryUrl();
+    return;
+  }
+  try {
+    const response = await fetch("/api/contributor-account", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "oauth-session",
+        accessToken: oauth.accessToken,
+        receipts: receiptRequestPayload(),
+      }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || `account ${response.status}`);
+    applyContributorAccount(data);
+    clearRecoveryUrl();
+    if (accountStatus) accountStatus.textContent = "";
+  } catch (error) {
+    if (accountStatus) accountStatus.textContent = error.message || "login failed";
+  }
 }
 
 function boundsArrayForTiles(tiles) {
@@ -2506,6 +2545,16 @@ async function submitContributorAccount(event, action) {
   } finally {
     if (button) button.disabled = false;
   }
+}
+
+function startContributorOauth(provider) {
+  const normalized = String(provider || "").toLowerCase();
+  if (!["google", "apple"].includes(normalized)) return;
+  if (accountStatus) accountStatus.textContent = `opening ${normalized} login...`;
+  [accountGoogleButton, accountAppleButton].forEach((button) => {
+    if (button) button.disabled = true;
+  });
+  window.location.assign(`/api/contributor-oauth?provider=${encodeURIComponent(normalized)}`);
 }
 
 async function updateContributorProfile(event) {
@@ -4021,6 +4070,8 @@ accountOpenButton?.addEventListener("click", openAccountSheet);
 accountCloseButton?.addEventListener("click", closeAccountSheet);
 accountLoginMode?.addEventListener("click", () => setAccountMode("log-in"));
 accountSignupMode?.addEventListener("click", () => setAccountMode("sign-up"));
+accountGoogleButton?.addEventListener("click", () => startContributorOauth("google"));
+accountAppleButton?.addEventListener("click", () => startContributorOauth("apple"));
 accountForgotButton?.addEventListener("click", () => {
   if (accountResetEmail && accountLoginEmail) accountResetEmail.value = accountLoginEmail.value;
   setAccountMode("reset");
@@ -4131,6 +4182,7 @@ if (typeof fetch === "function") {
   refreshContributorAccount().catch(() => applyContributorAccount(null));
 }
 openRecoveryAccountFlow();
+openOauthAccountFlow();
 if ("serviceWorker" in navigator) {
   window.addEventListener?.("load", () => {
     navigator.serviceWorker.register("/service-worker.js").catch((error) => {

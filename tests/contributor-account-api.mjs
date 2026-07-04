@@ -4,6 +4,7 @@ import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
 const auth = require("../api/_contributor-auth.js");
 const handler = require("../api/contributor-account.js");
+const oauthHandler = require("../api/contributor-oauth.js");
 const originalFetch = global.fetch;
 const originalEnv = {
   SUPABASE_URL: process.env.SUPABASE_URL,
@@ -40,6 +41,25 @@ async function invoke(method, body, cookie = "") {
   };
   await handler(request, response);
   return { status: response.statusCode, headers, body: JSON.parse(responseBody) };
+}
+
+async function invokeOauth(provider, method = "GET") {
+  const request = Readable.from([]);
+  request.method = method;
+  request.url = `/api/contributor-oauth?provider=${encodeURIComponent(provider)}`;
+  request.headers = {
+    "x-forwarded-host": "openazulejos.test",
+    "x-forwarded-proto": "https",
+  };
+  const headers = {};
+  let responseBody = "";
+  const response = {
+    statusCode: 200,
+    setHeader(name, value) { headers[name.toLowerCase()] = value; },
+    end(value) { responseBody = value || ""; },
+  };
+  await oauthHandler(request, response);
+  return { status: response.statusCode, headers, body: responseBody ? JSON.parse(responseBody) : null };
 }
 
 const userId = "11111111-1111-4111-8111-111111111111";
@@ -193,6 +213,37 @@ const updatedPassword = await invoke("POST", {
 });
 assert(updatedPassword.status === 200 && updatedPassword.body.authenticated, "password update should sign the contributor in");
 assert(/HttpOnly/.test(updatedPassword.headers["set-cookie"]), "password update should create an app session");
+
+const googleOauth = await invokeOauth("google");
+assert(googleOauth.status === 302, "Google OAuth should redirect");
+assert(googleOauth.headers.location.startsWith("https://example.supabase.co/auth/v1/authorize?"), "OAuth should redirect through Supabase");
+{
+  const redirect = new URL(googleOauth.headers.location);
+  assert(redirect.searchParams.get("provider") === "google", "OAuth provider should be preserved");
+  assert(redirect.searchParams.get("redirect_to") === "https://openazulejos.test/?account=oauth", "OAuth should return to the account flow");
+}
+const badOauth = await invokeOauth("github");
+assert(badOauth.status === 400, "unsupported OAuth providers should be rejected");
+
+global.fetch = async (url) => {
+  const requestUrl = String(url);
+  if (requestUrl.includes("/auth/v1/user")) {
+    return { ok: true, status: 200, json: async () => ({ id: userId, email: "walker@example.org", user_metadata: { pseudonym: "oauth-walker" } }) };
+  }
+  if (requestUrl.includes("contributor_profiles?select=*&user_id=")) {
+    return { ok: true, status: 200, json: async () => [profile] };
+  }
+  if (requestUrl.includes("contributions?select=legacy_azulejo_id%2Cstatus")) {
+    return { ok: true, status: 200, json: async () => [] };
+  }
+  throw new Error(`unexpected oauth session request: ${requestUrl}`);
+};
+const oauthSession = await invoke("POST", {
+  action: "oauth-session",
+  accessToken: "oauth-access-token",
+});
+assert(oauthSession.status === 200 && oauthSession.body.authenticated, "OAuth session should sign the contributor in");
+assert(/HttpOnly/.test(oauthSession.headers["set-cookie"]), "OAuth session should create an app session");
 
 global.fetch = async (url, options = {}) => {
   const requestUrl = String(url);

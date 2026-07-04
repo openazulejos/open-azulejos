@@ -1471,6 +1471,29 @@ pre {
   color: var(--ink);
 }
 
+.account-oauth {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  margin: 0 0 24px;
+}
+
+.account-oauth button {
+  min-height: 46px;
+  border: 1px solid var(--ink);
+  border-radius: 0;
+  background: #fff;
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 300;
+  cursor: pointer;
+}
+
+.account-oauth button:disabled {
+  opacity: 0.45;
+  cursor: wait;
+}
+
 .account-form {
   display: none;
   grid-template-columns: 1fr;

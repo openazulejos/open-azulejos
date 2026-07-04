@@ -227,6 +227,27 @@ module.exports = async function handler(request, response) {
     }
   }
 
+  if (action === "oauth-session") {
+    const accessToken = String(body.accessToken || "");
+    if (!accessToken || /\s/.test(accessToken) || accessToken.length > 4096) {
+      return json(response, 400, { error: "valid oauth session is required" });
+    }
+    const userResponse = await fetch(`${supabaseUrl}/auth/v1/user`, {
+      headers: { apikey: publishableKey, Authorization: `Bearer ${accessToken}` },
+    });
+    const user = await userResponse.json().catch(() => ({}));
+    if (!userResponse.ok || !user?.id) return json(response, 401, { error: "oauth session is invalid or expired" });
+    try {
+      const profile = await profileForUser(supabaseUrl, serviceKey, user);
+      const claims = { userId: user.id, email: user.email || "" };
+      response.setHeader("Set-Cookie", contributorSessionCookie(createContributorSession({ ...claims, pseudonym: profile.pseudonym })));
+      const claimed = await claimReceipts(supabaseUrl, serviceKey, user.id, body.receipts);
+      return json(response, 200, await accountPayload(supabaseUrl, serviceKey, claims, profile, { claimed }));
+    } catch {
+      return json(response, 502, { error: "account setup failed" });
+    }
+  }
+
   if (action === "claim") {
     const claims = authorizeContributorRequest(request);
     if (!claims) return json(response, 401, { authenticated: false });
