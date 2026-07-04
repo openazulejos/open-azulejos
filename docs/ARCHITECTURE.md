@@ -2,7 +2,7 @@
 
 Open Azulejos is a static browser application hosted on Vercel. Vercel functions
 validate requests and mediate privileged operations. Supabase provides Postgres,
-PostGIS, Storage, and named administrator identities.
+PostGIS, Storage, contributor identities, and named administrator identities.
 
 ## Data flow
 
@@ -14,17 +14,22 @@ PostGIS, Storage, and named administrator identities.
    explicit photo-license consent before creating a pending record.
 5. The compatibility trigger mirrors `azulejos` into normalized archive tables.
 6. Admin reads receive temporary signed URLs for private originals.
-7. Named administrators authenticate through Supabase Auth; the API exchanges a
-   verified active profile for a short-lived HttpOnly application session.
-8. Duplicate review first bounds candidates spatially in PostGIS, then ranks
+7. Contributor accounts authenticate through Supabase Auth and receive an
+   HttpOnly application session with private email and public pseudonym split.
+8. Named administrators authenticate through Supabase Auth; the API exchanges a
+   verified active profile for a short-lived HttpOnly administrator session.
+   The public map also recognizes contributor sessions whose `user_id` is an
+   active `admin_profiles` row, so admins can beta-test capture outside Lisbon
+   without opening the back office first.
+9. Duplicate review first bounds candidates spatially in PostGIS, then ranks
    their public derivatives locally with a 64-bit perceptual difference hash.
-9. Computed fingerprints are persisted on the compatibility record and its
+10. Computed fingerprints are persisted on the compatibility record and its
    published media asset. A confirmed duplicate creates a reviewed similarity
    relation between physical instances; it never merges or deletes media.
-10. A reviewed same-tile decision moves only the newer observation to the
+11. A reviewed same-tile decision moves only the newer observation to the
     canonical physical instance. Its contribution, media, location, credit, and
     timestamps remain independent and available through observation history.
-11. Finalization issues a random contribution receipt. Only its SHA-256 hash is
+12. Finalization issues a random contribution receipt. Only its SHA-256 hash is
     stored; the browser keeps the token locally and exchanges it through a POST
     request to read that contribution's status and moderation reason.
 
@@ -39,6 +44,8 @@ have migrated.
 - Original files are immutable and private.
 - Published images are derivatives and may be replaced without changing IDs.
 - Every location stores GPS accuracy and provenance where available.
+- Public capture rejects valid GPS outside Lisbon with a specific message;
+  active administrators may bypass that boundary only for beta testing.
 - A photo license is published only when its contributor credit and consent
   timestamp are both present.
 - Every moderation transition creates an append-only event.

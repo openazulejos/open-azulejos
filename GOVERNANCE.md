@@ -7,6 +7,10 @@ Durable decisions about licenses, destructive migrations, privacy, public data
 contracts, or institutional exclusivity require a written Architecture Decision
 Record in `docs/decisions` and review by two people when possible.
 
+Community recognition is based on approved observations and should remain
+auditable. Public top-contributor displays are acknowledgements, not governance
+rights, funding rights, or permission to bypass moderation.
+
 After three regular contributors are active for three months, the project will
 name technical, data-curation, and moderation maintainers. When the project can
 receive funds or sign agreements, ownership of the domain and provider accounts

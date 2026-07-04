@@ -6,10 +6,18 @@
 server-only. Rotate them after suspected exposure. Production must use a random
 session secret distinct from the human-entered admin password.
 
+`SUPABASE_DB_URL` is required for native PostgreSQL dumps in GitHub Actions but
+is not needed by the runtime app. Prefer a read-only backup role. Do not commit
+the database URL, publishable key, service role key, or downloaded `.env` files.
+
 After signing in with the temporary key, the owner creates the first named
 Supabase Auth administrator in the back office. The key exchange remains only as
 a compatibility bridge and must be removed after two named owner accounts are
 verified on separate devices.
+
+Admins who also have a public contributor account should keep the contributor
+`user_id` linked to an active `admin_profiles` row. That link is what allows
+admin-only outside-Lisbon beta capture from the public map.
 
 ## Monitoring thresholds
 
@@ -23,6 +31,8 @@ verified on separate devices.
 ## Routine
 
 - Daily: inspect failed uploads, backup status, and pending moderation count.
+- Daily during beta: verify that at least one admin can capture from the public
+  map and that non-admin users outside Lisbon receive the Lisbon-only message.
 - Weekly: review costs, errors, rejected content, and access logs.
 - Monthly: restore the latest backup into an isolated test project.
 - Quarterly: rotate recovery credentials and verify two maintainers can recover

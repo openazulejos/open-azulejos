@@ -6,22 +6,29 @@ frame, GPS quality metadata, moderation history, and a stable geographic record.
 
 Production: [openazulejos.com](https://openazulejos.com)
 
-Source: [github.com/orsoneveraert/open-azulejos](https://github.com/orsoneveraert/open-azulejos)
+Source: [github.com/openazulejos/open-azulejos](https://github.com/openazulejos/open-azulejos)
 
 ## Current capabilities
 
 - Mobile camera and photo-library capture with square preview and hidden margin.
 - Required photographer credit and explicit CC BY 4.0 consent for new photos.
-- Mandatory recent GPS position with accuracy checks and live map location.
+- Mandatory recent GPS position with accuracy checks and live map location;
+  public recording is Lisbon-only, while active admins may beta-test capture
+  outside Lisbon.
 - Pending-by-default moderation and a mobile-compatible image editor.
 - Perspective correction, tonal adjustments, white point, and border recovery.
 - Grid-aligned map images, viewport sampling, fullscreen mosaic viewer, and LQIP.
+- Contributor accounts with pseudonyms, private emails, editable usernames,
+  contribution claiming, account mosaics, and an About-page top-contributor
+  list based on approved observations.
 - Installable PWA shell and an IndexedDB submission queue that retries after a
   network interruption.
 - Stable CIDOC CRM-oriented JSON-LD, IIIF Presentation 3, and LIDO 1.1 records.
 - Cursor-paginated JSON-LD, IIIF, LIDO, GeoJSON, and CSV collection exports.
 - PostGIS-backed archive foundation and private storage for new source images.
-- Verified media backups with checksums and a dry-run restore command.
+- GitHub Actions record/media backups with checksums and a dry-run restore
+  command; native PostgreSQL dumps and independent long-term storage remain
+  operational hardening tasks.
 
 ## Local development
 

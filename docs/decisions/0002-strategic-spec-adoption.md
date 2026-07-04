@@ -12,6 +12,8 @@ the archive has evidence that a replacement is needed.
 - Moderated contributions with append-only provenance.
 - Private immutable originals and replaceable public derivatives.
 - Offline-resilient capture and submission.
+- Contributor identities, account mosaics, and restrained top-contributor
+  acknowledgements based on approved observations.
 - Stable public identifiers and future JSON-LD, IIIF Presentation, and LIDO
   exports.
 - Explicit rights, attribution, and contributor consent for future releases.
@@ -23,6 +25,8 @@ the archive has evidence that a replacement is needed.
 - Vercel hosting and functions.
 - Leaflet and the current vanilla JavaScript map interface.
 - The current moderation workflow and compatibility table during migration.
+- Vercel/GitHub deployment automation and the canonical
+  `openazulejos.com` domain.
 
 These choices already satisfy the immediate operational needs and remain
 portable through standard SQL, PostGIS, object paths, and versioned exports.
