@@ -7,8 +7,10 @@ server-only. Rotate them after suspected exposure. Production must use a random
 session secret distinct from the human-entered admin password.
 
 `SUPABASE_DB_URL` is required for native PostgreSQL dumps in GitHub Actions but
-is not needed by the runtime app. Prefer a read-only backup role. Do not commit
-the database URL, publishable key, service role key, or downloaded `.env` files.
+is not needed by the runtime app. The workflow should use the Supabase IPv4
+pooler connection and the PostgreSQL 17 Docker client. Prefer a read-only backup
+role. Do not commit the database URL, publishable key, service role key, or
+downloaded `.env` files.
 
 After signing in with the temporary key, the owner creates the first named
 Supabase Auth administrator in the back office. The key exchange remains only as

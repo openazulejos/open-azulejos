@@ -5,10 +5,11 @@ backs up database records and every media object separately.
 
 ## Create and verify
 
-The scheduled GitHub Actions workflow `archive backup` currently backs up all
-records and media using `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`, verifies
-checksums, and stores a 30-day GitHub artifact. Treat this as a useful recovery
-layer, not the final backup architecture.
+The scheduled GitHub Actions workflow `archive backup` backs up all records and
+media using `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`, creates a native
+PostgreSQL dump from `SUPABASE_DB_URL`, verifies checksums, and stores a 30-day
+GitHub artifact. Treat this as a useful recovery layer, not the final backup
+architecture.
 
 ```sh
 SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... \
@@ -16,12 +17,12 @@ SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... \
 node scripts/verify-backup.mjs /independent/location/<timestamp>
 ```
 
-Also create a native PostgreSQL dump with `pg_dump` using a read-only backup
-connection. In GitHub Actions this requires the missing `SUPABASE_DB_URL`
-secret; until it is set, the PostgreSQL dump step is skipped. Copy both outputs
-to storage controlled by a different provider. Long-term backup should use
-S3-compatible storage or another provider account independent from Supabase and
-Vercel.
+The GitHub workflow runs `pg_dump` through the official PostgreSQL 17 Docker
+client. For Supabase projects whose direct database hostname resolves to IPv6,
+use the Supabase IPv4 pooler connection in `SUPABASE_DB_URL`. Prefer a read-only
+backup role when one is available. Copy both outputs to storage controlled by a
+different provider. Long-term backup should use S3-compatible storage or another
+provider account independent from Supabase and Vercel.
 
 ## Restore drill
 

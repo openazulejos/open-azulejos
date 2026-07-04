@@ -26,9 +26,9 @@ Source: [github.com/openazulejos/open-azulejos](https://github.com/openazulejos/
 - Stable CIDOC CRM-oriented JSON-LD, IIIF Presentation 3, and LIDO 1.1 records.
 - Cursor-paginated JSON-LD, IIIF, LIDO, GeoJSON, and CSV collection exports.
 - PostGIS-backed archive foundation and private storage for new source images.
-- GitHub Actions record/media backups with checksums and a dry-run restore
-  command; native PostgreSQL dumps and independent long-term storage remain
-  operational hardening tasks.
+- GitHub Actions record/media backups with checksums, native PostgreSQL dumps,
+  and a dry-run restore command; independent long-term storage remains an
+  operational hardening task.
 
 ## Local development
 

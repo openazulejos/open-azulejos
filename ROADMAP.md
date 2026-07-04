@@ -63,8 +63,8 @@ The core loop is:
 
 ## Operational gaps
 
-- Add `SUPABASE_DB_URL` to GitHub Actions so the native PostgreSQL `pg_dump`
-  step runs in addition to the current record/media backup.
+- Keep the GitHub Actions PostgreSQL dump healthy; it now uses the Supabase
+  IPv4 pooler connection and the official PostgreSQL 17 Docker client.
 - Add independent S3-compatible backup storage, not only 30-day GitHub Actions
   artifacts.
 - Run and document a monthly restore drill into an isolated Supabase project.
@@ -192,8 +192,8 @@ Target: 12 to 24 months, triggered by measured use.
 
 ## Immediate implementation order
 
-1. Harden backups: add `SUPABASE_DB_URL`, independent object storage, and a
-   documented restore drill.
+1. Harden backups: add independent object storage and a documented restore
+   drill.
 2. Confirm and, if needed, repair the `orson` contributor/admin account link in
    production.
 3. Finish the many-observations-per-instance data contract.
