@@ -207,6 +207,11 @@ const contributionsGridView = document.querySelector("#contributionsGridView");
 const contributionsListView = document.querySelector("#contributionsListView");
 const recordHistoryButton = document.querySelector("#recordHistoryButton");
 const recordCameraInput = document.querySelector("#recordCameraInput");
+const recordOnboarding = document.querySelector("#recordOnboarding");
+const recordOnboardingClose = document.querySelector("#recordOnboardingClose");
+const recordOnboardingBack = document.querySelector("#recordOnboardingBack");
+const recordOnboardingNext = document.querySelector("#recordOnboardingNext");
+const recordOnboardingSteps = Array.from(document.querySelectorAll("[data-record-step]"));
 const squareCamera = document.querySelector("#squareCamera");
 const squareCameraVideo = document.querySelector("#squareCameraVideo");
 const squareCameraCapture = document.querySelector("#squareCameraCapture");
@@ -2903,6 +2908,72 @@ async function beginRecordingFlow() {
   openSquareCamera();
 }
 
+const RECORD_ONBOARDING_STORAGE_KEY = "open-azulejos-record-onboarding-v1";
+let recordOnboardingStep = 0;
+
+function hasSeenRecordOnboarding() {
+  try {
+    return localStorage.getItem(RECORD_ONBOARDING_STORAGE_KEY) === "seen";
+  } catch {
+    return false;
+  }
+}
+
+function markRecordOnboardingSeen() {
+  try {
+    localStorage.setItem(RECORD_ONBOARDING_STORAGE_KEY, "seen");
+  } catch {
+    // Recording still works when private browsing blocks local storage.
+  }
+}
+
+function renderRecordOnboardingStep() {
+  recordOnboardingSteps.forEach((step, index) => {
+    const active = index === recordOnboardingStep;
+    step.hidden = !active;
+    step.classList.toggle("is-active", active);
+  });
+  if (recordOnboardingBack) recordOnboardingBack.hidden = recordOnboardingStep === 0;
+  if (recordOnboardingNext) {
+    recordOnboardingNext.textContent = recordOnboardingStep === recordOnboardingSteps.length - 1
+      ? "start recording"
+      : "next";
+  }
+}
+
+function openRecordOnboarding() {
+  recordOnboardingStep = 0;
+  renderRecordOnboardingStep();
+  recordOnboarding?.classList.add("is-open");
+  recordOnboarding?.setAttribute("aria-hidden", "false");
+  recordOnboardingNext?.focus();
+}
+
+function closeRecordOnboarding() {
+  recordOnboarding?.classList.remove("is-open");
+  recordOnboarding?.setAttribute("aria-hidden", "true");
+  recordHistoryButton?.focus();
+}
+
+function requestRecording() {
+  if (hasSeenRecordOnboarding()) {
+    beginRecordingFlow();
+    return;
+  }
+  openRecordOnboarding();
+}
+
+function advanceRecordOnboarding() {
+  if (recordOnboardingStep < recordOnboardingSteps.length - 1) {
+    recordOnboardingStep += 1;
+    renderRecordOnboardingStep();
+    return;
+  }
+  markRecordOnboardingSeen();
+  closeRecordOnboarding();
+  beginRecordingFlow();
+}
+
 function latestUsableUploadGps() {
   return isUsableUploadGpsFixForContext(latestUserLocation, Date.now(), { allowOutsideLisbon: adminCaptureSession })
     ? latestUserLocation
@@ -3997,7 +4068,13 @@ exportGeoJsonButton.addEventListener("click", exportGeoJson);
 exportPointGeoJsonButton.addEventListener("click", exportPointGeoJson);
 exportCsvButton.addEventListener("click", exportCsv);
 clearImportsButton.addEventListener("click", clearImportedMosaic);
-recordHistoryButton?.addEventListener("click", beginRecordingFlow);
+recordHistoryButton?.addEventListener("click", requestRecording);
+recordOnboardingClose?.addEventListener("click", closeRecordOnboarding);
+recordOnboardingBack?.addEventListener("click", () => {
+  recordOnboardingStep = Math.max(0, recordOnboardingStep - 1);
+  renderRecordOnboardingStep();
+});
+recordOnboardingNext?.addEventListener("click", advanceRecordOnboarding);
 squareCameraCapture?.addEventListener("click", captureSquareCamera);
 squareCameraCancel?.addEventListener("click", closeSquareCamera);
 squareCameraFallback?.addEventListener("click", () => {

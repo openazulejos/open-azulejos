@@ -54,6 +54,8 @@ The core loop is:
 - Mobile-first square capture with preview, source-margin preservation,
   mandatory geolocation, iOS-oriented permission guidance, and admin-only
   outside-Lisbon beta capture.
+- First-recording onboarding explains the collection scope, temporal value of
+  repeat observations, lighting, and four-corner framing before permissions.
 - Account page contribution mosaic and About-page top-contributor list based on
   approved observations.
 - Minimal admin image treatment tools: crop correction, four-point perspective

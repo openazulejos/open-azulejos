@@ -37,6 +37,34 @@
       <button class="record-action" id="recordHistoryButton" type="button">record azulejos now</button>
       <input class="record-camera-input" id="recordCameraInput" type="file" accept="image/*" />
 
+      <section class="record-onboarding" id="recordOnboarding" role="dialog" aria-modal="true" aria-hidden="true" aria-label="before recording an azulejo">
+        <button class="record-onboarding-close" id="recordOnboardingClose" type="button" aria-label="close">×</button>
+        <div class="record-onboarding-content">
+          <article class="record-onboarding-step is-active" data-record-step="0">
+            <p class="record-onboarding-index">1 / 3</p>
+            <h2>contribute from the street</h2>
+            <p>If you are in Lisbon with a smartphone, you can document an azulejo for this open-source map right now.</p>
+            <p>Look for patterns not yet mapped when possible. A repeated observation is still useful: it can record how a tile changes over time.</p>
+          </article>
+          <article class="record-onboarding-step" data-record-step="1" hidden>
+            <p class="record-onboarding-index">2 / 3</p>
+            <h2>record the repeating unit</h2>
+            <p>For now, photograph one individual tile or the smallest repeating pattern, rather than an entire mural.</p>
+            <p>Move close enough for the motif and the tile’s edges to remain clearly visible.</p>
+          </article>
+          <article class="record-onboarding-step" data-record-step="2" hidden>
+            <p class="record-onboarding-index">3 / 3</p>
+            <h2>frame it carefully</h2>
+            <p>Hold the phone straight, avoid glare and strong shadows, and align the tile’s four corners with the four dots in the camera guide.</p>
+            <p>happy azulejo hunting.</p>
+          </article>
+          <div class="record-onboarding-actions">
+            <button id="recordOnboardingBack" type="button" hidden>back</button>
+            <button id="recordOnboardingNext" type="button">next</button>
+          </div>
+        </div>
+      </section>
+
       <section class="square-camera" id="squareCamera" aria-hidden="true" aria-label="square camera capture">
         <div class="square-camera-view">
           <video id="squareCameraVideo" autoplay muted playsinline></video>
@@ -405,6 +433,6 @@ azulejo-002.jpg,38.71072,-9.13908,Baixa</code></pre>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="./offline-queue.js?v=20260702-contribution-rights"></script>
-    <script src="./app-source-capture.js?v=20260704-password-auth"></script>
+    <script src="./app-source-capture.js?v=20260704-record-onboarding"></script>
   </body>
 </html>
