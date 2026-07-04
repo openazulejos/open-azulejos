@@ -96,7 +96,7 @@ async function contributionRecords(supabaseUrl, serviceKey, userId) {
   const ids = records.map((record) => record.legacy_azulejo_id).filter(Boolean);
   if (!ids.length) return [];
   const tileQuery = new URLSearchParams({
-    select: "id,title,image_url,lat,lng,moderation_status",
+    select: "id,title,image_url,lat,lng,moderation_status,photographer_credit,photo_license",
     id: `in.(${ids.join(",")})`,
   });
   const tileResponse = await fetch(`${supabaseUrl}/rest/v1/azulejos?${tileQuery}`, { headers });
@@ -112,6 +112,8 @@ async function contributionRecords(supabaseUrl, serviceKey, userId) {
     imageUrl: tilesById.get(record.legacy_azulejo_id)?.image_url || null,
     lat: tilesById.get(record.legacy_azulejo_id)?.lat ?? null,
     lng: tilesById.get(record.legacy_azulejo_id)?.lng ?? null,
+    photographerCredit: tilesById.get(record.legacy_azulejo_id)?.photographer_credit || null,
+    photoLicense: tilesById.get(record.legacy_azulejo_id)?.photo_license || null,
   }));
 }
 
@@ -147,11 +149,10 @@ async function claimReceipts(supabaseUrl, serviceKey, userId, value) {
 }
 
 async function accountPayload(supabaseUrl, serviceKey, claims, profile, extra = {}) {
-  const records = await contributionRecords(supabaseUrl, serviceKey, claims.userId);
   return {
     authenticated: true,
     profile: { pseudonym: profile.pseudonym, joinedAt: profile.created_at },
-    records: records.map((record) => ({ ...record, photographerCredit: profile.pseudonym })),
+    records: await contributionRecords(supabaseUrl, serviceKey, claims.userId),
     ...extra,
   };
 }
