@@ -12,6 +12,10 @@ pooler connection and the PostgreSQL 17 Docker client. Prefer a read-only backup
 role. Do not commit the database URL, publishable key, service role key, or
 downloaded `.env` files.
 
+`BETA_STARTED_AT` defines the inclusive UTC start used by the private launch
+dashboard. Keep it stable after public communication begins so historical
+growth figures do not move. Production defaults to `2026-07-04T00:00:00.000Z`.
+
 After signing in with the temporary key, the owner creates the first named
 Supabase Auth administrator in the back office. The key exchange remains only as
 a compatibility bridge and must be removed after two named owner accounts are

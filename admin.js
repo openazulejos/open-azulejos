@@ -21,6 +21,18 @@ const adminStatus = document.querySelector("#adminStatus");
 const adminFilters = document.querySelector("#adminFilters");
 const adminGrid = document.querySelector("#adminGrid");
 const adminLoadMore = document.querySelector("#adminLoadMore");
+const adminStatsPeriod = document.querySelector("#adminStatsPeriod");
+const adminStatsStatus = document.querySelector("#adminStatsStatus");
+const adminStatsNewContributors = document.querySelector("#adminStatsNewContributors");
+const adminStatsPublished = document.querySelector("#adminStatsPublished");
+const adminStatsSubmissions = document.querySelector("#adminStatsSubmissions");
+const adminStatsPending = document.querySelector("#adminStatsPending");
+const adminStatsApprovalRate = document.querySelector("#adminStatsApprovalRate");
+const adminStatsActiveContributors = document.querySelector("#adminStatsActiveContributors");
+const adminStatsLast24Hours = document.querySelector("#adminStatsLast24Hours");
+const adminStatsGuestSubmissions = document.querySelector("#adminStatsGuestSubmissions");
+const adminActivityChart = document.querySelector("#adminActivityChart");
+const adminStatsSummary = document.querySelector("#adminStatsSummary");
 const adminEditor = document.querySelector("#adminEditor");
 const adminEditorClose = document.querySelector("#adminEditorClose");
 const adminEditorMeta = document.querySelector("#adminEditorMeta");
@@ -82,6 +94,72 @@ const editorState = {
 
 function setAdminStatus(message) {
   adminStatus.textContent = message;
+}
+
+function formatStatsDate(value, options = { dateStyle: "medium" }) {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return null;
+  return new Intl.DateTimeFormat("en-GB", { ...options, timeZone: "Europe/Lisbon" }).format(date);
+}
+
+function renderActivityChart(days = []) {
+  adminActivityChart.textContent = "";
+  const maximum = Math.max(1, ...days.map((day) => Number(day.submitted) || 0));
+  days.forEach((day) => {
+    const row = document.createElement("div");
+    row.className = "admin-activity-row";
+    const time = document.createElement("time");
+    time.dateTime = day.date;
+    time.textContent = new Intl.DateTimeFormat("en-GB", {
+      weekday: "short",
+      day: "numeric",
+      timeZone: "Europe/Lisbon",
+    }).format(new Date(`${day.date}T12:00:00Z`));
+    const bars = document.createElement("div");
+    bars.className = "admin-activity-bars";
+    bars.setAttribute("aria-label", `${day.submitted} submitted, ${day.approved} approved`);
+    const submitted = document.createElement("span");
+    submitted.className = "admin-activity-submitted";
+    submitted.style.width = `${(Number(day.submitted) / maximum) * 100}%`;
+    const approved = document.createElement("span");
+    approved.className = "admin-activity-approved";
+    approved.style.width = `${(Number(day.approved) / maximum) * 100}%`;
+    const count = document.createElement("strong");
+    count.textContent = String(day.submitted || 0);
+    bars.append(submitted, approved);
+    row.append(time, bars, count);
+    adminActivityChart.append(row);
+  });
+}
+
+async function loadAdminStats() {
+  adminStatsStatus.textContent = "loading stats...";
+  try {
+    const response = await fetch(`/api/admin-stats?fresh=${Date.now()}`, {
+      credentials: "same-origin",
+      cache: "no-store",
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || `stats failed ${response.status}`);
+    const metrics = data.metrics || {};
+    adminStatsPeriod.textContent = `since ${formatStatsDate(data.launch?.startedAt) || "beta launch"}`;
+    adminStatsNewContributors.textContent = String(metrics.newContributors ?? 0);
+    adminStatsPublished.textContent = String(metrics.publishedSinceBeta ?? 0);
+    adminStatsSubmissions.textContent = String(metrics.submissionsSinceBeta ?? 0);
+    adminStatsPending.textContent = String(metrics.pendingNow ?? 0);
+    adminStatsApprovalRate.textContent = metrics.approvalRate === null || metrics.approvalRate === undefined
+      ? "—"
+      : `${metrics.approvalRate}%`;
+    adminStatsActiveContributors.textContent = String(metrics.activeContributors ?? 0);
+    adminStatsLast24Hours.textContent = String(metrics.submissionsLast24Hours ?? 0);
+    adminStatsGuestSubmissions.textContent = String(metrics.guestSubmissions ?? 0);
+    renderActivityChart(Array.isArray(data.daily) ? data.daily : []);
+    const latest = formatStatsDate(metrics.latestSubmissionAt, { dateStyle: "medium", timeStyle: "short" });
+    adminStatsSummary.textContent = `${metrics.totalPublished ?? 0} total published · ${metrics.totalContributors ?? 0} registered accounts${latest ? ` · latest submission ${latest}` : ""}`;
+    adminStatsStatus.textContent = `updated ${formatStatsDate(new Date(), { timeStyle: "short" })}`;
+  } catch (error) {
+    adminStatsStatus.textContent = error.message;
+  }
 }
 
 function showAdminTools() {
@@ -342,6 +420,7 @@ async function deleteRecord(record, card) {
   card.remove();
   adminRecords = adminRecords.filter((candidate) => candidate.id !== record.id);
   renderRecords(adminRecords, `deleted ${data.deleted}`);
+  loadAdminStats();
   if (editorState.record?.id === record.id) closeEditor();
 }
 
@@ -379,6 +458,7 @@ async function moderateRecord(record, card, moderationStatus, moderationReason =
   }
   Object.assign(record, data.record || {}, { moderation_status: moderationStatus });
   renderRecords(adminRecords, `${moderationStatus} ${record.id}`);
+  loadAdminStats();
   if (editorState.record?.id === record.id) updateEditorNavigation();
 }
 
@@ -983,8 +1063,7 @@ adminLogin.addEventListener("submit", async (event) => {
     adminAuthenticated = true;
     adminKeyInput.value = "";
     showAdminTools();
-    await loadRecords();
-    await refreshAdminAccountState();
+    await Promise.all([loadRecords(), loadAdminStats(), refreshAdminAccountState()]);
   } catch (error) {
     adminAuthenticated = false;
     showAdminTools();
@@ -1016,8 +1095,7 @@ adminAccountLogin.addEventListener("submit", async (event) => {
     adminAuthenticated = true;
     adminPasswordInput.value = "";
     showAdminTools();
-    await loadRecords();
-    await refreshAdminAccountState();
+    await Promise.all([loadRecords(), loadAdminStats(), refreshAdminAccountState()]);
   } catch (error) {
     adminAuthenticated = false;
     showAdminTools();
@@ -1066,7 +1144,7 @@ adminForgetKeyButton.addEventListener("click", async () => {
 });
 
 adminRefreshButton.addEventListener("click", () => {
-  loadRecords().catch((error) => setAdminStatus(error.message));
+  Promise.all([loadRecords(), loadAdminStats()]).catch((error) => setAdminStatus(error.message));
 });
 
 adminFilters.addEventListener("click", (event) => {
@@ -1085,7 +1163,7 @@ fetch("/api/admin-session", { credentials: "same-origin", cache: "no-store" })
     if (!response.ok) return;
     adminAuthenticated = true;
     showAdminTools();
-    return Promise.all([loadRecords(), refreshAdminAccountState()]);
+    return Promise.all([loadRecords(), loadAdminStats(), refreshAdminAccountState()]);
   })
   .catch((error) => {
     adminAuthenticated = false;

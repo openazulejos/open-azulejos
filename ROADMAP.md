@@ -58,6 +58,8 @@ The core loop is:
   repeat observations, lighting, and four-corner framing before permissions.
 - Account page contribution mosaic and About-page top-contributor list based on
   approved observations.
+- Mobile admin launch dashboard with beta-period registrations, submissions,
+  publication growth, moderation load, approval rate, and seven-day activity.
 - Minimal admin image treatment tools: crop correction, four-point perspective
   rectification, white-point sampling, exposure/highlight adjustments, condition
   tags, source-margin recovery, adjacent-record navigation, and rejection

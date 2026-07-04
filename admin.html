@@ -2,9 +2,9 @@
 <html lang="fr">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>open azulejos admin</title>
-    <link rel="stylesheet" href="./styles-admin-editor.css?v=20260703-review-evidence" />
+    <link rel="stylesheet" href="./styles-admin-editor.css?v=20260704-beta-dashboard" />
   </head>
   <body class="admin-page">
     <header class="admin-header">
@@ -44,6 +44,30 @@
           <button id="adminSetupButton" type="submit">create account</button>
           <p id="adminSetupStatus" role="status"></p>
         </form>
+        <section class="admin-dashboard" id="adminDashboard" aria-labelledby="adminDashboardTitle">
+          <header class="admin-dashboard-header">
+            <div>
+              <h1 id="adminDashboardTitle">beta launch</h1>
+              <p id="adminStatsPeriod">since 4 July 2026</p>
+            </div>
+            <span id="adminStatsStatus" role="status">loading stats...</span>
+          </header>
+          <div class="admin-stat-grid">
+            <article class="admin-stat is-primary"><span>new contributors</span><strong id="adminStatsNewContributors">—</strong></article>
+            <article class="admin-stat is-primary"><span>published since beta</span><strong id="adminStatsPublished">—</strong></article>
+            <article class="admin-stat"><span>submissions</span><strong id="adminStatsSubmissions">—</strong></article>
+            <article class="admin-stat"><span>pending review</span><strong id="adminStatsPending">—</strong></article>
+            <article class="admin-stat"><span>approval rate</span><strong id="adminStatsApprovalRate">—</strong></article>
+            <article class="admin-stat"><span>active contributors</span><strong id="adminStatsActiveContributors">—</strong></article>
+            <article class="admin-stat"><span>last 24 hours</span><strong id="adminStatsLast24Hours">—</strong></article>
+            <article class="admin-stat"><span>guest submissions</span><strong id="adminStatsGuestSubmissions">—</strong></article>
+          </div>
+          <section class="admin-activity" aria-labelledby="adminActivityTitle">
+            <h2 id="adminActivityTitle">last 7 days</h2>
+            <div id="adminActivityChart" class="admin-activity-chart"></div>
+          </section>
+          <p class="admin-stats-summary" id="adminStatsSummary"></p>
+        </section>
         <div class="admin-toolbar">
           <button id="adminRefreshButton" type="button">refresh</button>
           <button id="adminForgetKeyButton" type="button">lock</button>
@@ -166,6 +190,6 @@
     </section>
     <script src="./admin-image.js?v=20260630-expand-border"></script>
     <script src="./admin-similarity.js?v=20260703-persist-similarity"></script>
-    <script src="./admin.js?v=20260703-review-evidence"></script>
+    <script src="./admin.js?v=20260704-beta-dashboard"></script>
   </body>
 </html>
