@@ -56,6 +56,7 @@ const rows = {
     { contributor_id: null, submitted_at: "2026-07-04T14:00:00.000Z" },
   ],
 };
+const requestedStatsUrls = [];
 
 const valueMatches = (row, key, filter) => {
   if (filter.startsWith("eq.")) return String(row[key]) === filter.slice(3);
@@ -65,6 +66,7 @@ const valueMatches = (row, key, filter) => {
 };
 
 global.fetch = async (value, options = {}) => {
+  requestedStatsUrls.push(String(value));
   const url = new URL(value);
   const table = url.pathname.split("/").at(-1);
   let result = (rows[table] || []).filter((row) => [...url.searchParams.entries()]
@@ -80,6 +82,8 @@ global.fetch = async (value, options = {}) => {
 
 const stats = await invoke();
 assert(stats.status === 200, "stats should load");
+assert(requestedStatsUrls.some((url) => url.includes("contributor_profiles?select=user_id")), "stats should count contributor profiles by user_id");
+assert(!requestedStatsUrls.some((url) => url.includes("contributor_profiles?select=id")), "stats must not request a missing contributor profile id column");
 assert(stats.body.metrics.totalContributors === 2, "stats should count all contributors");
 assert(stats.body.metrics.newContributors === 1, "stats should count beta contributors");
 assert(stats.body.metrics.totalPublished === 2, "stats should retain the archive total");

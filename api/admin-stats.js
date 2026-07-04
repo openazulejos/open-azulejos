@@ -59,8 +59,8 @@ module.exports = async function handler(request, response) {
     title: "neq.api test",
   };
   const queryFor = (select, filters = {}, extras = {}) => new URLSearchParams({ select, ...filters, ...extras });
-  const countRows = async (table, filters = {}) => {
-    const query = queryFor("id", filters, { limit: "1" });
+  const countRows = async (table, filters = {}, select = "id") => {
+    const query = queryFor(select, filters, { limit: "1" });
     const result = await fetch(tableUrl(supabaseUrl, table, query), {
       headers: { ...headers, Prefer: "count=exact", Range: "0-0" },
     });
@@ -94,8 +94,8 @@ module.exports = async function handler(request, response) {
       recentSubmissions,
       latestSubmissionRows,
     ] = await Promise.all([
-      countRows("contributor_profiles"),
-      countRows("contributor_profiles", { created_at: `gte.${betaIso}` }),
+      countRows("contributor_profiles", {}, "user_id"),
+      countRows("contributor_profiles", { created_at: `gte.${betaIso}` }, "user_id"),
       countRows("azulejos", { ...cameraFilters, moderation_status: "eq.approved" }),
       countRows("azulejos", { ...betaFilters, moderation_status: "eq.approved" }),
       countRows("azulejos", betaFilters),
