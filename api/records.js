@@ -317,7 +317,7 @@ module.exports = async function handler(req, res) {
         return json(res, error.status || 500, { error: "database read failed", detail: error.detail || error.message });
       }
     }
-    const publicSelect = "id,title,lat,lng,image_url,cell_code,words,source,created_at,gps_accuracy_m,gps_timestamp,location_source";
+    const publicSelect = "id,title,lat,lng,image_url,cell_code,words,source,created_at,gps_accuracy_m,gps_timestamp,location_source,photographer_credit,photo_license";
     const response = await fetch(`${supabaseUrl}/rest/v1/azulejos?select=${publicSelect}&source=eq.web-camera&title=neq.api%20test&moderation_status=eq.approved&order=created_at.desc&limit=500`, {
       headers,
     });

@@ -165,7 +165,10 @@ const azulejoViewer = document.querySelector("#azulejoViewer");
 const azulejoViewerVisual = document.querySelector("#azulejoViewerVisual");
 const azulejoViewerImage = document.querySelector("#azulejoViewerImage");
 const azulejoViewerMosaic = document.querySelector("#azulejoViewerMosaic");
+const azulejoViewerMeta = document.querySelector("#azulejoViewerMeta");
 const azulejoViewerCaption = document.querySelector("#azulejoViewerCaption");
+const azulejoViewerCredit = document.querySelector("#azulejoViewerCredit");
+const azulejoViewerDownload = document.querySelector("#azulejoViewerDownload");
 const azulejoViewerClose = document.querySelector("#azulejoViewerClose");
 const aboutOpenButton = document.querySelector("#aboutOpenButton");
 const aboutSheet = document.querySelector("#aboutSheet");
@@ -730,6 +733,22 @@ function geodataCaption(tile) {
   return `${tile.lat.toFixed(6)}, ${tile.lng.toFixed(6)} · ${tile.cell}`;
 }
 
+function contributorCredit(tile) {
+  return String(tile?.photographerCredit || tile?.photographer_credit || tile?.contributor || "").trim()
+    || "anonymous contributor";
+}
+
+function licenseLabel(tile) {
+  const license = String(tile?.photoLicense || tile?.photo_license || "").trim();
+  if (!license) return "";
+  return license.toUpperCase() === "CC-BY-4.0" ? "CC BY 4.0" : license;
+}
+
+function imageDownloadName(tile) {
+  const id = String(tile?.id || "azulejo").replace(/[^a-z0-9-]+/gi, "-").replace(/^-|-$/g, "");
+  return `open-azulejos-${id || "image"}.jpg`;
+}
+
 function selectionCellForTile(tile) {
   const lat = Number(tile?.lat);
   const lng = Number(tile?.lng);
@@ -751,6 +770,8 @@ function viewerTileFromContribution(record) {
     minZoom: 12,
     ...selection,
     cell: record.cell || selection.code,
+    photographerCredit: record.photographerCredit || record.photographer_credit || record.contributor || "",
+    photoLicense: record.photoLicense || record.photo_license || "",
   };
 }
 
@@ -977,6 +998,14 @@ function renderAzulejoViewerTile(tile) {
   azulejoViewerImage.alt = tile.title;
   azulejoViewerCaption.textContent = geodataCaption(tile);
   azulejoViewerCaption.href = googleMapsUrl(tile.lat, tile.lng);
+  if (azulejoViewerCredit) {
+    const license = licenseLabel(tile);
+    azulejoViewerCredit.textContent = `contributor: ${contributorCredit(tile)}${license ? ` · ${license}` : ""}`;
+  }
+  if (azulejoViewerDownload) {
+    azulejoViewerDownload.href = tile.image;
+    azulejoViewerDownload.download = imageDownloadName(tile);
+  }
   setViewerMosaicMode(0, tile);
 }
 
@@ -1003,7 +1032,7 @@ function closeAzulejoViewer() {
 }
 
 function startViewerGesture(event) {
-  if (azulejoViewerClose?.contains(event.target) || azulejoViewerCaption?.contains(event.target)) return;
+  if (azulejoViewerClose?.contains(event.target) || azulejoViewerMeta?.contains(event.target)) return;
   viewerGesture = {
     pointerId: event.pointerId,
     x: event.clientX,
@@ -1474,6 +1503,8 @@ function addAzulejoTile(tile, options = {}) {
     image: tile.image,
     displayImage,
     source: tile.source || "manual",
+    photographerCredit: tile.photographerCredit || tile.photographer_credit || tile.contributor || "",
+    photoLicense: tile.photoLicense || tile.photo_license || "",
     crop: tile.crop || null,
     isSample: !!options.skipRecord,
     isServer: !!options.isServer,
@@ -3184,6 +3215,8 @@ async function placeRecordedAzulejo(squareImage, gps = null, uploadId = null, or
     lng,
     image: stored.record.image_url || stored.imageUrl,
     source: stored.queued ? "offline-pending" : "supabase-camera",
+    photographerCredit: stored.record.photographer_credit || rights?.photographerCredit || "",
+    photoLicense: stored.record.photo_license || rights?.photoLicense || "",
     minZoom: map.getZoom(),
   });
   highlightCell({ ...cell, lat, lng }, { fit: false });
@@ -3260,6 +3293,8 @@ function synchronizeServerTiles(records) {
         lng: Number(record.lng),
         image: record.image_url,
         source: "supabase-camera",
+        photographerCredit: record.photographer_credit,
+        photoLicense: record.photo_license,
         minZoom: 12,
       }, {
         isServer: true,

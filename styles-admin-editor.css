@@ -1399,15 +1399,34 @@ pre {
   transform-origin: center;
 }
 
-.azulejo-viewer a {
+.azulejo-viewer-meta {
+  display: grid;
+  justify-items: center;
+  gap: 5px;
   margin-top: 12px;
+  max-width: min(92vw, 760px);
+  color: var(--ink);
+  font-size: 12px;
+  line-height: 1.35;
+  text-align: center;
+  touch-action: auto;
+  user-select: text;
+}
+
+.azulejo-viewer-meta a,
+.azulejo-viewer-meta span {
   color: var(--ink);
   font-size: 12px;
   text-align: center;
+}
+
+.azulejo-viewer-meta a {
   text-decoration: underline;
   text-underline-offset: 3px;
-  touch-action: auto;
-  user-select: text;
+}
+
+.azulejo-viewer-meta span {
+  color: var(--muted);
 }
 
 .azulejo-viewer-close {
