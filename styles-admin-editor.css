@@ -1417,16 +1417,13 @@ pre {
 .azulejo-viewer-meta span {
   color: var(--ink);
   font-size: 12px;
+  font-weight: 300;
+  line-height: 1.35;
   text-align: center;
 }
 
 .azulejo-viewer-meta a {
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-.azulejo-viewer-meta span {
-  color: var(--muted);
+  text-decoration: none;
 }
 
 .azulejo-viewer-close {

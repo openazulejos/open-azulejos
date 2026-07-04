@@ -735,7 +735,7 @@ function geodataCaption(tile) {
 
 function contributorCredit(tile) {
   return String(tile?.photographerCredit || tile?.photographer_credit || tile?.contributor || "").trim()
-    || "anonymous contributor";
+    || "anonymous";
 }
 
 function licenseLabel(tile) {
@@ -747,6 +747,12 @@ function licenseLabel(tile) {
 function imageDownloadName(tile) {
   const id = String(tile?.id || "azulejo").replace(/[^a-z0-9-]+/gi, "-").replace(/^-|-$/g, "");
   return `open-azulejos-${id || "image"}.jpg`;
+}
+
+function updateTileOpenData(tile, record) {
+  if (!tile || !record) return;
+  tile.photographerCredit = record.photographer_credit || record.photographerCredit || record.contributor || tile.photographerCredit || "";
+  tile.photoLicense = record.photo_license || record.photoLicense || tile.photoLicense || "";
 }
 
 function selectionCellForTile(tile) {
@@ -3280,9 +3286,13 @@ function synchronizeServerTiles(records) {
   removeServerTilesOutside(nextIds);
 
   validRecords.forEach((record) => {
-    if (serverTilesById.has(record.id)) return;
+    if (serverTilesById.has(record.id)) {
+      updateTileOpenData(serverTilesById.get(record.id), record);
+      return;
+    }
     let tile = serverTileCacheById.get(record.id);
     if (tile) {
+      updateTileOpenData(tile, record);
       rememberServerTile(tile);
       displayedTiles.push(tile);
     } else {
