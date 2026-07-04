@@ -311,7 +311,12 @@ azulejo-002.jpg,38.71072,-9.13908,Baixa</code></pre>
               email
               <input id="accountLoginEmail" type="email" autocomplete="email" required />
             </label>
-            <button type="submit">send magic link</button>
+            <label>
+              password
+              <input id="accountLoginPassword" type="password" autocomplete="current-password" minlength="10" required />
+            </label>
+            <button type="submit">log in</button>
+            <button class="account-link-button" id="accountForgotButton" type="button">forgot password</button>
           </form>
 
           <form class="account-form" id="accountSignupForm">
@@ -323,7 +328,36 @@ azulejo-002.jpg,38.71072,-9.13908,Baixa</code></pre>
               email
               <input id="accountSignupEmail" type="email" autocomplete="email" required />
             </label>
-            <button type="submit">create account by magic link</button>
+            <label>
+              password
+              <input id="accountSignupPassword" type="password" autocomplete="new-password" minlength="10" required />
+            </label>
+            <label>
+              confirm password
+              <input id="accountSignupPasswordConfirm" type="password" autocomplete="new-password" minlength="10" required />
+            </label>
+            <button type="submit">create account</button>
+          </form>
+
+          <form class="account-form" id="accountResetForm">
+            <label>
+              email
+              <input id="accountResetEmail" type="email" autocomplete="email" required />
+            </label>
+            <button type="submit">send reset email</button>
+            <button class="account-link-button" type="button" data-account-mode="log-in">back to log in</button>
+          </form>
+
+          <form class="account-form" id="accountUpdatePasswordForm">
+            <label>
+              new password
+              <input id="accountNewPassword" type="password" autocomplete="new-password" minlength="10" required />
+            </label>
+            <label>
+              confirm new password
+              <input id="accountNewPasswordConfirm" type="password" autocomplete="new-password" minlength="10" required />
+            </label>
+            <button type="submit">save new password</button>
           </form>
           <p class="account-status" id="accountStatus" aria-live="polite"></p>
         </section>
@@ -371,6 +405,6 @@ azulejo-002.jpg,38.71072,-9.13908,Baixa</code></pre>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="./offline-queue.js?v=20260702-contribution-rights"></script>
-    <script src="./app-source-capture.js?v=20260704-magic-link"></script>
+    <script src="./app-source-capture.js?v=20260704-password-auth"></script>
   </body>
 </html>

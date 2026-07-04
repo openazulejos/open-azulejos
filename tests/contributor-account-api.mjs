@@ -150,48 +150,11 @@ assert(/HttpOnly/.test(updatedProfile.headers["set-cookie"]), "profile update sh
 const loggedOut = await invoke("DELETE", null, accountCookie);
 assert(loggedOut.status === 200 && /Max-Age=0/.test(loggedOut.headers["set-cookie"]), "logout should clear contributor session");
 
-let magicRedirect = "";
+let signInPayload = null;
 global.fetch = async (url, options = {}) => {
   const requestUrl = String(url);
-  if (requestUrl.includes("/auth/v1/otp")) {
-    magicRedirect = new URL(requestUrl).searchParams.get("redirect_to") || "";
-    const payload = JSON.parse(options.body);
-    assert(payload.email === "walker@example.org", "magic link should send normalized email");
-    assert(payload.create_user === true, "magic link should allow creating lightweight accounts");
-    return { ok: true, status: 200, json: async () => ({}) };
-  }
-  throw new Error(`unexpected magic link request: ${requestUrl}`);
-};
-const magicLink = await invoke("POST", { action: "magic-link", email: "Walker@Example.org" });
-assert(magicLink.status === 200 && magicLink.body.magicLinkRequested, "magic link requests should be accepted");
-assert(magicRedirect === "https://openazulejos.test/?account=magic", "magic link should return to the account flow");
-
-global.fetch = async (url) => {
-  const requestUrl = String(url);
-  if (requestUrl.includes("/auth/v1/user")) {
-    return { ok: true, status: 200, json: async () => ({ id: userId, email: "walker@example.org", user_metadata: { pseudonym: "magic-walker" } }) };
-  }
-  if (requestUrl.includes("contributor_profiles?select=*&user_id=")) {
-    return { ok: true, status: 200, json: async () => [profile] };
-  }
-  if (requestUrl.includes("contributions?select=legacy_azulejo_id%2Cstatus")) {
-    return { ok: true, status: 200, json: async () => [] };
-  }
-  throw new Error(`unexpected auth session request: ${requestUrl}`);
-};
-const magicSession = await invoke("POST", {
-  action: "auth-session",
-  accessToken: "magic-access-token",
-});
-assert(magicSession.status === 200 && magicSession.body.authenticated, "magic link session should sign the contributor in");
-assert(/HttpOnly/.test(magicSession.headers["set-cookie"]), "magic link session should create an app session");
-
-global.fetch = async (url, options = {}) => {
-  const requestUrl = String(url);
-  if (requestUrl.includes("/auth/v1/verify")) {
-    const payload = JSON.parse(options.body);
-    assert(payload.type === "magiclink", "magic link token verification should use magiclink type");
-    assert(payload.token_hash === "a".repeat(43), "magic link token hash should be forwarded");
+  if (requestUrl.includes("/auth/v1/token?grant_type=password")) {
+    signInPayload = JSON.parse(options.body);
     return { ok: true, status: 200, json: async () => ({ user: { id: userId, email: "walker@example.org" } }) };
   }
   if (requestUrl.includes("contributor_profiles?select=*&user_id=")) {
@@ -200,41 +163,83 @@ global.fetch = async (url, options = {}) => {
   if (requestUrl.includes("contributions?select=legacy_azulejo_id%2Cstatus")) {
     return { ok: true, status: 200, json: async () => [] };
   }
-  throw new Error(`unexpected token hash magic link request: ${requestUrl}`);
+  throw new Error(`unexpected sign-in request: ${requestUrl}`);
 };
-const verifiedMagicSession = await invoke("POST", {
-  action: "verify-magic-link",
-  tokenHash: "a".repeat(43),
-  type: "magiclink",
+const signedIn = await invoke("POST", {
+  action: "sign-in",
+  email: "Walker@Example.org",
+  password: "long-enough-password",
 });
-assert(verifiedMagicSession.status === 200 && verifiedMagicSession.body.authenticated, "token-hash magic link should sign the contributor in");
-assert(/HttpOnly/.test(verifiedMagicSession.headers["set-cookie"]), "token-hash magic link should create an app session");
+assert(signedIn.status === 200 && signedIn.body.authenticated, "contributor should sign in with a password");
+assert(signInPayload.email === "walker@example.org", "sign-in should normalize email");
+assert(signInPayload.password === "long-enough-password", "sign-in should pass the password to Supabase");
+assert(/HttpOnly/.test(signedIn.headers["set-cookie"]), "password sign-in should create an HttpOnly session");
 
-let signUpUserPayload = null;
+let resetRedirect = "";
+global.fetch = async (url, options = {}) => {
+  const requestUrl = String(url);
+  if (requestUrl.includes("/auth/v1/recover")) {
+    resetRedirect = new URL(requestUrl).searchParams.get("redirect_to") || "";
+    assert(JSON.parse(options.body).email === "walker@example.org", "password reset should send normalized email");
+    return { ok: true, status: 200, json: async () => ({}) };
+  }
+  throw new Error(`unexpected reset request: ${requestUrl}`);
+};
+const reset = await invoke("POST", { action: "reset-password", email: "Walker@Example.org" });
+assert(reset.status === 200 && reset.body.resetRequested, "password reset requests should be accepted");
+assert(resetRedirect === "https://openazulejos.test/?account=recovery", "password reset should return to the app");
+
+global.fetch = async (url) => {
+  const requestUrl = String(url);
+  if (requestUrl.includes("/auth/v1/recover")) {
+    return { ok: false, status: 429, json: async () => ({ message: "rate limited" }) };
+  }
+  throw new Error(`unexpected failed reset request: ${requestUrl}`);
+};
+const failedReset = await invoke("POST", { action: "reset-password", email: "walker@example.org" });
+assert(failedReset.status === 503, "failed reset delivery should be reported instead of silently succeeding");
+
+global.fetch = async (url, options = {}) => {
+  const requestUrl = String(url);
+  if (requestUrl.includes("/auth/v1/user") && options.method === "PUT") {
+    assert(options.headers.Authorization === "Bearer recovery-token", "password update should use the recovery access token");
+    assert(JSON.parse(options.body).password === "new-long-password", "password update should submit the new password");
+    return { ok: true, status: 200, json: async () => ({ id: userId, email: "walker@example.org" }) };
+  }
+  if (requestUrl.includes("contributor_profiles?select=*&user_id=")) {
+    return { ok: true, status: 200, json: async () => [profile] };
+  }
+  if (requestUrl.includes("contributions?select=legacy_azulejo_id%2Cstatus")) {
+    return { ok: true, status: 200, json: async () => [] };
+  }
+  throw new Error(`unexpected password update request: ${requestUrl}`);
+};
+const updatedPassword = await invoke("POST", {
+  action: "update-password",
+  accessToken: "recovery-token",
+  password: "new-long-password",
+});
+assert(updatedPassword.status === 200 && updatedPassword.body.authenticated, "password update should sign the contributor in");
+assert(/HttpOnly/.test(updatedPassword.headers["set-cookie"]), "password update should create an app session");
+
+let signUpPayload = null;
 let signUpProfilePayload = null;
-let signUpOtpPayload = null;
-let signUpRedirect = "";
 global.fetch = async (url, options = {}) => {
   const requestUrl = String(url);
   if (requestUrl.includes("contributor_profiles?select=user_id")) {
     return { ok: true, status: 200, json: async () => [] };
   }
-  if (requestUrl.includes("/auth/v1/admin/users") && options.method === "POST") {
-    signUpUserPayload = JSON.parse(options.body);
+  if (requestUrl.includes("/auth/v1/signup")) {
+    signUpPayload = JSON.parse(options.body);
     return {
       ok: true,
       status: 200,
-      json: async () => ({ id: userId, email: "walker@example.org" }),
+      json: async () => ({ user: { id: userId, email: "walker@example.org", identities: [{ id: "identity" }] } }),
     };
   }
   if (requestUrl.endsWith("/rest/v1/contributor_profiles") && options.method === "POST") {
     signUpProfilePayload = JSON.parse(options.body);
     return { ok: true, status: 201, json: async () => [profile] };
-  }
-  if (requestUrl.includes("/auth/v1/otp")) {
-    signUpRedirect = new URL(requestUrl).searchParams.get("redirect_to") || "";
-    signUpOtpPayload = JSON.parse(options.body);
-    return { ok: true, status: 200, json: async () => ({}) };
   }
   throw new Error(`unexpected sign-up request: ${requestUrl}`);
 };
@@ -242,14 +247,13 @@ const signedUp = await invoke("POST", {
   action: "sign-up",
   pseudonym: profile.pseudonym,
   email: "walker@example.org",
+  password: "long-enough-password",
 });
-assert(signedUp.status === 200 && signedUp.body.magicLinkRequested, "signup should request a magic link");
+assert(signedUp.status === 202 && signedUp.body.confirmationRequired, "unconfirmed signup should request email confirmation");
 assert(!signedUp.headers["set-cookie"], "unconfirmed signup must not create an app session");
-assert(signUpUserPayload.email === "walker@example.org" && signUpUserPayload.email_confirm === true, "signup should create an email-only Supabase user");
-assert(signUpUserPayload.user_metadata.pseudonym === profile.pseudonym, "signup should preserve the requested pseudonym");
+assert(signUpPayload.email === "walker@example.org" && signUpPayload.password === "long-enough-password", "signup should create a password account");
+assert(signUpPayload.data.pseudonym === profile.pseudonym, "signup should preserve the requested pseudonym");
 assert(signUpProfilePayload.user_id === userId && signUpProfilePayload.normalized_pseudonym === profile.normalized_pseudonym, "signup should create contributor profile");
-assert(signUpOtpPayload.email === "walker@example.org" && signUpOtpPayload.create_user === false, "signup should send a magic link to the created account");
-assert(signUpRedirect === "https://openazulejos.test/?account=magic", "signup magic link should return to the account flow");
 
 global.fetch = originalFetch;
 for (const [key, value] of Object.entries(originalEnv)) {
