@@ -212,6 +212,7 @@ const recordOnboardingClose = document.querySelector("#recordOnboardingClose");
 const recordOnboardingBack = document.querySelector("#recordOnboardingBack");
 const recordOnboardingNext = document.querySelector("#recordOnboardingNext");
 const recordOnboardingSteps = Array.from(document.querySelectorAll("[data-record-step]"));
+const themeColorMeta = document.querySelector('meta[name="theme-color"]');
 const squareCamera = document.querySelector("#squareCamera");
 const squareCameraVideo = document.querySelector("#squareCameraVideo");
 const squareCameraCapture = document.querySelector("#squareCameraCapture");
@@ -2836,8 +2837,15 @@ function setCameraPermissionStep(step, state) {
   step?.classList.add(`is-${state}`);
 }
 
+function setCameraPageState(active) {
+  document.documentElement?.classList.toggle("is-camera-open", active);
+  document.body?.classList.toggle("is-camera-open", active);
+  themeColorMeta?.setAttribute("content", active ? "#000000" : "#ffffff");
+}
+
 function openPermissionCameraShell() {
   if (!squareCamera) return;
+  setCameraPageState(true);
   squareCamera.classList.add("is-open", "is-permission");
   squareCamera.setAttribute("aria-hidden", "false");
   squareCameraCapture.disabled = true;
@@ -3327,6 +3335,7 @@ async function openSquareCamera() {
     return;
   }
   try {
+    setCameraPageState(true);
     squareCamera.classList.add("is-open", "is-permission");
     squareCamera.setAttribute("aria-hidden", "false");
     setCameraPermissionStep(cameraPermissionStep, "pending");
@@ -3371,6 +3380,7 @@ function closeSquareCamera() {
   if (squareCameraVideo) squareCameraVideo.srcObject = null;
   squareCamera?.classList.remove("is-open", "is-permission");
   squareCamera?.setAttribute("aria-hidden", "true");
+  setCameraPageState(false);
 }
 
 async function captureSquareCamera() {

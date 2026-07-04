@@ -27,6 +27,12 @@ body {
   text-transform: lowercase;
 }
 
+html.is-camera-open,
+body.is-camera-open {
+  background: #000;
+  overscroll-behavior: none;
+}
+
 button,
 input,
 textarea {
@@ -222,8 +228,11 @@ textarea {
   grid-template-rows: minmax(0, 1fr) auto;
   place-items: center;
   gap: 18px;
-  min-height: 100vh;
-  min-height: 100dvh;
+  width: 100vw;
+  width: 100dvw;
+  height: 100vh;
+  height: 100dvh;
+  min-height: -webkit-fill-available;
   padding: max(18px, env(safe-area-inset-top)) 16px max(22px, env(safe-area-inset-bottom));
   background: #000;
 }
@@ -278,13 +287,15 @@ textarea {
 
 .square-camera-controls {
   display: grid;
-  grid-template-columns: minmax(74px, 1fr) 82px minmax(74px, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   align-items: center;
-  gap: 18px;
-  width: min(92vmin, 420px);
+  gap: 10px;
+  width: min(calc(100vw - 32px), 420px);
 }
 
 .square-camera-controls button {
+  justify-self: center;
+  width: 100%;
   border: 0;
   border-radius: 0;
   background: transparent;
@@ -319,12 +330,8 @@ textarea {
   clip: rect(0 0 0 0);
 }
 
-.square-camera-secondary:first-child {
-  text-align: right;
-}
-
-.square-camera-secondary:last-child {
-  text-align: left;
+.square-camera-secondary {
+  text-align: center;
 }
 
 .square-camera-permissions {
