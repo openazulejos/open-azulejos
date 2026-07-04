@@ -1106,9 +1106,14 @@ function magicLinkParamsFromUrl() {
   const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
   const query = new URLSearchParams(window.location.search);
   const accessToken = hash.get("access_token") || query.get("access_token");
+  const tokenHash = hash.get("token_hash") || query.get("token_hash");
+  const type = hash.get("type") || query.get("type") || "magiclink";
   const error = hash.get("error_description") || hash.get("error") || query.get("error_description") || query.get("error");
   if (error) return { error };
-  return query.get("account") === "magic" && accessToken ? { accessToken } : null;
+  if (query.get("account") !== "magic") return null;
+  if (accessToken) return { accessToken };
+  if (tokenHash) return { tokenHash, type };
+  return null;
 }
 
 function clearRecoveryUrl() {
@@ -1128,11 +1133,18 @@ async function openMagicLinkAccountFlow() {
     const response = await fetch("/api/contributor-account", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action: "auth-session",
-        accessToken: magic.accessToken,
-        receipts: receiptRequestPayload(),
-      }),
+      body: JSON.stringify(magic.accessToken
+        ? {
+          action: "auth-session",
+          accessToken: magic.accessToken,
+          receipts: receiptRequestPayload(),
+        }
+        : {
+          action: "verify-magic-link",
+          tokenHash: magic.tokenHash,
+          type: magic.type,
+          receipts: receiptRequestPayload(),
+        }),
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || `account ${response.status}`);

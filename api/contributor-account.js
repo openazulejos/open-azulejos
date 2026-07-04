@@ -9,6 +9,8 @@ const { receiptHash } = require("./_contribution-receipt");
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/;
+const MAGIC_TOKEN_HASH_PATTERN = /^[A-Za-z0-9_-]{32,256}$/;
+const MAGIC_LINK_TYPES = new Set(["magiclink", "email"]);
 
 const json = (response, status, payload) => {
   response.statusCode = status;
@@ -212,6 +214,31 @@ module.exports = async function handler(request, response) {
     });
     const user = await userResponse.json().catch(() => ({}));
     if (!userResponse.ok || !user?.id) return json(response, 401, { error: "login session is invalid or expired" });
+    try {
+      const profile = await profileForUser(supabaseUrl, serviceKey, user);
+      const claims = { userId: user.id, email: user.email || "" };
+      response.setHeader("Set-Cookie", contributorSessionCookie(createContributorSession({ ...claims, pseudonym: profile.pseudonym })));
+      const claimed = await claimReceipts(supabaseUrl, serviceKey, user.id, body.receipts);
+      return json(response, 200, await accountPayload(supabaseUrl, serviceKey, claims, profile, { claimed }));
+    } catch {
+      return json(response, 502, { error: "account setup failed" });
+    }
+  }
+
+  if (action === "verify-magic-link") {
+    const tokenHash = String(body.tokenHash || "");
+    const type = String(body.type || "magiclink").toLowerCase();
+    if (!MAGIC_TOKEN_HASH_PATTERN.test(tokenHash) || !MAGIC_LINK_TYPES.has(type)) {
+      return json(response, 400, { error: "valid magic link token is required" });
+    }
+    const verifyResponse = await fetch(`${supabaseUrl}/auth/v1/verify`, {
+      method: "POST",
+      headers: { apikey: publishableKey, "Content-Type": "application/json" },
+      body: JSON.stringify({ type, token_hash: tokenHash }),
+    });
+    const verified = await verifyResponse.json().catch(() => ({}));
+    const user = verified.user || verified;
+    if (!verifyResponse.ok || !user?.id) return json(response, 401, { error: "magic link is invalid or expired" });
     try {
       const profile = await profileForUser(supabaseUrl, serviceKey, user);
       const claims = { userId: user.id, email: user.email || "" };

@@ -186,6 +186,30 @@ const magicSession = await invoke("POST", {
 assert(magicSession.status === 200 && magicSession.body.authenticated, "magic link session should sign the contributor in");
 assert(/HttpOnly/.test(magicSession.headers["set-cookie"]), "magic link session should create an app session");
 
+global.fetch = async (url, options = {}) => {
+  const requestUrl = String(url);
+  if (requestUrl.includes("/auth/v1/verify")) {
+    const payload = JSON.parse(options.body);
+    assert(payload.type === "magiclink", "magic link token verification should use magiclink type");
+    assert(payload.token_hash === "a".repeat(43), "magic link token hash should be forwarded");
+    return { ok: true, status: 200, json: async () => ({ user: { id: userId, email: "walker@example.org" } }) };
+  }
+  if (requestUrl.includes("contributor_profiles?select=*&user_id=")) {
+    return { ok: true, status: 200, json: async () => [profile] };
+  }
+  if (requestUrl.includes("contributions?select=legacy_azulejo_id%2Cstatus")) {
+    return { ok: true, status: 200, json: async () => [] };
+  }
+  throw new Error(`unexpected token hash magic link request: ${requestUrl}`);
+};
+const verifiedMagicSession = await invoke("POST", {
+  action: "verify-magic-link",
+  tokenHash: "a".repeat(43),
+  type: "magiclink",
+});
+assert(verifiedMagicSession.status === 200 && verifiedMagicSession.body.authenticated, "token-hash magic link should sign the contributor in");
+assert(/HttpOnly/.test(verifiedMagicSession.headers["set-cookie"]), "token-hash magic link should create an app session");
+
 let signUpUserPayload = null;
 let signUpProfilePayload = null;
 let signUpOtpPayload = null;
