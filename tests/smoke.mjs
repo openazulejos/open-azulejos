@@ -276,6 +276,12 @@ assert(api.tileInsideMapScene(sceneTiles[0], sceneBounds), "scene counter should
 assert(!api.tileInsideMapScene(sceneTiles[1], sceneBounds), "scene counter should exclude a registered tile outside map bounds");
 const sceneCounts = api.sceneAzulejoCounts(sceneTiles, sceneBounds, 18);
 assert(sceneCounts.visible === 1 && sceneCounts.total === 2, "scene counter should report visible and total registered azulejos");
+const completeServerCounts = api.normalizeServerSceneCounts({ visibleCount: 23, totalCount: 64 }, [], { visible: 1, total: 2 });
+assert(completeServerCounts.visible === 23 && completeServerCounts.total === 64, "scene counter should prefer complete server counts");
+const recordDerivedCounts = api.normalizeServerSceneCounts({}, [{ id: "a" }, { id: "b" }], { visible: 0, total: 64 });
+assert(recordDerivedCounts.visible === 2 && recordDerivedCounts.total === 64, "scene counter should derive visible count from returned records when server counts are missing");
+const fallbackTotalCounts = api.normalizeServerSceneCounts({ visibleCount: 0 }, [], { visible: 0, total: 64 });
+assert(fallbackTotalCounts.visible === 0 && fallbackTotalCounts.total === 64, "scene counter should preserve a known total instead of falling back to 0/0");
 const sceneOnlyTiles = api.tilesInMapScene(sceneTiles, sceneBounds, 18);
 assert(sceneOnlyTiles.length === 2 && !sceneOnlyTiles.includes(sceneTiles[1]), "viewer scene filter should exclude azulejos outside current map bounds");
 const contributionViewerTile = api.viewerTileFromContribution({

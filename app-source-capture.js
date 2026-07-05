@@ -602,13 +602,27 @@ function tileInsideMapScene(tile, bounds = map.getBounds()) {
     && lng <= Number(bounds.getEast());
 }
 
-function sceneAzulejoCounts(tiles = displayedTiles, bounds = map.getBounds(), zoom = map.getZoom()) {
-  if (serverCountsLoaded && tiles === displayedTiles) {
-    return { visible: serverViewportCount, total: serverTotalCount };
-  }
+function localSceneAzulejoCounts(tiles = displayedTiles, bounds = map.getBounds(), zoom = map.getZoom()) {
   const registered = tiles.filter((tile) => tile.source === "supabase-camera");
   const visible = tilesInMapScene(registered, bounds, zoom);
   return { visible: visible.length, total: registered.length };
+}
+
+function sceneAzulejoCounts(tiles = displayedTiles, bounds = map.getBounds(), zoom = map.getZoom()) {
+  const fallback = localSceneAzulejoCounts(tiles, bounds, zoom);
+  if (serverCountsLoaded && tiles === displayedTiles) {
+    if (serverViewportCount > 0 || serverTotalCount > 0 || fallback.total === 0) {
+      return {
+        visible: serverViewportCount,
+        total: Math.max(serverTotalCount, serverViewportCount),
+      };
+    }
+    return fallback;
+  }
+  if (tiles === displayedTiles && serverTotalCount > fallback.total) {
+    return { visible: fallback.visible, total: serverTotalCount };
+  }
+  return fallback;
 }
 
 function tilesInMapScene(tiles = displayedTiles, bounds = map.getBounds(), zoom = map.getZoom()) {
@@ -623,6 +637,29 @@ function updateMapAzulejoCount() {
   if (!mapAzulejoCount) return;
   const counts = sceneAzulejoCounts();
   mapAzulejoCount.textContent = `${counts.visible}/${counts.total}`;
+}
+
+function finiteCount(value) {
+  const count = Number(value);
+  return Number.isFinite(count) && count >= 0 ? Math.floor(count) : null;
+}
+
+function normalizeServerSceneCounts(data = {}, records = [], fallback = {}) {
+  const recordCount = Array.isArray(records) ? records.length : 0;
+  const fallbackVisible = finiteCount(fallback.visible);
+  const fallbackTotal = finiteCount(fallback.total);
+  const visibleFromServer = finiteCount(data.visibleCount);
+  const totalFromServer = finiteCount(data.totalCount);
+  const visible = visibleFromServer ?? (recordCount > 0 ? recordCount : fallbackVisible ?? 0);
+  const total = totalFromServer ?? Math.max(visible, fallbackTotal ?? 0);
+  return {
+    visible,
+    total: Math.max(total, visible),
+  };
+}
+
+function invalidateServerViewportCounts() {
+  serverCountsLoaded = false;
 }
 
 function tileVisibleAtZoom(tile, zoom = map.getZoom()) {
@@ -3338,7 +3375,10 @@ function synchronizeServerTiles(records) {
 }
 
 async function loadRecordedAzulejos() {
-  if (typeof fetch !== "function") return 0;
+  if (typeof fetch !== "function") {
+    updateMapAzulejoCount();
+    return 0;
+  }
   const sequence = ++serverViewportSequence;
   serverViewportRequest?.abort?.();
   serverViewportRequest = typeof AbortController === "function" ? new AbortController() : null;
@@ -3350,18 +3390,25 @@ async function loadRecordedAzulejos() {
   });
   try {
     const response = await fetch(`/api/records?${params}`, { signal: serverViewportRequest?.signal });
-    if (!response.ok) return 0;
+    if (!response.ok) {
+      updateMapAzulejoCount();
+      return 0;
+    }
     const data = await response.json();
     if (sequence !== serverViewportSequence) return 0;
     const records = Array.isArray(data.records) ? data.records : [];
-    serverViewportCount = Number(data.visibleCount) || 0;
-    serverTotalCount = Number(data.totalCount) || serverViewportCount;
+    const fallbackCounts = sceneAzulejoCounts(displayedTiles, map.getBounds(), map.getZoom());
+    const normalizedCounts = normalizeServerSceneCounts(data, records, fallbackCounts);
+    serverViewportCount = normalizedCounts.visible;
+    serverTotalCount = normalizedCounts.total;
     serverCountsLoaded = true;
     synchronizeServerTiles(records);
+    updateMapAzulejoCount();
     return records.length;
   } catch (error) {
     if (error?.name !== "AbortError") {
       console.warn("Supabase records unavailable:", error.message);
+      updateMapAzulejoCount();
     }
     return 0;
   }
@@ -4246,6 +4293,7 @@ document.querySelectorAll(".nav-button").forEach((button) => {
 
 gridToggle.addEventListener("change", drawGrid);
 gridDensity.addEventListener("input", () => {
+  invalidateServerViewportCounts();
   drawGrid();
   refreshTileVisibility();
   scheduleRecordedAzulejoLoad();
@@ -4256,10 +4304,12 @@ mosaicOpacity.addEventListener("input", setMosaicOpacity);
 
 map.on("move zoom resize", drawGrid);
 map.on("moveend", () => {
+  invalidateServerViewportCounts();
   updateMapAzulejoCount();
   scheduleRecordedAzulejoLoad();
 });
 map.on("zoomend", () => {
+  invalidateServerViewportCounts();
   refreshTileVisibility();
   renderHighlightedSelection({ fit: false });
 });
@@ -4340,6 +4390,7 @@ window.AzulejoAtlas = {
   viewportRenderBudget,
   looksLikeSwappedLisbonCoordinates,
   normalizedCellFromCell,
+  normalizeServerSceneCounts,
   normalizedCropPoints,
   setActiveCell,
   loadDemoArchive,
