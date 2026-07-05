@@ -156,7 +156,14 @@ const signedStorageUrl = async (supabaseUrl, headers, bucket, objectPath, expire
 
 const hydrateAdminMediaUrls = async (records, supabaseUrl, headers, publicBucket) => Promise.all(records.map(async (record) => {
   const originalBucket = record.original_image_bucket || (record.original_image_path ? publicBucket : null);
-  if (!record.original_image_path || originalBucket === publicBucket) return record;
+  if (!record.original_image_path) return record;
+  if (originalBucket === publicBucket) {
+    return {
+      ...record,
+      original_image_url: record.original_image_url
+        || `${supabaseUrl}/storage/v1/object/public/${publicBucket}/${record.original_image_path}`,
+    };
+  }
   return {
     ...record,
     original_image_url: await signedStorageUrl(supabaseUrl, headers, originalBucket, record.original_image_path),

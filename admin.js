@@ -770,7 +770,9 @@ async function openEditor(record, card) {
     adminRecoverBorder.disabled = !record.original_image_url;
     syncAdjustmentControls();
     scheduleEditorRender();
-    adminEditorStatus.textContent = record.original_image_url ? "source margin available" : "published image only";
+    adminEditorStatus.textContent = record.original_image_url
+      ? "editing from original source"
+      : "published image only";
     adminEditorSave.disabled = false;
     updateEditorNavigation();
   } catch (error) {

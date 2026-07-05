@@ -126,6 +126,39 @@ assert(statusCalls.some((url) => url.includes("moderation_status=eq.pending")), 
 assert(statusCalls.some((url) => url.includes("moderation_status=eq.approved")), "admin read should request approved records explicitly");
 assert(statusCalls.some((url) => url.includes("moderation_status=eq.rejected")), "admin read should request rejected records explicitly");
 
+global.fetch = async (url) => {
+  const requestUrl = String(url);
+  const status = requestUrl.match(/moderation_status=eq\.([^&]+)/)?.[1] || "unknown";
+  return {
+    ok: true,
+    json: async () => status === "pending" ? [{
+      id: "public-source-record",
+      created_at: "2026-06-29T22:00:00Z",
+      moderation_status: status,
+      image_url: "https://example.supabase.co/storage/v1/object/public/azulejos/captures/public-source-edited.jpg",
+      image_bucket: "azulejos",
+      original_image_path: "captures/public-source-original.jpg",
+      original_image_bucket: "azulejos",
+      original_image_url: null,
+    }] : [],
+  };
+};
+let publicSourceBody = "";
+await handler({
+  method: "GET",
+  headers: { host: "localhost", "x-admin-key": "admin-test" },
+  url: "/api/records?admin=1",
+}, {
+  setHeader() {},
+  end(value) { publicSourceBody = value; },
+  set statusCode(value) { void value; },
+});
+const publicSourceRecord = JSON.parse(publicSourceBody).records[0];
+assert(
+  publicSourceRecord.original_image_url === "https://example.supabase.co/storage/v1/object/public/azulejos/captures/public-source-original.jpg",
+  "admin records should reconstruct public original source URLs for repeat editing",
+);
+
 let patchPayload = null;
 let patchStatus = 200;
 let patchBody = "";
