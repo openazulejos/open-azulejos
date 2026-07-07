@@ -5,20 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#ffffff" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="application-name" content="Open Azulejos" />
+    <meta name="author" content="Open Azulejos" />
     <title>Open Azulejos - Lisbon azulejos map</title>
     <meta
       name="description"
       content="Open Azulejos is a collaborative map and photographic archive of Lisbon azulejos. Explore, photograph and preserve Portuguese tiles across Lisboa."
     />
     <meta name="robots" content="index,follow,max-image-preview:large" />
+    <meta name="googlebot" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" />
     <meta
       name="keywords"
       content="azulejos map, Lisbon azulejos map, map azulejos Lisbon, mapa de azulejos Lisboa, azulejos Lisboa, Portuguese tiles map, carte azulejos Lisbonne, azulejos Portugal"
     />
     <link rel="canonical" href="https://openazulejos.com/" />
-    <link rel="alternate" hreflang="en" href="https://openazulejos.com/" />
-    <link rel="alternate" hreflang="pt" href="https://openazulejos.com/" />
-    <link rel="alternate" hreflang="fr" href="https://openazulejos.com/" />
+    <link rel="alternate" hreflang="en" href="https://openazulejos.com/en" />
+    <link rel="alternate" hreflang="pt" href="https://openazulejos.com/pt" />
+    <link rel="alternate" hreflang="fr" href="https://openazulejos.com/fr" />
     <link rel="alternate" hreflang="x-default" href="https://openazulejos.com/" />
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="icon" href="./assets/favicon.ico" sizes="any" />
@@ -54,6 +57,12 @@
         "url": "https://openazulejos.com/",
         "description": "A collaborative map and photographic archive of Lisbon azulejos.",
         "inLanguage": ["en", "pt", "fr"],
+        "isAccessibleForFree": true,
+        "publisher": {
+          "@type": "Organization",
+          "name": "Open Azulejos",
+          "url": "https://openazulejos.com/"
+        },
         "keywords": [
           "azulejos map",
           "Lisbon azulejos map",
@@ -61,6 +70,72 @@
           "carte azulejos Lisbonne",
           "Portuguese tiles map"
         ]
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Dataset",
+        "name": "Open Azulejos Lisbon photographic map",
+        "alternateName": [
+          "Mapa de azulejos de Lisboa",
+          "Carte des azulejos de Lisbonne"
+        ],
+        "url": "https://openazulejos.com/",
+        "description": "A growing open dataset of geolocated street photographs of Lisbon azulejos, including tile images, coordinates, observation dates and contributor credits.",
+        "license": "https://creativecommons.org/licenses/by/4.0/",
+        "isAccessibleForFree": true,
+        "keywords": [
+          "azulejos",
+          "Lisbon",
+          "Lisboa",
+          "Portuguese tiles",
+          "ceramic heritage",
+          "conservation map",
+          "geolocated photographs"
+        ],
+        "spatialCoverage": {
+          "@type": "Place",
+          "name": "Lisbon, Portugal",
+          "geo": {
+            "@type": "GeoShape",
+            "box": "38.68 -9.24 38.80 -9.06"
+          }
+        },
+        "temporalCoverage": "2026/..",
+        "distribution": [
+          {
+            "@type": "DataDownload",
+            "encodingFormat": "text/csv",
+            "contentUrl": "https://openazulejos.com/exports/azulejos.csv"
+          },
+          {
+            "@type": "DataDownload",
+            "encodingFormat": "application/geo+json",
+            "contentUrl": "https://openazulejos.com/exports/azulejos.geojson"
+          },
+          {
+            "@type": "DataDownload",
+            "encodingFormat": "application/ld+json",
+            "contentUrl": "https://openazulejos.com/archive"
+          }
+        ]
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Open Azulejos",
+        "url": "https://openazulejos.com/",
+        "applicationCategory": "MapApplication",
+        "operatingSystem": "Web",
+        "description": "A browser-based collaborative map for locating, photographing and preserving Lisbon azulejos.",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "EUR"
+        }
       }
     </script>
   </head>
@@ -358,6 +433,26 @@ azulejo-002.jpg,38.71072,-9.13908,Baixa</code></pre>
         </p>
       </div>
     </section>
+
+    <noscript>
+      <section class="seo-noscript">
+        <h1>Open Azulejos: Lisbon azulejos map</h1>
+        <p>
+          Open Azulejos is a collaborative map of Lisbon azulejos. The project documents Portuguese tiles in the street through geolocated photographs, observation dates and open data exports.
+        </p>
+        <h2>Mapa de azulejos de Lisboa</h2>
+        <p>
+          O Open Azulejos e um mapa colaborativo dos azulejos de Lisboa. A plataforma ajuda a fotografar, localizar e preservar padroes ceramicos visiveis nas fachadas da cidade.
+        </p>
+        <h2>Carte des azulejos de Lisbonne</h2>
+        <p>
+          Open Azulejos est une carte collaborative des azulejos de Lisbonne, pensee comme une archive photographique ouverte pour documenter les carreaux portugais, leur localisation et leur etat dans le temps.
+        </p>
+        <p>
+          Data exports: <a href="/exports/azulejos.csv">CSV</a>, <a href="/exports/azulejos.geojson">GeoJSON</a>, <a href="/archive">JSON-LD archive</a>.
+        </p>
+      </section>
+    </noscript>
 
     <section class="about-sheet" id="aboutSheet" aria-hidden="true" aria-label="about open azulejos">
       <button class="about-close" id="aboutCloseButton" type="button" aria-label="close">×</button>
