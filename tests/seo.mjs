@@ -8,6 +8,9 @@ const root = new URL("../", import.meta.url);
 const index = fs.readFileSync(new URL("index.html", root), "utf8");
 const admin = fs.readFileSync(new URL("admin.html", root), "utf8");
 const dashboard = fs.readFileSync(new URL("dashboard.html", root), "utf8");
+const english = fs.readFileSync(new URL("en.html", root), "utf8");
+const portuguese = fs.readFileSync(new URL("pt.html", root), "utf8");
+const french = fs.readFileSync(new URL("fr.html", root), "utf8");
 const robots = fs.readFileSync(new URL("robots.txt", root), "utf8");
 const sitemap = fs.readFileSync(new URL("sitemap.xml", root), "utf8");
 const vercel = JSON.parse(fs.readFileSync(new URL("vercel.json", root), "utf8"));
@@ -32,8 +35,10 @@ assert(robots.includes("Disallow: /api/"), "robots should keep API endpoints out
 assert(sitemap.includes("<loc>https://openazulejos.com/</loc>"), "sitemap should expose the canonical public homepage");
 assert(sitemap.includes("<loc>https://openazulejos.com/pt</loc>") && sitemap.includes("<loc>https://openazulejos.com/fr</loc>"), "sitemap should expose language entry points");
 assert(sitemap.includes("<loc>https://openazulejos.com/exports/azulejos.geojson</loc>"), "sitemap should expose open data exports");
-assert(vercel.rewrites.some((rewrite) => rewrite.source === "/pt" && rewrite.destination === "/index.html"), "Portuguese route should serve the public app");
-assert(vercel.rewrites.some((rewrite) => rewrite.source === "/fr" && rewrite.destination === "/index.html"), "French route should serve the public app");
+assert(portuguese.includes("Mapa de azulejos de Lisboa") && portuguese.includes("https://openazulejos.com/pt"), "Portuguese static SEO page should exist");
+assert(french.includes("Carte des azulejos de Lisbonne") && french.includes("https://openazulejos.com/fr"), "French static SEO page should exist");
+assert(english.includes("Lisbon azulejos map") && english.includes("https://openazulejos.com/en"), "English static SEO page should exist");
+assert(!vercel.rewrites.some((rewrite) => ["/en", "/pt", "/fr"].includes(rewrite.source)), "language pages should be served as clean static HTML files");
 assert(manifest.description.includes("Lisbon azulejos"), "manifest should describe the searchable public project");
 
 console.log("seo tests passed");
