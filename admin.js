@@ -33,6 +33,9 @@ const adminStatsLast24Hours = document.querySelector("#adminStatsLast24Hours");
 const adminStatsGuestSubmissions = document.querySelector("#adminStatsGuestSubmissions");
 const adminActivityChart = document.querySelector("#adminActivityChart");
 const adminStatsSummary = document.querySelector("#adminStatsSummary");
+const adminMembersStatus = document.querySelector("#adminMembersStatus");
+const adminMembersList = document.querySelector("#adminMembersList");
+const adminMembersRefresh = document.querySelector("#adminMembersRefresh");
 const adminEditor = document.querySelector("#adminEditor");
 const adminEditorClose = document.querySelector("#adminEditorClose");
 const adminEditorMeta = document.querySelector("#adminEditorMeta");
@@ -165,6 +168,102 @@ async function loadAdminStats() {
 function showAdminTools() {
   adminAccessPanel.hidden = adminAuthenticated;
   adminTools.hidden = !adminAuthenticated;
+}
+
+function formatMemberDate(value) {
+  const date = new Date(value || "");
+  if (!Number.isFinite(date.getTime())) return "never";
+  return new Intl.DateTimeFormat("en-GB", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "Europe/Lisbon",
+  }).format(date);
+}
+
+function renderAdminMembers(members = []) {
+  adminMembersList.textContent = "";
+  if (!members.length) {
+    adminMembersStatus.textContent = "no registered members yet";
+    return;
+  }
+  members.forEach((member) => {
+    const card = document.createElement("article");
+    card.className = "admin-member-card";
+
+    const form = document.createElement("form");
+    form.className = "admin-member-name";
+    const input = document.createElement("input");
+    input.value = member.pseudonym || "";
+    input.maxLength = 32;
+    input.autocomplete = "off";
+    input.setAttribute("aria-label", `pseudonym for ${member.pseudonym || "member"}`);
+    const save = document.createElement("button");
+    save.type = "submit";
+    save.textContent = "save";
+    form.append(input, save);
+
+    const stats = document.createElement("div");
+    stats.className = "admin-member-stats";
+    stats.innerHTML = `
+      <span><strong>${member.totalCount}</strong> total</span>
+      <span><strong>${member.approvedCount}</strong> accepted</span>
+      <span><strong>${member.pendingCount}</strong> pending</span>
+    `;
+
+    const meta = document.createElement("p");
+    meta.className = "admin-member-meta";
+    meta.textContent = `joined ${formatMemberDate(member.joinedAt)} · latest ${formatMemberDate(member.lastContributionAt)}`;
+
+    const status = document.createElement("p");
+    status.className = "admin-member-status";
+    status.setAttribute("role", "status");
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      save.disabled = true;
+      save.textContent = "saving...";
+      status.textContent = "";
+      try {
+        const response = await fetch("/api/admin-members", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({ userId: member.userId, pseudonym: input.value }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || `member update failed ${response.status}`);
+        member.pseudonym = data.member?.pseudonym || input.value.trim();
+        input.value = member.pseudonym;
+        status.textContent = "saved";
+        loadAdminStats().catch(() => {});
+      } catch (error) {
+        status.textContent = error.message;
+      } finally {
+        save.disabled = false;
+        save.textContent = "save";
+      }
+    });
+
+    card.append(form, stats, meta, status);
+    adminMembersList.append(card);
+  });
+  adminMembersStatus.textContent = `${members.length} member${members.length > 1 ? "s" : ""}`;
+}
+
+async function loadAdminMembers() {
+  if (!adminMembersList || !adminMembersStatus) return;
+  adminMembersStatus.textContent = "loading members...";
+  try {
+    const response = await fetch("/api/admin-members?limit=300", {
+      credentials: "same-origin",
+      cache: "no-store",
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || `members failed ${response.status}`);
+    renderAdminMembers(Array.isArray(data.members) ? data.members : []);
+  } catch (error) {
+    adminMembersStatus.textContent = error.message;
+  }
 }
 
 async function refreshAdminAccountState() {
@@ -1075,7 +1174,7 @@ adminLogin.addEventListener("submit", async (event) => {
     adminAuthenticated = true;
     adminKeyInput.value = "";
     showAdminTools();
-    await Promise.all([loadRecords(), loadAdminStats(), refreshAdminAccountState()]);
+    await Promise.all([loadRecords(), loadAdminStats(), loadAdminMembers(), refreshAdminAccountState()]);
   } catch (error) {
     adminAuthenticated = false;
     showAdminTools();
@@ -1107,7 +1206,7 @@ adminAccountLogin.addEventListener("submit", async (event) => {
     adminAuthenticated = true;
     adminPasswordInput.value = "";
     showAdminTools();
-    await Promise.all([loadRecords(), loadAdminStats(), refreshAdminAccountState()]);
+    await Promise.all([loadRecords(), loadAdminStats(), loadAdminMembers(), refreshAdminAccountState()]);
   } catch (error) {
     adminAuthenticated = false;
     showAdminTools();
@@ -1156,7 +1255,13 @@ adminForgetKeyButton.addEventListener("click", async () => {
 });
 
 adminRefreshButton.addEventListener("click", () => {
-  Promise.all([loadRecords(), loadAdminStats()]).catch((error) => setAdminStatus(error.message));
+  Promise.all([loadRecords(), loadAdminStats(), loadAdminMembers()]).catch((error) => setAdminStatus(error.message));
+});
+
+adminMembersRefresh.addEventListener("click", () => {
+  loadAdminMembers().catch((error) => {
+    adminMembersStatus.textContent = error.message;
+  });
 });
 
 adminFilters.addEventListener("click", (event) => {
@@ -1175,7 +1280,7 @@ fetch("/api/admin-session", { credentials: "same-origin", cache: "no-store" })
     if (!response.ok) return;
     adminAuthenticated = true;
     showAdminTools();
-    return Promise.all([loadRecords(), loadAdminStats(), refreshAdminAccountState()]);
+    return Promise.all([loadRecords(), loadAdminStats(), loadAdminMembers(), refreshAdminAccountState()]);
   })
   .catch((error) => {
     adminAuthenticated = false;

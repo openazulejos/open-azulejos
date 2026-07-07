@@ -7,7 +7,7 @@
     <link rel="icon" href="./assets/favicon.ico" sizes="any" />
     <link rel="icon" href="./assets/favicon-32.png" type="image/png" />
     <link rel="apple-touch-icon" href="./assets/apple-touch-icon.png" />
-    <link rel="stylesheet" href="./styles-admin-editor.css?v=20260704-rejection-reasons" />
+    <link rel="stylesheet" href="./styles-admin-editor.css?v=20260707-admin-members" />
   </head>
   <body class="admin-page">
     <header class="admin-header">
@@ -70,6 +70,17 @@
             <div id="adminActivityChart" class="admin-activity-chart"></div>
           </section>
           <p class="admin-stats-summary" id="adminStatsSummary"></p>
+        </section>
+        <section class="admin-members" id="adminMembers" aria-labelledby="adminMembersTitle">
+          <header class="admin-members-header">
+            <div>
+              <h2 id="adminMembersTitle">members</h2>
+              <p>registered contributor accounts</p>
+            </div>
+            <button id="adminMembersRefresh" type="button">refresh</button>
+          </header>
+          <p class="admin-members-status" id="adminMembersStatus" role="status">loading members...</p>
+          <div class="admin-members-list" id="adminMembersList"></div>
         </section>
         <div class="admin-toolbar">
           <button id="adminRefreshButton" type="button">refresh</button>
@@ -193,6 +204,6 @@
     </section>
     <script src="./admin-image.js?v=20260630-expand-border"></script>
     <script src="./admin-similarity.js?v=20260703-persist-similarity"></script>
-    <script src="./admin.js?v=20260705-original-edit-source"></script>
+    <script src="./admin.js?v=20260707-admin-members"></script>
   </body>
 </html>
