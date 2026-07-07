@@ -229,17 +229,20 @@ global.fetch = async (url, options = {}) => {
   if (requestUrl.includes("contributor_profiles?select=user_id")) {
     return { ok: true, status: 200, json: async () => [] };
   }
-  if (requestUrl.includes("/auth/v1/signup")) {
+  if (requestUrl.includes("/auth/v1/admin/users")) {
     signUpPayload = JSON.parse(options.body);
     return {
       ok: true,
       status: 200,
-      json: async () => ({ user: { id: userId, email: "walker@example.org", identities: [{ id: "identity" }] } }),
+      json: async () => ({ id: userId, email: "walker@example.org" }),
     };
   }
   if (requestUrl.endsWith("/rest/v1/contributor_profiles") && options.method === "POST") {
     signUpProfilePayload = JSON.parse(options.body);
     return { ok: true, status: 201, json: async () => [profile] };
+  }
+  if (requestUrl.includes("contributions?select=legacy_azulejo_id%2Cstatus")) {
+    return { ok: true, status: 200, json: async () => [] };
   }
   throw new Error(`unexpected sign-up request: ${requestUrl}`);
 };
@@ -249,11 +252,34 @@ const signedUp = await invoke("POST", {
   email: "walker@example.org",
   password: "long-enough-password",
 });
-assert(signedUp.status === 202 && signedUp.body.confirmationRequired, "unconfirmed signup should request email confirmation");
-assert(!signedUp.headers["set-cookie"], "unconfirmed signup must not create an app session");
+assert(signedUp.status === 200 && signedUp.body.authenticated, "signup should directly create an authenticated contributor session");
+assert(/HttpOnly/.test(signedUp.headers["set-cookie"]), "signup should create an app session without email OTP confirmation");
 assert(signUpPayload.email === "walker@example.org" && signUpPayload.password === "long-enough-password", "signup should create a password account");
-assert(signUpPayload.data.pseudonym === profile.pseudonym, "signup should preserve the requested pseudonym");
+assert(signUpPayload.email_confirm === true, "signup should not require a Supabase email OTP confirmation");
+assert(signUpPayload.user_metadata.pseudonym === profile.pseudonym, "signup should preserve the requested pseudonym");
 assert(signUpProfilePayload.user_id === userId && signUpProfilePayload.normalized_pseudonym === profile.normalized_pseudonym, "signup should create contributor profile");
+
+global.fetch = async (url, options = {}) => {
+  const requestUrl = String(url);
+  if (requestUrl.includes("contributor_profiles?select=user_id")) {
+    return { ok: true, status: 200, json: async () => [] };
+  }
+  if (requestUrl.includes("/auth/v1/admin/users")) {
+    return {
+      ok: false,
+      status: 422,
+      json: async () => ({ message: "A user with this email address has already been registered" }),
+    };
+  }
+  throw new Error(`unexpected duplicate signup request: ${requestUrl}`);
+};
+const duplicateSignUp = await invoke("POST", {
+  action: "sign-up",
+  pseudonym: "other-walker",
+  email: "walker@example.org",
+  password: "long-enough-password",
+});
+assert(duplicateSignUp.status === 422 && duplicateSignUp.body.error.includes("log in instead"), "duplicate signup should give a useful login hint");
 
 global.fetch = originalFetch;
 for (const [key, value] of Object.entries(originalEnv)) {

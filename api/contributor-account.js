@@ -282,19 +282,26 @@ module.exports = async function handler(request, response) {
     if (!available.ok) return json(response, 502, { error: "pseudonym lookup failed" });
     if ((await available.json()).length) return json(response, 409, { error: "this pseudonym is already in use" });
 
-    const signUp = await fetch(`${supabaseUrl}/auth/v1/signup`, {
+    const signUp = await fetch(`${supabaseUrl}/auth/v1/admin/users`, {
       method: "POST",
-      headers: { apikey: publishableKey, "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password, data: { pseudonym } }),
+      headers: { ...serviceHeaders(serviceKey), "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: { pseudonym },
+      }),
     });
     const signedUp = await signUp.json().catch(() => ({}));
     if (!signUp.ok) {
-      return json(response, signUp.status, { error: signedUp.msg || signedUp.message || "sign up failed" });
+      const message = signedUp.msg || signedUp.message || "";
+      const alreadyRegistered = /already|registered|exists/i.test(message);
+      return json(response, signUp.status, {
+        error: alreadyRegistered ? "this email already has an account, log in instead" : message || "sign up failed",
+      });
     }
     const user = signedUp.user || signedUp;
-    if (!user?.id || (Array.isArray(user.identities) && !user.identities.length)) {
-      return json(response, 202, { authenticated: false, confirmationRequired: true });
-    }
+    if (!user?.id) return json(response, 502, { error: "account creation failed" });
     let profile;
     try {
       const createProfile = await fetch(`${supabaseUrl}/rest/v1/contributor_profiles`, {
@@ -308,7 +315,6 @@ module.exports = async function handler(request, response) {
       await fetch(`${supabaseUrl}/auth/v1/admin/users/${user.id}`, { method: "DELETE", headers: serviceHeaders(serviceKey) }).catch(() => {});
       return json(response, 409, { error: "could not create this contributor profile" });
     }
-    if (!signedUp.access_token) return json(response, 202, { authenticated: false, confirmationRequired: true });
     const claims = { userId: user.id, email };
     response.setHeader("Set-Cookie", contributorSessionCookie(createContributorSession({ ...claims, pseudonym })));
     const claimed = await claimReceipts(supabaseUrl, serviceKey, user.id, body.receipts);
