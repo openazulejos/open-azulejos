@@ -2744,6 +2744,7 @@ pre {
 
 .admin-members-header p,
 .admin-members-status,
+.admin-member-email,
 .admin-member-meta,
 .admin-member-status {
   margin: 0;
@@ -2793,6 +2794,11 @@ pre {
   color: var(--ink);
   font: inherit;
   font-size: 14px;
+}
+
+.admin-member-email {
+  overflow-wrap: anywhere;
+  color: var(--ink);
 }
 
 .admin-member-stats {

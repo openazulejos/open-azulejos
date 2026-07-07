@@ -39,28 +39,48 @@ async function invoke(method = "GET", body = null, cookie = "") {
 
 const adminCookie = `open_azulejos_admin=${auth.createAdminSession({ actor: "owner", role: "owner", method: "account" })}`;
 let requestedListUrl = "";
+let requestedAuthUrl = "";
 global.fetch = async (url, options = {}) => {
-  requestedListUrl = String(url);
+  const requestUrl = String(url);
   assert(options.headers.Authorization === "Bearer service-test", "admin members should use service role");
-  return {
-    ok: true,
-    status: 200,
-    json: async () => [{
-      user_id: "11111111-1111-4111-8111-111111111111",
-      pseudonym: "orson",
-      joined_at: "2026-07-03T12:00:00Z",
-      approved_count: 99,
-      pending_count: 2,
-      total_count: 101,
-      last_contribution_at: "2026-07-04T12:00:00Z",
-    }],
-  };
+  if (requestUrl.includes("/rest/v1/public_contributor_stats?")) {
+    requestedListUrl = requestUrl;
+    return {
+      ok: true,
+      status: 200,
+      json: async () => [{
+        user_id: "11111111-1111-4111-8111-111111111111",
+        pseudonym: "orson",
+        joined_at: "2026-07-03T12:00:00Z",
+        approved_count: 99,
+        pending_count: 2,
+        total_count: 101,
+        last_contribution_at: "2026-07-04T12:00:00Z",
+      }],
+    };
+  }
+  if (requestUrl.includes("/auth/v1/admin/users?")) {
+    requestedAuthUrl = requestUrl;
+    return {
+      ok: true,
+      status: 200,
+      json: async () => ({
+        users: [{
+          id: "11111111-1111-4111-8111-111111111111",
+          email: "orson@openazulejos.com",
+        }],
+      }),
+    };
+  }
+  throw new Error(`unexpected member list request: ${requestUrl}`);
 };
 
 const listed = await invoke("GET", null, adminCookie);
 assert(listed.status === 200, "admin member list should succeed for admins");
 assert(requestedListUrl.includes("limit=500"), "admin member list should cap large limits");
+assert(requestedAuthUrl.includes("per_page=500"), "admin member list should request auth emails with the same capped limit");
 assert(listed.body.members[0].userId === "11111111-1111-4111-8111-111111111111", "admin member list may expose member ids to admins");
+assert(listed.body.members[0].email === "orson@openazulejos.com", "admin member list should expose member emails to admins");
 assert(listed.body.members[0].totalCount === 101, "admin member list should normalize counts");
 
 let updatePayload = null;

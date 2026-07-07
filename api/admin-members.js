@@ -42,12 +42,25 @@ function normalizeMember(row) {
   return {
     userId: row.user_id,
     pseudonym: row.pseudonym,
+    email: row.email || null,
     joinedAt: row.joined_at,
     approvedCount: Number(row.approved_count) || 0,
     pendingCount: Number(row.pending_count) || 0,
     totalCount: Number(row.total_count) || 0,
     lastContributionAt: row.last_contribution_at,
   };
+}
+
+async function readAuthEmails(supabaseUrl, headers, limit) {
+  const query = new URLSearchParams({
+    page: "1",
+    per_page: String(Math.max(1, Math.min(limit, 1000))),
+  });
+  const upstream = await fetch(`${supabaseUrl}/auth/v1/admin/users?${query}`, { headers });
+  if (!upstream.ok) return new Map();
+  const payload = await upstream.json();
+  const users = Array.isArray(payload?.users) ? payload.users : [];
+  return new Map(users.map((user) => [user.id, user.email || null]));
 }
 
 module.exports = async function handler(request, response) {
@@ -61,14 +74,19 @@ module.exports = async function handler(request, response) {
 
   if (request.method === "GET") {
     const url = new URL(request.url || "/api/admin-members", `https://${request.headers.host || "openazulejos.com"}`);
+    const limit = memberLimit(url.searchParams.get("limit"));
     const query = new URLSearchParams({
       select: "user_id,pseudonym,joined_at,approved_count,pending_count,total_count,last_contribution_at",
       order: "total_count.desc,approved_count.desc,last_contribution_at.desc",
-      limit: String(memberLimit(url.searchParams.get("limit"))),
+      limit: String(limit),
     });
     const upstream = await fetch(`${supabaseUrl}/rest/v1/public_contributor_stats?${query}`, { headers });
     if (!upstream.ok) return json(response, upstream.status, { error: "member lookup failed", detail: await upstream.text() });
-    return json(response, 200, { members: (await upstream.json()).map(normalizeMember) });
+    const rows = await upstream.json();
+    const emailsByUserId = await readAuthEmails(supabaseUrl, headers, limit);
+    return json(response, 200, {
+      members: rows.map((row) => normalizeMember({ ...row, email: emailsByUserId.get(row.user_id) })),
+    });
   }
 
   if (request.method !== "PATCH") {

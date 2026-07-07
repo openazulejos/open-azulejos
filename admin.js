@@ -208,6 +208,10 @@ function renderAdminMembers(members = []) {
     save.textContent = "save";
     form.append(input, save);
 
+    const email = document.createElement("p");
+    email.className = "admin-member-email";
+    email.textContent = member.email || "email unavailable";
+
     const stats = document.createElement("div");
     stats.className = "admin-member-stats";
     stats.innerHTML = `
@@ -250,7 +254,7 @@ function renderAdminMembers(members = []) {
       }
     });
 
-    card.append(form, stats, meta, status);
+    card.append(form, email, stats, meta, status);
     adminMembersList.append(card);
   });
   adminMembersStatus.textContent = `${members.length} member${members.length > 1 ? "s" : ""}`;
