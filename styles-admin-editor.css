@@ -3249,6 +3249,10 @@ pre {
   background: #fff;
 }
 
+.admin-visual-similar {
+  min-height: 132px;
+}
+
 .admin-nearby > header {
   display: flex;
   align-items: center;
@@ -3580,7 +3584,7 @@ pre {
 
   .admin-nearby {
     min-height: 0;
-    max-height: 23dvh;
+    max-height: 19dvh;
     overflow: hidden;
     padding: 8px 12px 10px;
   }

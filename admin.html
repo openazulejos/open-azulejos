@@ -7,7 +7,7 @@
     <link rel="icon" href="./assets/favicon.ico" sizes="any" />
     <link rel="icon" href="./assets/favicon-32.png" type="image/png" />
     <link rel="apple-touch-icon" href="./assets/apple-touch-icon.png" />
-    <link rel="stylesheet" href="./styles-admin-editor.css?v=20260707-admin-members" />
+    <link rel="stylesheet" href="./styles-admin-editor.css?v=20260707-visual-similar" />
   </head>
   <body class="admin-page">
     <header class="admin-header">
@@ -155,6 +155,19 @@
         </header>
         <div class="admin-nearby-list" id="adminNearbyList"></div>
       </section>
+      <section class="admin-nearby admin-visual-similar" aria-label="visually similar submissions">
+        <header>
+          <div>
+            <strong>visually similar</strong>
+            <span id="adminVisualStatus">loading visual matches...</span>
+          </div>
+          <label>
+            minimum <output id="adminVisualThresholdValue">65%</output>
+            <input id="adminVisualThreshold" type="range" min="35" max="100" step="1" value="65" />
+          </label>
+        </header>
+        <div class="admin-nearby-list" id="adminVisualList"></div>
+      </section>
       <footer class="admin-editor-footer">
         <span id="adminEditorStatus"></span>
         <button id="adminEditorSave" type="button">save treatment</button>
@@ -203,7 +216,7 @@
       </div>
     </section>
     <script src="./admin-image.js?v=20260630-expand-border"></script>
-    <script src="./admin-similarity.js?v=20260703-persist-similarity"></script>
-    <script src="./admin.js?v=20260707-admin-members"></script>
+    <script src="./admin-similarity.js?v=20260707-visual-similar"></script>
+    <script src="./admin.js?v=20260707-visual-similar"></script>
   </body>
 </html>

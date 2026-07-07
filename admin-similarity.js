@@ -89,23 +89,24 @@
     return results;
   }
 
-  async function scoreRecords(referenceRecord, records) {
+  async function scoreRecords(referenceRecord, records, options = {}) {
     const referenceHash = /^[01]{64}$/.test(referenceRecord.image_fingerprint || "")
       ? referenceRecord.image_fingerprint
       : await differenceHash(referenceRecord.image_url);
-    const candidates = records.slice(0, 50);
-    const scored = await mapWithConcurrency(candidates, 6, async (record) => {
+    const maxImageLoads = Math.max(0, Math.min(Number(options.maxImageLoads) || 50, 120));
+    let imageLoadCount = 0;
+    const scored = await mapWithConcurrency(records, 6, async (record) => {
       try {
-        const candidateHash = /^[01]{64}$/.test(record.image_fingerprint || "")
-          ? record.image_fingerprint
-          : await differenceHash(record.image_url);
+        const storedHash = /^[01]{64}$/.test(record.image_fingerprint || "") ? record.image_fingerprint : null;
+        if (!storedHash && imageLoadCount >= maxImageLoads) return { ...record, visual_similarity: null };
+        if (!storedHash) imageLoadCount += 1;
+        const candidateHash = storedHash || await differenceHash(record.image_url);
         return { ...record, image_fingerprint: candidateHash, visual_similarity: hammingSimilarity(referenceHash, candidateHash) };
       } catch {
         return { ...record, visual_similarity: null };
       }
     });
-    const unscored = records.slice(candidates.length).map((record) => ({ ...record, visual_similarity: null }));
-    return [...scored, ...unscored].sort((first, second) => {
+    return scored.sort((first, second) => {
       const similarityDelta = (second.visual_similarity ?? -1) - (first.visual_similarity ?? -1);
       return similarityDelta || Number(first.distance_m || 0) - Number(second.distance_m || 0);
     });

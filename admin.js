@@ -55,6 +55,10 @@ const adminNearbyStatus = document.querySelector("#adminNearbyStatus");
 const adminNearbyRadius = document.querySelector("#adminNearbyRadius");
 const adminNearbyRadiusValue = document.querySelector("#adminNearbyRadiusValue");
 const adminNearbyList = document.querySelector("#adminNearbyList");
+const adminVisualStatus = document.querySelector("#adminVisualStatus");
+const adminVisualThreshold = document.querySelector("#adminVisualThreshold");
+const adminVisualThresholdValue = document.querySelector("#adminVisualThresholdValue");
+const adminVisualList = document.querySelector("#adminVisualList");
 const adminNearbyViewer = document.querySelector("#adminNearbyViewer");
 const adminNearbyViewerClose = document.querySelector("#adminNearbyViewerClose");
 const adminNearbyViewerImage = document.querySelector("#adminNearbyViewerImage");
@@ -91,6 +95,8 @@ const editorState = {
   renderFrame: null,
   nearbyController: null,
   nearbyTimer: null,
+  visualTimer: null,
+  visualSearchToken: 0,
   nearbyRecord: null,
   moderationTarget: null,
 };
@@ -307,6 +313,22 @@ function nearbySimilarityLabel(record) {
     : "visual match unavailable";
 }
 
+function recordDistanceFrom(reference, candidate) {
+  const firstLat = Number(reference?.lat);
+  const firstLng = Number(reference?.lng);
+  const secondLat = Number(candidate?.lat);
+  const secondLng = Number(candidate?.lng);
+  if (![firstLat, firstLng, secondLat, secondLng].every(Number.isFinite)) return null;
+  const toRadians = (degrees) => degrees * Math.PI / 180;
+  const lat1 = toRadians(firstLat);
+  const lat2 = toRadians(secondLat);
+  const deltaLat = lat2 - lat1;
+  const deltaLng = toRadians(secondLng - firstLng);
+  const haversine = Math.sin(deltaLat / 2) ** 2
+    + Math.cos(lat1) * Math.cos(lat2) * Math.sin(deltaLng / 2) ** 2;
+  return 6371008.8 * 2 * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine));
+}
+
 function updateCardStatus(card, record) {
   const status = card.querySelector(".admin-status-pill");
   const moderationStatus = recordStatus(record);
@@ -379,6 +401,8 @@ async function openEditorAdjacent(direction) {
   closeNearbyViewer();
   editorState.nearbyController?.abort();
   window.clearTimeout(editorState.nearbyTimer);
+  window.clearTimeout(editorState.visualTimer);
+  editorState.visualSearchToken += 1;
   await openEditor(next, cardForRecord(next));
 }
 
@@ -792,6 +816,73 @@ function renderNearbyRecords(records, radius) {
   });
 }
 
+function renderVisualRecords(records, threshold) {
+  adminVisualList.textContent = "";
+  adminVisualStatus.textContent = records.length
+    ? `${records.length} tile${records.length > 1 ? "s" : ""} at ${threshold}% or more`
+    : `no visual match at ${threshold}% or more`;
+  records.forEach((record) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "admin-nearby-card";
+    button.title = `${nearbySimilarityLabel(record)} · ${nearbyDistanceLabel(record)} · ${formatSubmissionDate(record.created_at)}`;
+    const image = document.createElement("img");
+    image.src = record.image_url;
+    image.alt = record.title || "visually similar azulejo";
+    image.loading = "lazy";
+    const similarity = document.createElement("strong");
+    similarity.className = "admin-nearby-similarity";
+    similarity.textContent = nearbySimilarityLabel(record);
+    const distance = document.createElement("span");
+    distance.textContent = nearbyDistanceLabel(record);
+    const meta = document.createElement("span");
+    meta.textContent = `${record.moderation_status || "approved"} · ${formatSubmissionDate(record.created_at)}`;
+    button.append(image, similarity, distance, meta);
+    button.addEventListener("click", () => openNearbyViewer(record));
+    adminVisualList.append(button);
+  });
+}
+
+async function loadVisualRecords() {
+  const record = editorState.record;
+  if (!record || !adminVisualList || !adminVisualStatus) return;
+  const token = editorState.visualSearchToken + 1;
+  editorState.visualSearchToken = token;
+  const threshold = Math.max(0, Math.min(Number(adminVisualThreshold.value) || 65, 100));
+  adminVisualThresholdValue.value = `${threshold}%`;
+  if (!similarityTools) {
+    adminVisualStatus.textContent = "visual comparison unavailable";
+    adminVisualList.textContent = "";
+    return;
+  }
+  const candidates = adminRecords
+    .filter((candidate) => candidate.id !== record.id && candidate.image_url)
+    .map((candidate) => ({
+      ...candidate,
+      distance_m: recordDistanceFrom(record, candidate),
+      fingerprint_was_stored: /^[01]{64}$/.test(candidate.image_fingerprint || ""),
+    }));
+  if (!candidates.length) {
+    renderVisualRecords([], threshold);
+    return;
+  }
+  adminVisualStatus.textContent = `comparing ${candidates.length} tile${candidates.length > 1 ? "s" : ""}...`;
+  try {
+    const rankedRecords = await similarityTools.scoreRecords(record, candidates, { maxImageLoads: 30 });
+    if (editorState.record?.id !== record.id || editorState.visualSearchToken !== token) return;
+    persistVisualFingerprints(record, rankedRecords).catch(() => {});
+    renderVisualRecords(
+      rankedRecords.filter((candidate) => Number.isFinite(candidate.visual_similarity) && candidate.visual_similarity >= threshold),
+      threshold,
+    );
+  } catch (error) {
+    if (editorState.record?.id === record.id && editorState.visualSearchToken === token) {
+      adminVisualStatus.textContent = error.message || "visual comparison failed";
+      adminVisualList.textContent = "";
+    }
+  }
+}
+
 async function loadNearbyRecords() {
   const record = editorState.record;
   if (!record) return;
@@ -852,8 +943,12 @@ async function openEditor(record, card) {
   adminNearbyRadius.value = String(nearbyRadius);
   adminNearbyRadiusValue.value = `${nearbyRadius} m`;
   adminNearbyList.textContent = "";
+  adminVisualThreshold.value = adminVisualThreshold.value || "65";
+  adminVisualThresholdValue.value = `${adminVisualThreshold.value}%`;
+  adminVisualList.textContent = "";
   syncConditionControls();
   loadNearbyRecords();
+  loadVisualRecords();
   try {
     const sourceUrl = record.original_image_url || record.image_url;
     const image = await loadEditorImage(sourceUrl);
@@ -884,6 +979,9 @@ function closeEditor() {
   closeNearbyViewer();
   editorState.nearbyController?.abort();
   window.clearTimeout(editorState.nearbyTimer);
+  window.clearTimeout(editorState.visualTimer);
+  editorState.visualSearchToken += 1;
+  if (adminVisualList) adminVisualList.textContent = "";
   adminEditor.classList.remove("is-open");
   adminEditor.setAttribute("aria-hidden", "true");
   document.body.style.overflow = "";
@@ -1061,6 +1159,12 @@ adminNearbyRadius.addEventListener("input", () => {
   adminNearbyRadiusValue.value = `${adminNearbyRadius.value} m`;
   window.clearTimeout(editorState.nearbyTimer);
   editorState.nearbyTimer = window.setTimeout(loadNearbyRecords, 260);
+});
+
+adminVisualThreshold.addEventListener("input", () => {
+  adminVisualThresholdValue.value = `${adminVisualThreshold.value}%`;
+  window.clearTimeout(editorState.visualTimer);
+  editorState.visualTimer = window.setTimeout(loadVisualRecords, 220);
 });
 
 adminNearbyViewerClose.addEventListener("click", closeNearbyViewer);
