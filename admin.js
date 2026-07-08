@@ -934,7 +934,7 @@ async function loadVisualRecords() {
   }
   adminVisualStatus.textContent = `comparing ${candidates.length} tile${candidates.length > 1 ? "s" : ""}...`;
   try {
-    const rankedRecords = await similarityTools.scoreRecords(record, candidates, { maxImageLoads: 30 });
+    const rankedRecords = await similarityTools.scoreRecords(record, candidates, { maxImageLoads: 140 });
     if (editorState.record?.id !== record.id || editorState.visualSearchToken !== token) return;
     persistVisualFingerprints(record, rankedRecords).catch(() => {});
     renderVisualRecords(
