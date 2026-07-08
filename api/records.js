@@ -202,7 +202,7 @@ const enrichAdminContributorMetadata = async (records, supabaseUrl, headers) => 
   const profileById = new Map();
   for (const group of chunks(contributorIds, 120)) {
     const query = new URLSearchParams({
-      select: "user_id,pseudonym,display_name",
+      select: "user_id,pseudonym",
       user_id: `in.(${group.join(",")})`,
     });
     const response = await fetch(`${supabaseUrl}/rest/v1/contributor_profiles?${query}`, { headers });
@@ -213,7 +213,7 @@ const enrichAdminContributorMetadata = async (records, supabaseUrl, headers) => 
   return records.map((record) => {
     const contribution = contributionByRecord.get(record.id);
     const profile = contribution?.contributor_id ? profileById.get(contribution.contributor_id) : null;
-    const pseudonym = String(profile?.display_name || profile?.pseudonym || record.photographer_credit || "").trim();
+    const pseudonym = String(profile?.pseudonym || record.photographer_credit || "").trim();
     return {
       ...record,
       contributor_id: contribution?.contributor_id || null,

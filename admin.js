@@ -101,6 +101,7 @@ const editorState = {
   visualSearchToken: 0,
   nearbyRecord: null,
   moderationTarget: null,
+  usesOriginalSource: false,
 };
 
 function setAdminStatus(message) {
@@ -681,6 +682,10 @@ adminModerationCancel.addEventListener("click", closeModerationDialog);
 
 function loadEditorImage(url) {
   return new Promise((resolve, reject) => {
+    if (!url) {
+      reject(new Error("source image could not be loaded"));
+      return;
+    }
     const image = new Image();
     image.crossOrigin = "anonymous";
     image.onload = () => resolve(image);
@@ -1011,26 +1016,40 @@ async function openEditor(record, card) {
   loadNearbyRecords();
   loadVisualRecords();
   try {
-    const sourceUrl = record.original_image_url || record.image_url;
-    const image = await loadEditorImage(sourceUrl);
-    const defaultInset = record.original_image_url ? 0.09 : 0;
+    let image = null;
+    let usesOriginalSource = false;
+    let originalLoadError = null;
+    if (record.original_image_url) {
+      try {
+        image = await loadEditorImage(record.original_image_url);
+        usesOriginalSource = true;
+      } catch (error) {
+        originalLoadError = error;
+      }
+    }
+    if (!image) image = await loadEditorImage(record.image_url);
+    const defaultInset = usesOriginalSource ? 0.09 : 0;
     const points = imageTools.normalizePoints(record.crop_points, defaultInset);
     editorState.image = image;
+    editorState.usesOriginalSource = usesOriginalSource;
     editorState.points = points;
     editorState.initialPoints = points.map((point) => ({ ...point }));
     editorState.settings = imageTools.normalizeSettings(record.edit_settings);
     editorState.whitePoint = record.edit_settings?.whitePoint || null;
     if (editorState.whitePoint) editorState.settings.whitePoint = { ...editorState.whitePoint };
     setWhitePointMode(false);
-    adminRecoverBorder.disabled = !record.original_image_url;
+    adminRecoverBorder.disabled = !usesOriginalSource;
     syncAdjustmentControls();
     scheduleEditorRender();
-    adminEditorStatus.textContent = record.original_image_url
+    adminEditorStatus.textContent = usesOriginalSource
       ? "editing from original source"
-      : "published image only";
+      : originalLoadError
+        ? "original source could not be loaded; editing published image only"
+        : "published image only";
     adminEditorSave.disabled = false;
     updateEditorNavigation();
   } catch (error) {
+    editorState.usesOriginalSource = false;
     adminEditorStatus.textContent = error.message;
     updateEditorNavigation();
   }
@@ -1284,8 +1303,8 @@ adminEditorSave.addEventListener("click", async () => {
         imageData,
         image_fingerprint: imageFingerprint,
         condition_codes: selectedConditionCodes(),
-        crop_points: editorState.record.original_image_url ? editorState.points : null,
-        edit_settings: editorState.record.original_image_url ? editorState.settings : imageTools.normalizeSettings(),
+        crop_points: editorState.usesOriginalSource ? editorState.points : null,
+        edit_settings: editorState.usesOriginalSource ? editorState.settings : imageTools.normalizeSettings(),
       }),
     });
     const data = await response.json().catch(() => ({}));
