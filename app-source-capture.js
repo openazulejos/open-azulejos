@@ -3267,18 +3267,21 @@ async function placeRecordedAzulejo(squareImage, gps = null, uploadId = null, or
     }
   }
   maybeInviteContributorAccount(rememberContributionReceipt(stored));
-  addAzulejoTile({
-    id: stored.record.id,
-    title: "recorded azulejo",
-    lat,
-    lng,
-    image: stored.record.image_url || stored.imageUrl,
-    source: stored.queued ? "offline-pending" : "supabase-camera",
-    photographerCredit: stored.record.photographer_credit || rights?.photographerCredit || "",
-    photoLicense: stored.record.photo_license || rights?.photoLicense || "",
-    minZoom: map.getZoom(),
-  });
+  if (stored.record?.moderation_status === "approved") {
+    addAzulejoTile({
+      id: stored.record.id,
+      title: "recorded azulejo",
+      lat,
+      lng,
+      image: stored.record.image_url || stored.imageUrl,
+      source: "supabase-camera",
+      photographerCredit: stored.record.photographer_credit || rights?.photographerCredit || "",
+      photoLicense: stored.record.photo_license || rights?.photoLicense || "",
+      minZoom: map.getZoom(),
+    }, { skipPersistence: true });
+  }
   highlightCell({ ...cell, lat, lng }, { fit: false });
+  scheduleRecordedAzulejoLoad(0);
   return stored;
 }
 
@@ -3299,14 +3302,17 @@ function currentViewportRequest() {
 }
 
 function removeServerTilesOutside(nextIds) {
+  let removedActiveViewerTile = false;
   displayedTiles = displayedTiles.filter((tile) => {
     if (!tile.isServer || nextIds.has(tile.id)) return true;
+    if (tile.id === activeViewerTileId) removedActiveViewerTile = true;
     setLayerPresence(tile.layerGroup, tile.mosaicCell, false);
     return false;
   });
   serverTilesById.forEach((tile, id) => {
     if (!nextIds.has(id)) serverTilesById.delete(id);
   });
+  if (removedActiveViewerTile) closeAzulejoViewer();
 }
 
 function rememberServerTile(tile) {
@@ -3867,7 +3873,11 @@ function restoreMosaicState() {
   try {
     const saved = JSON.parse(localStorage.getItem("azulejo-atlas-placed") || "[]");
     if (!Array.isArray(saved)) return;
-    loadSavedFragments(saved, { append: true, sourceLabel: "restored-import" });
+    const localOnly = saved.filter((fragment) => !["supabase-camera", "offline-pending"].includes(fragment?.source));
+    if (localOnly.length !== saved.length) {
+      localStorage.setItem("azulejo-atlas-placed", JSON.stringify(localOnly));
+    }
+    loadSavedFragments(localOnly, { append: true, sourceLabel: "restored-import" });
   } catch {
     localStorage.removeItem("azulejo-atlas-placed");
   }
