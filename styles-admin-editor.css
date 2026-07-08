@@ -2713,6 +2713,26 @@ pre {
   font-variant-numeric: tabular-nums;
 }
 
+.admin-contributor-filter {
+  display: inline-grid;
+  gap: 5px;
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.admin-contributor-filter select {
+  min-width: min(100vw - 32px, 280px);
+  min-height: 34px;
+  padding: 0 30px 0 9px;
+  border: 1px solid var(--line);
+  border-radius: 0;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  font-size: 11px;
+}
+
 .admin-status {
   min-height: 18px;
   margin-bottom: 12px;

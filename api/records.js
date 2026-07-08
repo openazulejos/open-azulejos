@@ -170,6 +170,58 @@ const hydrateAdminMediaUrls = async (records, supabaseUrl, headers, publicBucket
   };
 }));
 
+const chunks = (items, size) => {
+  const groups = [];
+  for (let index = 0; index < items.length; index += size) {
+    groups.push(items.slice(index, index + size));
+  }
+  return groups;
+};
+
+const enrichAdminContributorMetadata = async (records, supabaseUrl, headers) => {
+  const ids = [...new Set(records.map((record) => record.id).filter((id) => UUID_PATTERN.test(String(id))))];
+  if (!ids.length) return records;
+  const contributionRows = [];
+  for (const group of chunks(ids, 120)) {
+    const query = new URLSearchParams({
+      select: "legacy_azulejo_id,contributor_id,submitted_at",
+      legacy_azulejo_id: `in.(${group.join(",")})`,
+      order: "submitted_at.desc",
+    });
+    const response = await fetch(`${supabaseUrl}/rest/v1/contributions?${query}`, { headers });
+    if (!response.ok) continue;
+    contributionRows.push(...await response.json());
+  }
+  const contributionByRecord = new Map();
+  contributionRows.forEach((row) => {
+    if (!contributionByRecord.has(row.legacy_azulejo_id)) contributionByRecord.set(row.legacy_azulejo_id, row);
+  });
+  const contributorIds = [...new Set(contributionRows
+    .map((row) => row.contributor_id)
+    .filter((id) => UUID_PATTERN.test(String(id))))];
+  const profileById = new Map();
+  for (const group of chunks(contributorIds, 120)) {
+    const query = new URLSearchParams({
+      select: "user_id,pseudonym,display_name",
+      user_id: `in.(${group.join(",")})`,
+    });
+    const response = await fetch(`${supabaseUrl}/rest/v1/contributor_profiles?${query}`, { headers });
+    if (!response.ok) continue;
+    const profiles = await response.json();
+    profiles.forEach((profile) => profileById.set(profile.user_id, profile));
+  }
+  return records.map((record) => {
+    const contribution = contributionByRecord.get(record.id);
+    const profile = contribution?.contributor_id ? profileById.get(contribution.contributor_id) : null;
+    const pseudonym = String(profile?.display_name || profile?.pseudonym || record.photographer_credit || "").trim();
+    return {
+      ...record,
+      contributor_id: contribution?.contributor_id || null,
+      contributor_pseudonym: pseudonym || "anonymous",
+    };
+  });
+};
+
 module.exports = async function handler(req, res) {
   if (req.method === "OPTIONS") {
     res.setHeader("Allow", "GET, POST, PATCH, DELETE, OPTIONS");
@@ -316,7 +368,8 @@ module.exports = async function handler(req, res) {
     if (isAdmin) {
       try {
         const storedRecords = await readWebCameraRecordsByStatus(supabaseUrl, adminHeaders);
-        const records = await hydrateAdminMediaUrls(storedRecords, supabaseUrl, adminHeaders, bucket);
+        const contributorRecords = await enrichAdminContributorMetadata(storedRecords, supabaseUrl, adminHeaders);
+        const records = await hydrateAdminMediaUrls(contributorRecords, supabaseUrl, adminHeaders, bucket);
         res.setHeader("Vary", "x-admin-key");
         res.setHeader("Cache-Control", "private, no-store");
         return json(res, 200, { records });

@@ -19,6 +19,7 @@ const adminForgetKeyButton = document.querySelector("#adminForgetKeyButton");
 const adminRefreshButton = document.querySelector("#adminRefreshButton");
 const adminStatus = document.querySelector("#adminStatus");
 const adminFilters = document.querySelector("#adminFilters");
+const adminContributorFilter = document.querySelector("#adminContributorFilter");
 const adminGrid = document.querySelector("#adminGrid");
 const adminLoadMore = document.querySelector("#adminLoadMore");
 const adminStatsPeriod = document.querySelector("#adminStatsPeriod");
@@ -81,6 +82,7 @@ const similarityTools = window.AdminSimilarityTools;
 let adminRecords = [];
 let renderedRecordCount = 0;
 let adminRecordFilter = "pending";
+let adminContributorFilterValue = "all";
 let adminAuthenticated = false;
 const editorState = {
   record: null,
@@ -354,6 +356,14 @@ function recordStatus(record) {
   return record.moderation_status || "approved";
 }
 
+function contributorKey(record) {
+  return String(record.contributor_id || "").trim() || "anonymous";
+}
+
+function contributorLabel(record) {
+  return String(record.contributor_pseudonym || record.photographer_credit || "").trim() || "anonymous";
+}
+
 function moderationCounts(records) {
   return records.reduce((counts, record) => {
     const status = recordStatus(record);
@@ -374,9 +384,45 @@ function updateAdminFilters(records) {
 }
 
 function filteredAdminRecords() {
-  return adminRecordFilter === "all"
+  const byStatus = adminRecordFilter === "all"
     ? adminRecords
     : adminRecords.filter((record) => recordStatus(record) === adminRecordFilter);
+  return adminContributorFilterValue === "all"
+    ? byStatus
+    : byStatus.filter((record) => contributorKey(record) === adminContributorFilterValue);
+}
+
+function contributorFilterOptions(records) {
+  const options = new Map();
+  records.forEach((record) => {
+    const key = contributorKey(record);
+    const label = contributorLabel(record);
+    if (!options.has(key)) options.set(key, { key, label, count: 0 });
+    options.get(key).count += 1;
+  });
+  return [...options.values()].sort((first, second) => {
+    if (first.key === "anonymous") return 1;
+    if (second.key === "anonymous") return -1;
+    return first.label.localeCompare(second.label, undefined, { sensitivity: "base" });
+  });
+}
+
+function updateContributorFilter(records) {
+  const options = contributorFilterOptions(records);
+  const available = new Set(["all", ...options.map((option) => option.key)]);
+  if (!available.has(adminContributorFilterValue)) adminContributorFilterValue = "all";
+  adminContributorFilter.textContent = "";
+  const all = document.createElement("option");
+  all.value = "all";
+  all.textContent = "all contributors";
+  adminContributorFilter.append(all);
+  options.forEach((option) => {
+    const item = document.createElement("option");
+    item.value = option.key;
+    item.textContent = `${option.label} (${option.count})`;
+    adminContributorFilter.append(item);
+  });
+  adminContributorFilter.value = adminContributorFilterValue;
 }
 
 function editorRecordIndex() {
@@ -432,6 +478,10 @@ function appendRecordCard(record, index) {
     submissionDate.className = "admin-submission-date";
     submissionDate.textContent = formatSubmissionDate(record.created_at);
 
+    const contributor = document.createElement("span");
+    contributor.className = "admin-card-contributor";
+    contributor.textContent = `contributor: ${contributorLabel(record)}`;
+
     const status = document.createElement("span");
     status.className = "admin-status-pill";
 
@@ -476,7 +526,7 @@ function appendRecordCard(record, index) {
     deleteButton.addEventListener("click", () => deleteRecord(record, card));
 
     actions.append(editButton, approveButton, rejectButton, deleteButton);
-    card.append(image, title, status, moderationReason, meta, submissionDate, mapLink, id, actions);
+    card.append(image, title, status, moderationReason, meta, submissionDate, contributor, mapLink, id, actions);
     updateCardStatus(card, record);
     adminGrid.append(card);
 }
@@ -488,7 +538,10 @@ function renderNextRecordBatch(batchSize = ADMIN_BATCH_SIZE) {
     appendRecordCard(records[index], index);
   }
   renderedRecordCount = nextCount;
-  setAdminStatus(`${renderedRecordCount} / ${records.length} ${adminRecordFilter} contributions loaded · ${adminRecords.length} total`);
+  const contributor = adminContributorFilterValue === "all"
+    ? ""
+    : ` · ${adminContributorFilter.selectedOptions[0]?.textContent || "selected contributor"}`;
+  setAdminStatus(`${renderedRecordCount} / ${records.length} ${adminRecordFilter} contributions loaded${contributor} · ${adminRecords.length} total`);
   adminLoadMore.hidden = renderedRecordCount >= records.length;
 }
 
@@ -503,6 +556,7 @@ function renderRecords(records, note = "") {
   if (!counts[adminRecordFilter] && counts.pending) adminRecordFilter = "pending";
   else if (!counts[adminRecordFilter] && adminRecordFilter !== "all") adminRecordFilter = "all";
   updateAdminFilters(adminRecords);
+  updateContributorFilter(adminRecords);
   renderedRecordCount = 0;
   adminGrid.textContent = "";
   adminLoadMore.hidden = true;
@@ -511,7 +565,10 @@ function renderRecords(records, note = "") {
     return;
   }
   if (!filteredAdminRecords().length) {
-    setAdminStatus(`no ${adminRecordFilter} records · ${adminRecords.length} total`);
+    const contributor = adminContributorFilterValue === "all"
+      ? ""
+      : ` for ${adminContributorFilter.selectedOptions[0]?.textContent || "selected contributor"}`;
+    setAdminStatus(`no ${adminRecordFilter} records${contributor} · ${adminRecords.length} total`);
     return;
   }
   renderNextRecordBatch(ADMIN_INITIAL_BATCH_SIZE);
@@ -1376,6 +1433,11 @@ adminFilters.addEventListener("click", (event) => {
   const button = event.target.closest("button[data-filter]");
   if (!button) return;
   adminRecordFilter = button.dataset.filter;
+  renderRecords(adminRecords);
+});
+
+adminContributorFilter.addEventListener("change", () => {
+  adminContributorFilterValue = adminContributorFilter.value || "all";
   renderRecords(adminRecords);
 });
 
