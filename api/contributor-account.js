@@ -6,6 +6,7 @@ const {
   createContributorSession,
 } = require("./_contributor-auth");
 const { receiptHash } = require("./_contribution-receipt");
+const { notifyNewContributor } = require("./_email-notifications");
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/;
@@ -318,6 +319,9 @@ module.exports = async function handler(request, response) {
     const claims = { userId: user.id, email };
     response.setHeader("Set-Cookie", contributorSessionCookie(createContributorSession({ ...claims, pseudonym })));
     const claimed = await claimReceipts(supabaseUrl, serviceKey, user.id, body.receipts);
+    await notifyNewContributor({ pseudonym, email, userId: user.id }).catch((error) => {
+      console.warn("new contributor notification failed", error.message);
+    });
     return json(response, 200, await accountPayload(supabaseUrl, serviceKey, claims, profile, { claimed }));
   }
 

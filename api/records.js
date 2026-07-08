@@ -2,6 +2,7 @@ const crypto = require("node:crypto");
 const { authorizeAdminRequest } = require("./_admin-auth");
 const { authorizeContributorRequest } = require("./_contributor-auth");
 const { issueContributionReceipt } = require("./_contribution-receipt");
+const { notifyNewSubmission } = require("./_email-notifications");
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const FINGERPRINT_PATTERN = /^[01]{64}$/;
 const REVIEWED_RELATIONS = new Set(["duplicate", "same-pattern", "variation", "possibly-related"]);
@@ -795,5 +796,8 @@ module.exports = async function handler(req, res) {
   } catch (error) {
     return json(res, 502, { error: "contribution receipt failed", detail: error.message });
   }
+  await notifyNewSubmission({ record, contributor, imageUrl: publicUrl }).catch((error) => {
+    console.warn("new submission notification failed", error.message);
+  });
   return json(res, 200, { record, receiptToken, imageUrl: publicUrl });
 };

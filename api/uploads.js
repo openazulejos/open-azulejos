@@ -5,6 +5,7 @@ const ALLOWED_MIME_TYPES = new Map([
 ]);
 const { issueContributionReceipt } = require("./_contribution-receipt");
 const { authorizeContributorRequest } = require("./_contributor-auth");
+const { notifyNewSubmission } = require("./_email-notifications");
 
 const json = (response, status, payload) => {
   response.statusCode = status;
@@ -194,6 +195,9 @@ module.exports = async function handler(request, response) {
     if (!insert.ok) return json(response, insert.status, { error: "database insert failed", detail: await insert.text() });
     const [record] = await insert.json();
     const receiptToken = await issueContributionReceipt(supabaseUrl, headers, id, contributor?.userId);
+    await notifyNewSubmission({ record, contributor, imageUrl: publicUrl }).catch((error) => {
+      console.warn("new submission notification failed", error.message);
+    });
     return json(response, 200, {
       record,
       receiptToken,
