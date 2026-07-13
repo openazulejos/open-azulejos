@@ -1,7 +1,7 @@
 const LISBON = [38.7223, -9.1393];
 const HOME_VIEW = {
   center: [38.7148, -9.1452],
-  zoom: 15,
+  zoom: 16,
 };
 const LISBON_BOUNDS = {
   south: 38.58,
