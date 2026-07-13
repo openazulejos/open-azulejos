@@ -1,4 +1,8 @@
 const LISBON = [38.7223, -9.1393];
+const HOME_VIEW = {
+  center: [38.7148, -9.1452],
+  zoom: 15,
+};
 const LISBON_BOUNDS = {
   south: 38.58,
   west: -9.38,
@@ -106,7 +110,7 @@ const map = L.map("map", {
   preferCanvas: true,
   minZoom: 12,
   maxZoom: 22,
-}).setView(LISBON, 13);
+}).setView(HOME_VIEW.center, HOME_VIEW.zoom);
 
 map.attributionControl.setPrefix(false);
 L.control.zoom({ position: "bottomleft" }).addTo(map);
@@ -4335,7 +4339,10 @@ map.on("click", (event) => {
 });
 
 loadNeighborhoodLayer();
-map.fitBounds([[38.686, -9.232], [38.797, -9.083]], { padding: [32, 32], maxZoom: 13 });
+const hashCell = cellFromHash(window.location.hash);
+if (!hashCell) {
+  map.setView(HOME_VIEW.center, HOME_VIEW.zoom, { animate: false });
+}
 sampleTiles.forEach((tile) => addAzulejoTile(tile, { skipRecord: true }));
 loadRecordedAzulejos();
 window.addEventListener?.("online", () => {
@@ -4355,9 +4362,8 @@ if ("serviceWorker" in navigator) {
 }
 restoreMosaicState();
 restoreContributionView();
-const initialCell = cellForLatLng(LISBON[0], LISBON[1]);
+const initialCell = cellForLatLng(HOME_VIEW.center[0], HOME_VIEW.center[1]);
 cursorReadout.textContent = `Lisboa · grille 3 m · ${initialCell.code}`;
-const hashCell = cellFromHash(window.location.hash);
 if (hashCell) {
   highlightCell(hashCell, { hash: false });
 }

@@ -14,7 +14,18 @@ const originalEnv = {
 process.env.ADMIN_SESSION_SECRET = "stats-session-secret";
 process.env.SUPABASE_URL = "https://example.supabase.co";
 process.env.SUPABASE_SERVICE_ROLE_KEY = "service-key";
-process.env.BETA_STARTED_AT = "2026-07-04T00:00:00.000Z";
+
+const daysAgoIso = (days, hour = 12) => {
+  const date = new Date();
+  date.setUTCHours(hour, 0, 0, 0);
+  date.setUTCDate(date.getUTCDate() - days);
+  return date.toISOString();
+};
+const betaStartedAt = daysAgoIso(3, 0);
+const oldSubmissionAt = daysAgoIso(5);
+const betaSubmissionAt = daysAgoIso(2);
+const betaSubmissionDay = handler.lisbonDayKey(betaSubmissionAt);
+process.env.BETA_STARTED_AT = betaStartedAt;
 
 const assert = (condition, message) => {
   if (!condition) throw new Error(message);
@@ -41,19 +52,19 @@ assert(methodRejected.status === 405, "stats should reject non-GET methods");
 
 const rows = {
   contributor_profiles: [
-    { user_id: "founder", created_at: "2026-07-01T10:00:00.000Z" },
-    { user_id: "new-user", created_at: "2026-07-04T12:00:00.000Z" },
+    { user_id: "founder", created_at: oldSubmissionAt },
+    { user_id: "new-user", created_at: betaSubmissionAt },
   ],
   azulejos: [
-    { id: "legacy", source: "web-camera", title: "old", moderation_status: "approved", created_at: "2026-07-01T10:00:00.000Z" },
-    { id: "approved", source: "web-camera", title: "new", moderation_status: "approved", created_at: "2026-07-04T12:00:00.000Z" },
-    { id: "pending", source: "web-camera", title: "new", moderation_status: "pending", created_at: "2026-07-04T13:00:00.000Z" },
-    { id: "rejected", source: "web-camera", title: "new", moderation_status: "rejected", created_at: "2026-07-04T14:00:00.000Z" },
+    { id: "legacy", source: "web-camera", title: "old", moderation_status: "approved", created_at: oldSubmissionAt },
+    { id: "approved", source: "web-camera", title: "new", moderation_status: "approved", created_at: betaSubmissionAt },
+    { id: "pending", source: "web-camera", title: "new", moderation_status: "pending", created_at: betaSubmissionAt },
+    { id: "rejected", source: "web-camera", title: "new", moderation_status: "rejected", created_at: betaSubmissionAt },
   ],
   contributions: [
-    { contributor_id: "new-user", submitted_at: "2026-07-04T12:00:00.000Z" },
-    { contributor_id: null, submitted_at: "2026-07-04T13:00:00.000Z" },
-    { contributor_id: null, submitted_at: "2026-07-04T14:00:00.000Z" },
+    { contributor_id: "new-user", submitted_at: betaSubmissionAt },
+    { contributor_id: null, submitted_at: betaSubmissionAt },
+    { contributor_id: null, submitted_at: betaSubmissionAt },
   ],
 };
 const requestedStatsUrls = [];
@@ -93,7 +104,7 @@ assert(stats.body.metrics.pendingNow === 1, "stats should count the moderation q
 assert(stats.body.metrics.activeContributors === 1, "stats should count distinct active accounts");
 assert(stats.body.metrics.guestSubmissions === 2, "stats should count anonymous submissions");
 assert(stats.body.metrics.approvalRate === 50, "stats should calculate resolved approval rate");
-assert(stats.body.daily.find((day) => day.date === "2026-07-04")?.submitted === 3, "daily series should group beta submissions by Lisbon day");
+assert(stats.body.daily.find((day) => day.date === betaSubmissionDay)?.submitted === 3, "daily series should group beta submissions by Lisbon day");
 
 assert(handler.countFromRange("0-0/109") === 109, "content range count should parse");
 assert(handler.countFromRange("*/0") === 0, "empty content range should parse");
