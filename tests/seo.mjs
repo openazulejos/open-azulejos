@@ -17,7 +17,8 @@ const vercel = JSON.parse(fs.readFileSync(new URL("vercel.json", root), "utf8"))
 const manifest = JSON.parse(fs.readFileSync(new URL("manifest.webmanifest", root), "utf8"));
 
 assert(index.includes("<html lang=\"en\">"), "public page should declare its primary language");
-assert(index.includes("<title>Open Azulejos - Lisbon azulejos map</title>"), "public page should have a descriptive SEO title");
+assert(index.includes("<title>Lisbon Azulejos Map - Open Azulejos</title>"), "public page should put the searchable map title before the brand");
+assert(index.includes("name=\"title\" content=\"Lisbon Azulejos Map - Open Azulejos\""), "public page should expose an explicit meta title");
 assert(index.includes("name=\"description\""), "public page should have a meta description");
 assert(index.includes("azulejos map") && index.includes("mapa de azulejos Lisboa"), "public page should include English and Portuguese search phrasing");
 assert(index.includes("rel=\"canonical\" href=\"https://openazulejos.com/\""), "public page should declare a canonical URL");
@@ -31,7 +32,7 @@ assert(index.includes("hreflang=\"pt\" href=\"https://openazulejos.com/pt\""), "
 assert(admin.includes("noindex,nofollow,noarchive"), "admin page should not be indexed");
 assert(dashboard.includes("noindex,nofollow,noarchive"), "dashboard page should not be indexed");
 assert(robots.includes("Sitemap: https://openazulejos.com/sitemap.xml"), "robots should point crawlers to the sitemap");
-assert(robots.includes("Disallow: /api/"), "robots should keep API endpoints out of crawler paths");
+assert(robots.includes("Allow: /api/archive") && robots.includes("Disallow: /api/"), "robots should expose public archive data while keeping other API endpoints out of crawler paths");
 assert(sitemap.includes("<loc>https://openazulejos.com/</loc>"), "sitemap should expose the canonical public homepage");
 assert(sitemap.includes("<loc>https://openazulejos.com/pt</loc>") && sitemap.includes("<loc>https://openazulejos.com/fr</loc>"), "sitemap should expose language entry points");
 assert(sitemap.includes("<loc>https://openazulejos.com/exports/azulejos.geojson</loc>"), "sitemap should expose open data exports");

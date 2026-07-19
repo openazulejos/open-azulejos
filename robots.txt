@@ -4,6 +4,7 @@ Disallow: /admin
 Disallow: /admin.html
 Disallow: /dashboard
 Disallow: /dashboard.html
+Allow: /api/archive
 Disallow: /api/
 
 Sitemap: https://openazulejos.com/sitemap.xml
