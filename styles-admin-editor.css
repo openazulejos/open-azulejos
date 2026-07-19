@@ -734,6 +734,20 @@ textarea {
   cursor: wait;
 }
 
+.target-coordinates {
+  position: absolute;
+  right: 10px;
+  bottom: max(5px, env(safe-area-inset-bottom));
+  z-index: 650;
+  min-width: 124px;
+  color: var(--ink);
+  font-size: 11px;
+  line-height: 1.2;
+  text-align: right;
+  letter-spacing: 0;
+  pointer-events: none;
+}
+
 .map-location-probe {
   position: absolute;
   left: 50%;

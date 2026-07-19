@@ -148,6 +148,7 @@ const gridCanvas = document.querySelector("#gridCanvas");
 const gridCtx = gridCanvas.getContext("2d");
 const mapAzulejoCount = document.querySelector("#mapAzulejoCount");
 const mapLocationButton = document.querySelector("#mapLocationButton");
+const targetCoordinates = document.querySelector("#targetCoordinates");
 const cursorReadout = document.querySelector("#cursorReadout");
 const tileCount = document.querySelector("#tileCount");
 const cellCount = document.querySelector("#cellCount");
@@ -1353,6 +1354,18 @@ function gridStepLabel(step) {
   return step === GRID_METERS ? "grille 3 m" : `aperçu ${step} m`;
 }
 
+function formatTargetCoordinates(latlng = map.getCenter()) {
+  const lat = Number(latlng?.lat);
+  const lng = Number(latlng?.lng);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return "";
+  return `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+}
+
+function updateTargetCoordinates() {
+  if (!targetCoordinates) return;
+  targetCoordinates.textContent = formatTargetCoordinates(map.getCenter());
+}
+
 function drawGrid() {
   resizeGridCanvas();
   gridCtx.clearRect(0, 0, gridCanvas.width, gridCanvas.height);
@@ -1401,6 +1414,7 @@ function drawGrid() {
   gridCtx.restore();
   const current = cellForLatLng(map.getCenter().lat, map.getCenter().lng);
   cursorReadout.textContent = `Lisboa · ${gridStepLabel(step)} · ${current.code}`;
+  updateTargetCoordinates();
 }
 
 function applyCityClipPath() {
@@ -4323,11 +4337,13 @@ mosaicOpacity.addEventListener("input", setMosaicOpacity);
 map.on("move zoom resize", drawGrid);
 map.on("moveend", () => {
   invalidateServerViewportCounts();
+  updateTargetCoordinates();
   updateMapAzulejoCount();
   scheduleRecordedAzulejoLoad();
 });
 map.on("zoomend", () => {
   invalidateServerViewportCounts();
+  updateTargetCoordinates();
   refreshTileVisibility();
   renderHighlightedSelection({ fit: false });
 });
@@ -4368,6 +4384,7 @@ restoreMosaicState();
 restoreContributionView();
 const initialCell = cellForLatLng(HOME_VIEW.center[0], HOME_VIEW.center[1]);
 cursorReadout.textContent = `Lisboa · grille 3 m · ${initialCell.code}`;
+updateTargetCoordinates();
 if (hashCell) {
   highlightCell(hashCell, { hash: false });
 }
@@ -4408,6 +4425,7 @@ window.AzulejoAtlas = {
   rememberLoadedImageUrl,
   thumbnailImageUrl,
   viewportRenderBudget,
+  formatTargetCoordinates,
   looksLikeSwappedLisbonCoordinates,
   normalizedCellFromCell,
   normalizeServerSceneCounts,

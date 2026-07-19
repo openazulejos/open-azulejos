@@ -487,6 +487,10 @@ assert(api.viewportRenderBudget(390, 844) === 235, "mobile viewport should keep 
 assert(api.viewportRenderBudget(1920, 1080) === 900, "large viewports should respect the maximum image-render budget");
 assert(api.viewportRenderBudget(1, 1) === 160, "tiny viewports should retain a useful minimum render budget");
 assert(
+  api.formatTargetCoordinates({ lat: 38.7148123, lng: -9.1452456 }) === "38.714812, -9.145246",
+  "target coordinate readout should use stable six-decimal GPS formatting",
+);
+assert(
   api.thumbnailImageUrl("https://example.supabase.co/storage/v1/object/public/azulejos/captures/a.jpg")
     === "/api/image?src=https%3A%2F%2Fexample.supabase.co%2Fstorage%2Fv1%2Fobject%2Fpublic%2Fazulejos%2Fcaptures%2Fa.jpg&w=128&h=128&q=50",
   "Supabase map images should use compact same-origin cached thumbnails",
