@@ -1533,9 +1533,13 @@ function thumbnailImageUrl(imageUrl, size = 128) {
   const source = String(imageUrl || "");
   const marker = "/storage/v1/object/public/";
   if (!source.startsWith("http") || !source.includes(marker)) return source;
-  const transformed = source.replace(marker, "/storage/v1/render/image/public/");
-  const separator = transformed.includes("?") ? "&" : "?";
-  return `${transformed}${separator}width=${size}&height=${size}&resize=cover&quality=60`;
+  const params = new URLSearchParams({
+    src: source,
+    w: String(size),
+    h: String(size),
+    q: "50",
+  });
+  return `/api/image?${params}`;
 }
 
 function addAzulejoTile(tile, options = {}) {

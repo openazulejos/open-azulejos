@@ -363,7 +363,7 @@ module.exports = async function handler(req, res) {
         return json(res, viewportResponse.status, { error: "viewport read failed", detail: await viewportResponse.text() });
       }
       const payload = await viewportResponse.json();
-      res.setHeader("Cache-Control", "public, max-age=10, stale-while-revalidate=30");
+      res.setHeader("Cache-Control", "public, max-age=60, stale-while-revalidate=300");
       return json(res, 200, payload || { records: [], visibleCount: 0, totalCount: 0 });
     }
     if (isAdmin) {
@@ -386,7 +386,7 @@ module.exports = async function handler(req, res) {
       return json(res, response.status, { error: "database read failed", detail: await response.text() });
     }
     res.setHeader("Vary", "x-admin-key");
-    res.setHeader("Cache-Control", isAdmin ? "private, no-store" : "public, max-age=10, stale-while-revalidate=30");
+    res.setHeader("Cache-Control", isAdmin ? "private, no-store" : "public, max-age=60, stale-while-revalidate=300");
     return json(res, 200, { records: await response.json() });
   }
 

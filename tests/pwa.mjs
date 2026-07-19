@@ -13,6 +13,7 @@ assert(manifest.icons.some((icon) => icon.type === "image/png"), "PWA manifest s
 
 const serviceWorker = fs.readFileSync(new URL("service-worker.js", root), "utf8");
 assert(serviceWorker.includes('url.pathname.startsWith("/api/")'), "service worker must keep API calls out of the cache");
+assert(serviceWorker.includes('url.pathname !== "/api/image"'), "service worker should allow immutable image thumbnails to be cached");
 assert(serviceWorker.includes('url.pathname.startsWith("/admin")'), "service worker must keep admin pages out of the cache");
 assert(serviceWorker.includes('url.pathname.startsWith("/dashboard")'), "service worker must keep dashboard pages out of the cache");
 assert(serviceWorker.includes('caches.match("/index.html")'), "service worker should provide the public shell offline");

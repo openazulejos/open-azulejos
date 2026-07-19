@@ -488,8 +488,8 @@ assert(api.viewportRenderBudget(1920, 1080) === 900, "large viewports should res
 assert(api.viewportRenderBudget(1, 1) === 160, "tiny viewports should retain a useful minimum render budget");
 assert(
   api.thumbnailImageUrl("https://example.supabase.co/storage/v1/object/public/azulejos/captures/a.jpg")
-    === "https://example.supabase.co/storage/v1/render/image/public/azulejos/captures/a.jpg?width=128&height=128&resize=cover&quality=60",
-  "Supabase map images should use compact transformed thumbnails",
+    === "/api/image?src=https%3A%2F%2Fexample.supabase.co%2Fstorage%2Fv1%2Fobject%2Fpublic%2Fazulejos%2Fcaptures%2Fa.jpg&w=128&h=128&q=50",
+  "Supabase map images should use compact same-origin cached thumbnails",
 );
 assert(api.thumbnailImageUrl("./assets/local.jpg") === "./assets/local.jpg", "local images should keep their original URL");
 const recoveryHandlers = {};

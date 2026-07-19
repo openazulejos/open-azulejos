@@ -1,6 +1,6 @@
 "use strict";
 
-const CACHE_NAME = "open-azulejos-shell-v50";
+const CACHE_NAME = "open-azulejos-shell-v51";
 const APP_SHELL = [
   "/",
   "/index.html",
@@ -24,7 +24,7 @@ self.addEventListener("activate", (event) => {
 });
 
 function shouldUseNetworkOnly(url) {
-  return url.pathname.startsWith("/api/")
+  return (url.pathname.startsWith("/api/") && url.pathname !== "/api/image")
     || url.pathname.startsWith("/admin")
     || url.pathname.startsWith("/dashboard")
     || url.origin !== self.location.origin;
