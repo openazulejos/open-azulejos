@@ -174,6 +174,7 @@ const azulejoViewerMeta = document.querySelector("#azulejoViewerMeta");
 const azulejoViewerCaption = document.querySelector("#azulejoViewerCaption");
 const azulejoViewerCredit = document.querySelector("#azulejoViewerCredit");
 const azulejoViewerDownload = document.querySelector("#azulejoViewerDownload");
+const azulejoViewerMapLink = document.querySelector("#azulejoViewerMapLink");
 const azulejoViewerClose = document.querySelector("#azulejoViewerClose");
 const aboutOpenButton = document.querySelector("#aboutOpenButton");
 const aboutSheet = document.querySelector("#aboutSheet");
@@ -285,6 +286,7 @@ let pendingCapture = null;
 const CAPTURE_MIN_ZOOM = 1.22;
 let activeViewerTileId = null;
 let activeViewerTile = null;
+let activeViewerOrigin = "map";
 let viewerMosaicMode = 0;
 let viewerGesture = null;
 let viewerMosaicRenderToken = 0;
@@ -1057,30 +1059,58 @@ function renderAzulejoViewerTile(tile) {
   setViewerMosaicMode(0, tile);
 }
 
-function openAzulejoViewer(tile) {
+function openAzulejoViewer(tile, options = {}) {
   if (!azulejoViewer || !azulejoViewerImage || !azulejoViewerCaption) return;
+  activeViewerOrigin = options.origin || "map";
   renderAzulejoViewerTile(tile);
   azulejoViewer.classList.add("is-open");
+  azulejoViewer.classList.toggle("is-contribution-origin", activeViewerOrigin === "contributions");
   azulejoViewer.setAttribute("aria-hidden", "false");
 }
 
-function closeAzulejoViewer() {
+function shouldRestoreViewerMapSelection(origin, options = {}) {
+  return origin !== "contributions" && options.restoreMapSelection !== false;
+}
+
+function closeAzulejoViewer(options = {}) {
   if (!azulejoViewer || !azulejoViewerImage) return;
   const selectedTile = activeViewerTile;
+  const shouldRestoreMapSelection = shouldRestoreViewerMapSelection(activeViewerOrigin, options);
   azulejoViewer.classList.remove("is-open");
+  azulejoViewer.classList.remove("is-contribution-origin");
   azulejoViewer.setAttribute("aria-hidden", "true");
   azulejoViewerImage.removeAttribute("src");
   setViewerMosaicMode(0, null);
   activeViewerTileId = null;
   activeViewerTile = null;
+  activeViewerOrigin = "map";
+  if (!shouldRestoreMapSelection) return;
   const selection = selectionCellForTile(selectedTile);
   if (selection) {
     highlightCell(selection, { fit: false, latlng: selection });
   }
 }
 
+function showActiveViewerTileOnMap() {
+  const tile = activeViewerTile;
+  const lat = Number(tile?.lat);
+  const lng = Number(tile?.lng);
+  if (!tile || !Number.isFinite(lat) || !Number.isFinite(lng)) return;
+  closeAzulejoViewer({ restoreMapSelection: false });
+  closeAccountSheet();
+  map.setView([lat, lng], 21, { animate: false });
+  const selection = selectionCellForTile(tile);
+  if (selection) {
+    highlightCell(selection, { fit: false, latlng: selection });
+  }
+}
+
 function startViewerGesture(event) {
-  if (azulejoViewerClose?.contains(event.target) || azulejoViewerMeta?.contains(event.target)) return;
+  if (
+    azulejoViewerClose?.contains(event.target)
+    || azulejoViewerMapLink?.contains(event.target)
+    || azulejoViewerMeta?.contains(event.target)
+  ) return;
   viewerGesture = {
     pointerId: event.pointerId,
     x: event.clientX,
@@ -2463,13 +2493,11 @@ function focusContributionRecord(record) {
   const lng = Number(record.lng);
   if (record.status !== "approved" || !Number.isFinite(lat) || !Number.isFinite(lng)) return;
   const fallbackTile = viewerTileFromContribution(record);
-  closeAccountSheet();
-  map.setView([lat, lng], 21, { animate: false });
   const tile = displayedTiles.find((candidate) => candidate.id === record.id)
     || serverTileCacheById.get(record.id)
     || fallbackTile;
   if (!tile) return;
-  openAzulejoViewer(tile);
+  openAzulejoViewer(tile, { origin: "contributions" });
   loadRecordedAzulejos().then(() => {
     if (activeViewerTileId !== record.id) return;
     const loadedTile = displayedTiles.find((candidate) => candidate.id === record.id)
@@ -4271,7 +4299,8 @@ accountLogoutButton?.addEventListener("click", logoutContributorAccount);
 contributionsGridView?.addEventListener?.("click", () => setContributionView("grid"));
 contributionsListView?.addEventListener?.("click", () => setContributionView("list"));
 mapLocationButton?.addEventListener("click", locateUserOnMap);
-azulejoViewerClose?.addEventListener("click", closeAzulejoViewer);
+azulejoViewerMapLink?.addEventListener("click", showActiveViewerTileOnMap);
+azulejoViewerClose?.addEventListener("click", () => closeAzulejoViewer());
 azulejoViewerImage?.addEventListener("load", () => {
   azulejoViewerImage.classList.remove("is-image-unavailable");
 });
@@ -4450,6 +4479,7 @@ window.AzulejoAtlas = {
   tilesInMapScene,
   viewerMosaicCells,
   viewerMosaicRotation,
+  shouldRestoreViewerMapSelection,
   viewerTileFromContribution,
   visibleTiles,
   getState: () => ({

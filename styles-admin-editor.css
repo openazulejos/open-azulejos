@@ -1464,6 +1464,26 @@ pre {
   cursor: pointer;
 }
 
+.azulejo-viewer-map-link {
+  display: none;
+  position: fixed;
+  top: 14px;
+  right: 58px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-size: 22px;
+  font-weight: 300;
+  line-height: 1;
+  letter-spacing: 0;
+  cursor: pointer;
+}
+
+.azulejo-viewer.is-contribution-origin .azulejo-viewer-map-link {
+  display: block;
+}
+
 .about-sheet,
 .account-sheet {
   position: fixed;

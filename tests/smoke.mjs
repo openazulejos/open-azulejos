@@ -250,6 +250,9 @@ assert([1, 3, 5, 7, 5, 3, 1].every((count, row) => mosaicCells.filter((cell) => 
 assert(api.viewerMosaicRotation(1, 2, 3) === 0, "first mosaic mode should keep a uniform orientation");
 assert(api.viewerMosaicRotation(2, 2, 3) !== api.viewerMosaicRotation(2, 2, 4), "second mosaic mode should alternate orientations");
 assert(api.viewerMosaicRotation(3, 3, 0) !== api.viewerMosaicRotation(3, 3, 6), "third mosaic mode should orient tiles radially");
+assert(api.shouldRestoreViewerMapSelection("map") === true, "map-opened viewer should restore the selected cell on close");
+assert(api.shouldRestoreViewerMapSelection("contributions") === false, "contribution-opened viewer should close back to account without restoring map selection");
+assert(api.shouldRestoreViewerMapSelection("map", { restoreMapSelection: false }) === false, "show-on-map flow should be able to suppress viewer close restoration");
 const horizontalEdgeCosts = Array.from({ length: 4 }, (_, first) => Array.from({ length: 4 }, (_, second) => second === (first + 1) % 4 ? 0 : 100));
 const verticalEdgeCosts = Array.from({ length: 4 }, (_, first) => Array.from({ length: 4 }, (_, second) => second === (first + 2) % 4 ? 0 : 100));
 const matchedRotations = api.edgeMatchedMosaicRotations(horizontalEdgeCosts, verticalEdgeCosts, mosaicCells);
