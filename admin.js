@@ -109,6 +109,7 @@ const editorState = {
   moderationTarget: null,
   usesOriginalSource: false,
   resizeTarget: null,
+  reviewQueueIds: [],
 };
 
 function setAdminStatus(message) {
@@ -475,7 +476,10 @@ function updateContributorFilter(records) {
 }
 
 function editorRecordIndex() {
-  const records = filteredAdminRecords();
+  const queuedRecords = editorState.reviewQueueIds
+    .map((id) => adminRecords.find((record) => record.id === id))
+    .filter(Boolean);
+  const records = queuedRecords.length ? queuedRecords : filteredAdminRecords();
   const index = records.findIndex((record) => record.id === editorState.record?.id);
   return { records, index };
 }
@@ -506,7 +510,7 @@ async function openEditorAdjacent(direction) {
   window.clearTimeout(editorState.nearbyTimer);
   window.clearTimeout(editorState.visualTimer);
   editorState.visualSearchToken += 1;
-  await openEditor(next, cardForRecord(next));
+  await openEditor(next, cardForRecord(next), { preserveQueue: true });
 }
 
 function appendRecordCard(record, index) {
@@ -1083,7 +1087,7 @@ async function loadNearbyRecords() {
   }
 }
 
-async function openEditor(record, card) {
+async function openEditor(record, card, options = {}) {
   adminEditor.classList.add("is-open");
   adminEditor.setAttribute("aria-hidden", "false");
   document.body.style.overflow = "hidden";
@@ -1097,6 +1101,12 @@ async function openEditor(record, card) {
   adminEditorReject.textContent = "reject";
   adminEditorDelete.disabled = false;
   adminEditorDelete.textContent = "delete";
+  if (!options.preserveQueue) {
+    const queue = filteredAdminRecords();
+    editorState.reviewQueueIds = queue.some((candidate) => candidate.id === record.id)
+      ? queue.map((candidate) => candidate.id)
+      : [record.id];
+  }
   editorState.record = record;
   editorState.card = card;
   updateEditorNavigation();
@@ -1163,6 +1173,7 @@ function closeEditor() {
   editorState.record = null;
   editorState.card = null;
   editorState.image = null;
+  editorState.reviewQueueIds = [];
   editorState.draggedPoint = null;
   editorState.whitePoint = null;
   setWhitePointMode(false);
