@@ -2021,12 +2021,9 @@ function updateCanvaZoomLabel() {
 }
 
 function renderAzulejoCanva() {
-  if (!azulejoCanvaWorld || !azulejoCanvaViewport || !azulejoCanvaStatus) return;
+  if (!azulejoCanvaWorld || !azulejoCanvaViewport) return;
   const records = canvaFilteredRecords();
-  azulejoCanvaStatus.textContent = gridRecordsError
-    || (gridRecordsLoading
-      ? "loading azulejos"
-      : `${records.length}/${gridRecords.length} azulejos · generative canva`);
+  if (azulejoCanvaStatus) azulejoCanvaStatus.textContent = "";
   updateCanvaZoomLabel();
   if (!records.length) {
     azulejoCanvaWorld.textContent = "";
@@ -5074,6 +5071,17 @@ azulejoCanvaViewport?.addEventListener("wheel", (event) => {
 }, { passive: false });
 azulejoCanvaZoomOut?.addEventListener("click", () => setCanvaZoom(canvaZoom - 0.18));
 azulejoCanvaZoomIn?.addEventListener("click", () => setCanvaZoom(canvaZoom + 0.18));
+document.addEventListener("keydown", (event) => {
+  if (activeViewMode !== "canva") return;
+  if (event.target?.closest?.("input, textarea, select, button, [contenteditable='true']")) return;
+  if (event.key === "+" || event.key === "=") {
+    event.preventDefault();
+    setCanvaZoom(canvaZoom + 0.18);
+  } else if (event.key === "-" || event.key === "_") {
+    event.preventDefault();
+    setCanvaZoom(canvaZoom - 0.18);
+  }
+});
 document.addEventListener("click", (event) => {
   if (!viewSwitchMenu || viewSwitchMenu.hasAttribute("hidden")) return;
   if (viewSwitchButton?.contains?.(event.target) || viewSwitchMenu.contains?.(event.target)) return;

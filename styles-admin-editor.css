@@ -374,27 +374,11 @@ textarea {
 }
 
 .azulejo-canva-status {
-  position: fixed;
-  left: 16px;
-  bottom: calc(max(18px, env(safe-area-inset-bottom)) + 54px);
-  z-index: 725;
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 300;
-  pointer-events: none;
+  display: none;
 }
 
 .azulejo-canva-controls {
-  position: fixed;
-  right: 18px;
-  bottom: max(18px, env(safe-area-inset-bottom));
-  z-index: 725;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--ink);
-  font-size: 12px;
-  font-weight: 300;
+  display: none;
 }
 
 .azulejo-canva-controls button {
@@ -530,6 +514,11 @@ body.is-grid-view .map-stage,
 body.is-canva-view .map-stage,
 body.is-grid-view .record-controls {
   pointer-events: none;
+}
+
+body.is-canva-view .map-azulejo-count,
+body.is-canva-view .map-zoom-percent {
+  display: none;
 }
 
 .record-onboarding {
