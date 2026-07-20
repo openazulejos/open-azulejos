@@ -401,8 +401,7 @@ function formatSubmissionDate(value) {
 }
 
 function recommendedNearbyRadius(record) {
-  const accuracy = Number(record?.gps_accuracy_m);
-  return Math.round(Math.max(40, Math.min(120, (Number.isFinite(accuracy) ? accuracy : 25) + 25)) / 5) * 5;
+  return 150;
 }
 
 function nearbyDistanceLabel(record) {
@@ -1261,7 +1260,7 @@ async function loadNearbyRecords() {
   editorState.nearbyController?.abort();
   const controller = new AbortController();
   editorState.nearbyController = controller;
-  const radius = Number(adminNearbyRadius.value) || 60;
+  const radius = Number(adminNearbyRadius.value) || 150;
   adminNearbyRadiusValue.value = `${radius} m`;
   adminNearbyStatus.textContent = "loading nearby tiles...";
   try {
