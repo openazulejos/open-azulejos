@@ -4645,8 +4645,11 @@ button.admin-member-stat:focus-visible {
     color: var(--ink) !important;
   }
 
-  .neighborhood-cut {
-    stroke: rgba(var(--ink-rgb), 0.72) !important;
+  .neighborhood-cut,
+  .leaflet-overlay-pane .neighborhood-cut {
+    stroke: rgba(var(--ink-rgb), 0.92) !important;
+    stroke-opacity: 1 !important;
+    filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.7));
   }
 
   .cell-highlight {
