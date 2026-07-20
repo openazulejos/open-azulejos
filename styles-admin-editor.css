@@ -4435,6 +4435,10 @@ button.admin-member-stat:focus-visible {
     line-height: 1.05;
   }
 
+  .beta-label {
+    display: none;
+  }
+
   .about-trigger,
   .admin-trigger,
   .account-trigger {
