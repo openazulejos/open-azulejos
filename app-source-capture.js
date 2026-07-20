@@ -2124,17 +2124,24 @@ function scheduleAzulejoCanvaRender(delay = 40) {
   }, delay);
 }
 
-function setCanvaZoom(nextZoom) {
+function setCanvaZoom(nextZoom, focalPoint = null) {
   if (!azulejoCanvaViewport) return;
   const previousCellSize = Math.round(CANVA_BASE_CELL_SIZE * canvaZoom);
-  const centerX = azulejoCanvaViewport.scrollLeft + azulejoCanvaViewport.clientWidth / 2;
-  const centerY = azulejoCanvaViewport.scrollTop + azulejoCanvaViewport.clientHeight / 2;
+  const viewportRect = azulejoCanvaViewport.getBoundingClientRect();
+  const focalViewportX = focalPoint
+    ? Math.max(0, Math.min(azulejoCanvaViewport.clientWidth, focalPoint.clientX - viewportRect.left))
+    : azulejoCanvaViewport.clientWidth / 2;
+  const focalViewportY = focalPoint
+    ? Math.max(0, Math.min(azulejoCanvaViewport.clientHeight, focalPoint.clientY - viewportRect.top))
+    : azulejoCanvaViewport.clientHeight / 2;
+  const focalWorldX = azulejoCanvaViewport.scrollLeft + focalViewportX;
+  const focalWorldY = azulejoCanvaViewport.scrollTop + focalViewportY;
   canvaZoom = Math.max(CANVA_MIN_ZOOM, Math.min(CANVA_MAX_ZOOM, nextZoom));
   updateCanvaZoomLabel();
   const nextCellSize = Math.round(CANVA_BASE_CELL_SIZE * canvaZoom);
   const scale = previousCellSize ? nextCellSize / previousCellSize : 1;
-  azulejoCanvaViewport.scrollLeft = centerX * scale - azulejoCanvaViewport.clientWidth / 2;
-  azulejoCanvaViewport.scrollTop = centerY * scale - azulejoCanvaViewport.clientHeight / 2;
+  azulejoCanvaViewport.scrollLeft = focalWorldX * scale - focalViewportX;
+  azulejoCanvaViewport.scrollTop = focalWorldY * scale - focalViewportY;
   canvaRenderSignature = "";
   renderAzulejoCanva();
 }
@@ -5067,7 +5074,9 @@ azulejoCanvaViewport?.addEventListener("dragstart", (event) => event.preventDefa
 azulejoCanvaViewport?.addEventListener("wheel", (event) => {
   if (!event.ctrlKey && !event.metaKey) return;
   event.preventDefault();
-  setCanvaZoom(canvaZoom + (event.deltaY < 0 ? 0.12 : -0.12));
+  const normalizedDelta = Math.max(-36, Math.min(36, event.deltaY));
+  const zoomFactor = Math.exp(-normalizedDelta * 0.006);
+  setCanvaZoom(canvaZoom * zoomFactor, { clientX: event.clientX, clientY: event.clientY });
 }, { passive: false });
 azulejoCanvaZoomOut?.addEventListener("click", () => setCanvaZoom(canvaZoom - 0.18));
 azulejoCanvaZoomIn?.addEventListener("click", () => setCanvaZoom(canvaZoom + 0.18));
