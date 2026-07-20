@@ -75,6 +75,7 @@ const adminNearbyViewerDistance = document.querySelector("#adminNearbyViewerDist
 const adminNearbyViewerMeta = document.querySelector("#adminNearbyViewerMeta");
 const adminNearbyViewerMap = document.querySelector("#adminNearbyViewerMap");
 const adminNearbyViewerRelation = document.querySelector("#adminNearbyViewerRelation");
+const adminNearbyViewerEdit = document.querySelector("#adminNearbyViewerEdit");
 const adminNearbyViewerDuplicate = document.querySelector("#adminNearbyViewerDuplicate");
 const adminModerationDialog = document.querySelector("#adminModerationDialog");
 const adminModerationForm = document.querySelector("#adminModerationForm");
@@ -134,6 +135,7 @@ const editorState = {
   usesOriginalSource: false,
   resizeTarget: null,
   reviewQueueIds: [],
+  returnRecordIds: [],
 };
 
 function setAdminStatus(message) {
@@ -1127,10 +1129,23 @@ function openNearbyViewer(record) {
   adminNearbyViewerMap.href = googleMapsUrl(record);
   adminNearbyViewerRelation.value = "duplicate";
   adminNearbyViewerRelation.disabled = false;
+  adminNearbyViewerEdit.disabled = false;
   adminNearbyViewerDuplicate.disabled = false;
   adminNearbyViewerDuplicate.textContent = "record relation";
   adminNearbyViewer.classList.add("is-open");
   adminNearbyViewer.setAttribute("aria-hidden", "false");
+}
+
+async function editNearbyViewerRecord() {
+  const reference = editorState.record;
+  const candidate = editorState.nearbyRecord;
+  if (!reference || !candidate) return;
+  adminNearbyViewerEdit.disabled = true;
+  closeNearbyViewer();
+  editorState.returnRecordIds.push(reference.id);
+  const storedCandidate = adminRecords.find((record) => record.id === candidate.id) || candidate;
+  if (!adminRecords.some((record) => record.id === storedCandidate.id)) adminRecords.push(storedCandidate);
+  await openEditor(storedCandidate, cardForRecord(storedCandidate), { preserveQueue: true });
 }
 
 async function persistVisualFingerprints(referenceRecord, records) {
@@ -1372,13 +1387,25 @@ async function openEditor(record, card, options = {}) {
   }
 }
 
-function closeEditor() {
+function stopEditorAsyncWork() {
   closeNearbyViewer();
   editorState.nearbyController?.abort();
   window.clearTimeout(editorState.nearbyTimer);
   window.clearTimeout(editorState.visualTimer);
   editorState.visualSearchToken += 1;
   if (adminVisualList) adminVisualList.textContent = "";
+}
+
+function closeEditor() {
+  stopEditorAsyncWork();
+  const returnRecordId = editorState.returnRecordIds.pop();
+  if (returnRecordId) {
+    const returnRecord = adminRecords.find((record) => record.id === returnRecordId);
+    if (returnRecord) {
+      openEditor(returnRecord, cardForRecord(returnRecord), { preserveQueue: true });
+      return;
+    }
+  }
   adminEditor.classList.remove("is-open");
   adminEditor.setAttribute("aria-hidden", "true");
   document.body.style.overflow = "";
@@ -1386,6 +1413,7 @@ function closeEditor() {
   editorState.card = null;
   editorState.image = null;
   editorState.reviewQueueIds = [];
+  editorState.returnRecordIds = [];
   editorState.draggedPoint = null;
   editorState.whitePoint = null;
   setWhitePointMode(false);
@@ -1620,6 +1648,12 @@ adminVisualThreshold.addEventListener("input", () => {
 });
 
 adminNearbyViewerClose.addEventListener("click", closeNearbyViewer);
+adminNearbyViewerEdit.addEventListener("click", () => {
+  editNearbyViewerRecord().catch((error) => {
+    adminNearbyViewerMeta.textContent = error.message;
+    adminNearbyViewerEdit.disabled = false;
+  });
+});
 
 adminNearbyViewerDuplicate.addEventListener("click", async () => {
   const reference = editorState.record;
