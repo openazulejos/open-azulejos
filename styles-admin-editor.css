@@ -267,7 +267,6 @@ textarea {
   min-width: 150px;
   height: 34px;
   border: 0;
-  border-bottom: 1px solid rgba(16, 16, 16, 0.32);
   border-radius: 0;
   background: transparent;
   color: var(--ink);
@@ -283,7 +282,6 @@ textarea {
 
 .azulejo-grid-filters select:disabled {
   color: #aaa;
-  border-bottom-color: rgba(16, 16, 16, 0.14);
 }
 
 .azulejo-grid-filters label::after {
