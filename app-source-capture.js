@@ -1673,6 +1673,7 @@ function thumbnailImageUrl(imageUrl, size = 128) {
 function gridRecordToTile(record) {
   const lat = Number(record?.lat);
   const lng = Number(record?.lng);
+  if (record?.moderation_status && record.moderation_status !== "approved") return null;
   if (!record?.id || !record.image_url || !Number.isFinite(lat) || !Number.isFinite(lng)) return null;
   const cell = cellForLatLng(lat, lng);
   return {
@@ -3716,6 +3717,7 @@ function synchronizeServerTiles(records) {
   const validRecords = records.filter((record) => (
     record?.id
     && record.image_url
+    && (!record.moderation_status || record.moderation_status === "approved")
     && Number.isFinite(Number(record.lat))
     && Number.isFinite(Number(record.lng))
   ));

@@ -64,6 +64,40 @@ assert(requestedUrl.includes("lat=gte.") && requestedUrl.includes("lng=lte."), "
 assert(requestedUrl.includes("id=neq."), "nearby endpoint should exclude the current contribution");
 assert(headers["Cache-Control"] === "private, no-store", "nearby admin results should not be publicly cached");
 
+let viewportRequest = null;
+global.fetch = async (url, options = {}) => {
+  viewportRequest = { url: String(url), payload: JSON.parse(options.body) };
+  return {
+    ok: true,
+    json: async () => ({
+      records: [
+        { id: "approved-record", moderation_status: "approved", image_url: "approved.jpg" },
+        { id: "rejected-record", moderation_status: "rejected", image_url: "rejected.jpg" },
+      ],
+      visibleCount: 2,
+      totalCount: 2,
+    }),
+  };
+};
+let viewportStatus = 200;
+let viewportBody = "";
+const viewportHeaders = {};
+await handler({
+  method: "GET",
+  headers: { host: "localhost", "x-admin-key": "admin-test" },
+  url: "/api/records?bbox=-9.15,38.70,-9.13,38.73&limit=100&step=30",
+}, {
+  setHeader(name, value) { viewportHeaders[name] = value; },
+  end(value) { viewportBody = value; },
+  set statusCode(value) { viewportStatus = value; },
+});
+const viewportPayload = JSON.parse(viewportBody);
+assert(viewportStatus === 200, "viewport endpoint should succeed even when an admin session is present");
+assert(viewportRequest.url.endsWith("/rest/v1/rpc/azulejos_viewport"), "bbox reads should use the public viewport RPC, not the admin read");
+assert(viewportRequest.payload.p_limit === 100 && viewportRequest.payload.p_step_meters === 30, "viewport should pass bounded render parameters");
+assert(viewportPayload.records.length === 1 && viewportPayload.records[0].id === "approved-record", "viewport should not expose rejected records");
+assert(viewportHeaders["Cache-Control"].includes("max-age=10"), "viewport cache should be short enough for moderation checks");
+
 let historyRequest = null;
 global.fetch = async (url, options = {}) => {
   historyRequest = { url: String(url), payload: JSON.parse(options.body) };

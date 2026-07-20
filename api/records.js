@@ -335,7 +335,7 @@ module.exports = async function handler(req, res) {
     const bbox = String(requestUrl.searchParams.get("bbox") || "")
       .split(",")
       .map(Number);
-    if (!isAdmin && bbox.length === 4 && bbox.every(Number.isFinite)) {
+    if (bbox.length === 4 && bbox.every(Number.isFinite)) {
       const [west, south, east, north] = bbox;
       if (west >= east || south >= north || south < -90 || north > 90 || west < -180 || east > 180) {
         return json(res, 400, { error: "invalid bbox" });
@@ -363,10 +363,23 @@ module.exports = async function handler(req, res) {
         return json(res, viewportResponse.status, { error: "viewport read failed", detail: await viewportResponse.text() });
       }
       const payload = await viewportResponse.json();
-      res.setHeader("Cache-Control", "public, max-age=60, stale-while-revalidate=300");
+      const rawRecords = Array.isArray(payload?.records) ? payload.records : [];
+      const records = rawRecords.length
+        ? rawRecords.filter((record) => !record.moderation_status || record.moderation_status === "approved")
+        : [];
+      res.setHeader("Cache-Control", "public, max-age=10, stale-while-revalidate=30");
+      if (payload && typeof payload === "object") {
+        return json(res, 200, {
+          ...payload,
+          records,
+          visibleCount: records.length === rawRecords.length
+            ? payload.visibleCount
+            : Math.min(Number(payload.visibleCount) || records.length, records.length),
+        });
+      }
       return json(res, 200, payload || { records: [], visibleCount: 0, totalCount: 0 });
     }
-    if (isAdmin) {
+    if (requestedAdminRead && isAdmin) {
       try {
         const storedRecords = await readWebCameraRecordsByStatus(supabaseUrl, adminHeaders);
         const contributorRecords = await enrichAdminContributorMetadata(storedRecords, supabaseUrl, adminHeaders);
@@ -388,7 +401,7 @@ module.exports = async function handler(req, res) {
       return json(res, response.status, { error: "database read failed", detail: await response.text() });
     }
     res.setHeader("Vary", "x-admin-key");
-    res.setHeader("Cache-Control", isAdmin ? "private, no-store" : "public, max-age=60, stale-while-revalidate=300");
+    res.setHeader("Cache-Control", "public, max-age=10, stale-while-revalidate=30");
     return json(res, 200, { records: await response.json() });
   }
 
