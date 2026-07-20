@@ -2618,24 +2618,7 @@ function applyContributorAccount(data) {
   if (authenticated) {
     const records = contributorAccount.records || [];
     renderContributionRecords(records, "");
-    refreshAdminShortcut();
   } else if (adminOpenButton) {
-    adminOpenButton.hidden = true;
-  }
-}
-
-async function refreshAdminShortcut() {
-  if (!adminOpenButton || !contributorAccount) return;
-  adminOpenButton.hidden = true;
-  try {
-    const response = await fetch("/api/admin-session", {
-      headers: { Accept: "application/json" },
-      credentials: "same-origin",
-      cache: "no-store",
-    });
-    const data = await response.json().catch(() => ({}));
-    adminOpenButton.hidden = !response.ok || !data?.authenticated;
-  } catch {
     adminOpenButton.hidden = true;
   }
 }
