@@ -49,6 +49,15 @@ textarea {
   font: inherit;
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
 .topbar {
   position: fixed;
   inset: 0 0 auto 0;
@@ -223,7 +232,7 @@ textarea {
   inset: 52px 0 0 0;
   z-index: 610;
   overflow: auto;
-  background: #f7f7f7;
+  background: #fff;
   color: var(--ink);
   padding: 58px max(24px, 5vw) max(52px, env(safe-area-inset-bottom));
 }
@@ -242,19 +251,19 @@ textarea {
   flex-wrap: wrap;
   gap: 22px;
   align-items: end;
+  justify-content: center;
   margin-bottom: 30px;
 }
 
 .azulejo-grid-filters label {
+  position: relative;
   display: grid;
-  gap: 7px;
   min-width: 150px;
-  color: #6f6f6f;
-  font-size: 12px;
-  font-weight: 300;
 }
 
 .azulejo-grid-filters select {
+  appearance: none;
+  -webkit-appearance: none;
   min-width: 150px;
   height: 34px;
   border: 0;
@@ -266,11 +275,29 @@ textarea {
   font-size: 15px;
   font-weight: 300;
   outline: none;
+  box-shadow: none;
+  padding: 0 19px 0 0;
+  text-align: center;
+  text-align-last: center;
 }
 
 .azulejo-grid-filters select:disabled {
   color: #aaa;
   border-bottom-color: rgba(16, 16, 16, 0.14);
+}
+
+.azulejo-grid-filters label::after {
+  content: "";
+  position: absolute;
+  right: 3px;
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  border-right: 1px solid currentColor;
+  border-bottom: 1px solid currentColor;
+  color: currentColor;
+  pointer-events: none;
+  transform: translateY(-65%) rotate(45deg);
 }
 
 .azulejo-grid-status {
@@ -289,14 +316,14 @@ textarea {
 }
 
 .azulejo-grid-card {
-  display: grid;
-  gap: 9px;
+  display: block;
   padding: 0;
   border: 0;
   background: transparent;
   color: var(--ink);
   text-align: left;
   cursor: pointer;
+  box-shadow: none;
 }
 
 .azulejo-grid-card img {
@@ -305,13 +332,6 @@ textarea {
   object-fit: cover;
   border: 1px solid rgba(16, 16, 16, 0.12);
   background: #f2f2f2;
-}
-
-.azulejo-grid-card span {
-  color: #6f6f6f;
-  font-size: 11px;
-  font-weight: 300;
-  line-height: 1.2;
 }
 
 body.is-grid-view .map-stage,

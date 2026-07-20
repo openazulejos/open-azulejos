@@ -1770,15 +1770,13 @@ function renderAzulejoGrid() {
   filtered.forEach((tile) => {
     const card = document.createElement("button");
     const image = document.createElement("img");
-    const meta = document.createElement("span");
     card.className = "azulejo-grid-card";
     card.type = "button";
     image.src = tile.displayImage;
     image.alt = tile.title;
     image.loading = "lazy";
     image.decoding = "async";
-    meta.textContent = tile.neighborhood || "unknown";
-    card.append(image, meta);
+    card.append(image);
     card.addEventListener("click", () => openAzulejoViewer(tile, { origin: "grid" }));
     fragment.append(card);
   });
