@@ -3,6 +3,7 @@ import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
 const auth = require("../api/_admin-auth.js");
+const contributorAuth = require("../api/_contributor-auth.js");
 const handler = require("../api/admin-account.js");
 const originalFetch = global.fetch;
 const originalEnv = {
@@ -79,6 +80,28 @@ const signedIn = await invoke("POST", {
   password: "long-test-password",
 });
 assert(signedIn.status === 200 && signedIn.body.role === "owner", "active named administrator should sign in");
+
+const contributorToken = contributorAuth.createContributorSession({
+  userId: createdProfile.user_id,
+  email: "curator@example.org",
+  pseudonym: "curator",
+});
+let createdContributorAdminCookie = false;
+global.fetch = async (url) => {
+  const requestUrl = String(url);
+  if (requestUrl.includes("admin_profiles?select=display_name%2Crole")) {
+    return { ok: true, json: async () => [{ display_name: "curator", role: "owner" }] };
+  }
+  if (requestUrl.includes("admin_profiles?select=user_id")) {
+    return { ok: true, headers: new Headers({ "content-range": "0-0/1" }), json: async () => [] };
+  }
+  throw new Error(`unexpected contributor-admin check request: ${requestUrl}`);
+};
+const contributorAdmin = await invoke("GET", null, `open_azulejos_contributor=${contributorToken}`);
+createdContributorAdminCookie = /open_azulejos_admin=/.test(contributorAdmin.headers["set-cookie"] || "");
+assert(contributorAdmin.status === 200 && contributorAdmin.body.authenticated, "contributor admin account should open admin account session");
+assert(contributorAdmin.body.method === "contributor-admin", "contributor admin account should keep contributor-admin method");
+assert(createdContributorAdminCookie, "contributor admin account should receive an admin session cookie");
 
 global.fetch = originalFetch;
 for (const [key, value] of Object.entries(originalEnv)) {

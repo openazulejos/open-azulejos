@@ -3,6 +3,7 @@ const {
   adminSessionCookie,
   createAdminSession,
 } = require("./_admin-auth");
+const { authorizeContributorRequest } = require("./_contributor-auth");
 
 const json = (response, status, payload) => {
   response.statusCode = status;
@@ -29,6 +30,29 @@ const readBody = (request) => new Promise((resolve, reject) => {
 
 const validEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
 
+const contributorAdminAuthorization = async (request, supabaseUrl, serviceKey) => {
+  const contributor = authorizeContributorRequest(request);
+  if (!contributor?.userId) return null;
+  const query = new URLSearchParams({
+    select: "display_name,role",
+    user_id: `eq.${contributor.userId}`,
+    active: "eq.true",
+    limit: "1",
+  });
+  const profileResponse = await fetch(`${supabaseUrl}/rest/v1/admin_profiles?${query}`, {
+    headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` },
+  });
+  if (!profileResponse.ok) return null;
+  const [profile] = await profileResponse.json();
+  if (!profile) return null;
+  return {
+    actor: profile.display_name || contributor.pseudonym || "admin",
+    role: profile.role || null,
+    method: "contributor-admin",
+    userId: contributor.userId,
+  };
+};
+
 module.exports = async function handler(request, response) {
   const supabaseUrl = process.env.SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -37,8 +61,13 @@ module.exports = async function handler(request, response) {
   const serviceHeaders = { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` };
 
   if (request.method === "GET") {
-    const authorization = authorizeAdminRequest(request);
-    if (!authorization.ok) return json(response, 401, { authenticated: false });
+    let authorization = authorizeAdminRequest(request);
+    if (!authorization.ok) {
+      const contributorAdmin = await contributorAdminAuthorization(request, supabaseUrl, serviceKey);
+      if (!contributorAdmin) return json(response, 401, { authenticated: false });
+      response.setHeader("Set-Cookie", adminSessionCookie(createAdminSession(contributorAdmin)));
+      authorization = { ok: true, ...contributorAdmin };
+    }
     const countResponse = await fetch(`${supabaseUrl}/rest/v1/admin_profiles?select=user_id&active=eq.true&limit=1`, {
       headers: { ...serviceHeaders, Prefer: "count=exact" },
     });

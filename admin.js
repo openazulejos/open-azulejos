@@ -1623,7 +1623,10 @@ showAdminTools();
 
 async function bootstrapAdminSession() {
   try {
-    const response = await fetch("/api/admin-session", { credentials: "same-origin", cache: "no-store" });
+    let response = await fetch("/api/admin-session", { credentials: "same-origin", cache: "no-store" });
+    if (!response.ok) {
+      response = await fetch("/api/admin-account", { credentials: "same-origin", cache: "no-store" });
+    }
     adminAuthenticated = response.ok;
     adminAuthChecked = true;
     showAdminTools();
