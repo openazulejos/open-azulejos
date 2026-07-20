@@ -93,7 +93,8 @@ async function contributionRecords(supabaseUrl, serviceKey, userId) {
   });
   const response = await fetch(`${supabaseUrl}/rest/v1/contributions?${query}`, { headers });
   if (!response.ok) throw new Error("contribution lookup failed");
-  const records = await response.json();
+  const records = (await response.json())
+    .filter((record) => UUID_PATTERN.test(String(record.legacy_azulejo_id || "")));
   const ids = records.map((record) => record.legacy_azulejo_id).filter(Boolean);
   if (!ids.length) return [];
   const tileQuery = new URLSearchParams({
@@ -103,19 +104,23 @@ async function contributionRecords(supabaseUrl, serviceKey, userId) {
   const tileResponse = await fetch(`${supabaseUrl}/rest/v1/azulejos?${tileQuery}`, { headers });
   const tiles = tileResponse.ok ? await tileResponse.json() : [];
   const tilesById = new Map(tiles.map((tile) => [tile.id, tile]));
-  return records.map((record) => ({
-    id: record.legacy_azulejo_id,
-    status: record.status,
-    reason: record.moderation_reason,
-    submittedAt: record.submitted_at,
-    updatedAt: record.updated_at,
-    title: tilesById.get(record.legacy_azulejo_id)?.title || "azulejo",
-    imageUrl: tilesById.get(record.legacy_azulejo_id)?.image_url || null,
-    lat: tilesById.get(record.legacy_azulejo_id)?.lat ?? null,
-    lng: tilesById.get(record.legacy_azulejo_id)?.lng ?? null,
-    photographerCredit: tilesById.get(record.legacy_azulejo_id)?.photographer_credit || null,
-    photoLicense: tilesById.get(record.legacy_azulejo_id)?.photo_license || null,
-  }));
+  return records.flatMap((record) => {
+    const tile = tilesById.get(record.legacy_azulejo_id);
+    if (!tile) return [];
+    return [{
+      id: record.legacy_azulejo_id,
+      status: record.status,
+      reason: record.moderation_reason,
+      submittedAt: record.submitted_at,
+      updatedAt: record.updated_at,
+      title: tile.title || "azulejo",
+      imageUrl: tile.image_url || null,
+      lat: tile.lat ?? null,
+      lng: tile.lng ?? null,
+      photographerCredit: tile.photographer_credit || null,
+      photoLicense: tile.photo_license || null,
+    }];
+  });
 }
 
 async function claimReceipts(supabaseUrl, serviceKey, userId, value) {

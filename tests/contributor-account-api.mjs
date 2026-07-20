@@ -83,13 +83,29 @@ global.fetch = async (url, options = {}) => {
     return {
       ok: true,
       status: 200,
-      json: async () => [{
-        legacy_azulejo_id: contributionId,
-        status: "pending",
-        moderation_reason: null,
-        submitted_at: "2026-07-03T12:00:00.000Z",
-        updated_at: "2026-07-03T12:00:00.000Z",
-      }],
+      json: async () => [
+        {
+          legacy_azulejo_id: null,
+          status: "pending",
+          moderation_reason: null,
+          submitted_at: "2026-07-03T12:01:00.000Z",
+          updated_at: "2026-07-03T12:01:00.000Z",
+        },
+        {
+          legacy_azulejo_id: "33333333-3333-4333-8333-333333333333",
+          status: "pending",
+          moderation_reason: null,
+          submitted_at: "2026-07-03T12:00:30.000Z",
+          updated_at: "2026-07-03T12:00:30.000Z",
+        },
+        {
+          legacy_azulejo_id: contributionId,
+          status: "pending",
+          moderation_reason: null,
+          submitted_at: "2026-07-03T12:00:00.000Z",
+          updated_at: "2026-07-03T12:00:00.000Z",
+        },
+      ],
     };
   }
   if (requestUrl.includes("azulejos?select=id%2Ctitle%2Cimage_url")) {
@@ -108,6 +124,7 @@ const claimedAccount = await invoke("POST", {
 }, accountCookie);
 assert(claimedAccount.status === 200 && claimedAccount.body.authenticated, "contributor should claim receipts with an existing session");
 assert(claimedAccount.body.claimed === 1 && claimPatch?.contributor_id === userId, "valid local receipt should attach to account");
+assert(claimedAccount.body.records.length === 1, "account should skip orphaned contribution rows");
 assert(claimedAccount.body.records[0].imageUrl.endsWith("tile.jpg"), "account should return its contribution image");
 
 global.fetch = async (url) => {
