@@ -7,6 +7,7 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
 const FINGERPRINT_PATTERN = /^[01]{64}$/;
 const REVIEWED_RELATIONS = new Set(["duplicate", "same-pattern", "variation", "possibly-related"]);
 const CONDITION_CODES = new Set(["intact", "crazed", "chipped", "missing", "painted-covered", "repaired", "unknown"]);
+const COLOR_FAMILIES = new Set(["blue", "green", "yellow", "red", "brown", "black", "white", "grey", "multicolor"]);
 
 const json = (res, status, payload) => {
   res.statusCode = status;
@@ -78,6 +79,32 @@ const normalizedEditSettings = (value) => {
     };
   }
   return settings;
+};
+
+const normalizedColorMetadata = (body) => {
+  const dominant = String(body.dominant_color || body.color_metadata?.dominant || "").trim().toLowerCase();
+  if (!COLOR_FAMILIES.has(dominant)) return null;
+  const sourceFamilies = body.color_metadata?.families;
+  const families = {};
+  if (sourceFamilies && typeof sourceFamilies === "object" && !Array.isArray(sourceFamilies)) {
+    Object.entries(sourceFamilies).forEach(([family, value]) => {
+      const key = String(family || "").trim().toLowerCase();
+      const amount = Number(value);
+      if (COLOR_FAMILIES.has(key) && Number.isFinite(amount) && amount >= 0) {
+        families[key] = Math.min(1, Number(amount.toFixed(4)));
+      }
+    });
+  }
+  if (!Object.keys(families).length) families[dominant] = 1;
+  return {
+    dominant,
+    metadata: {
+      dominant,
+      families,
+      source: "admin-treatment",
+      analyzed_at: new Date().toISOString(),
+    },
+  };
 };
 
 const normalizedContributionRights = (body, contributor = null) => {
@@ -413,7 +440,7 @@ module.exports = async function handler(req, res) {
       const lngDelta = radius / Math.max(1, 111320 * Math.cos(nearLat * Math.PI / 180));
       const exclude = String(requestUrl.searchParams.get("exclude") || "").trim();
       const query = new URLSearchParams();
-      query.set("select", "id,title,lat,lng,image_url,created_at,gps_accuracy_m,moderation_status,cell_code,words,image_fingerprint");
+      query.set("select", "id,title,lat,lng,image_url,created_at,gps_accuracy_m,moderation_status,cell_code,words,image_fingerprint,dominant_color,color_metadata");
       query.set("source", "eq.web-camera");
       query.set("title", "neq.api test");
       query.append("lat", `gte.${nearLat - latDelta}`);
@@ -499,7 +526,7 @@ module.exports = async function handler(req, res) {
         return json(res, error.status || 500, { error: "database read failed", detail: error.detail || error.message });
       }
     }
-    const publicSelect = "id,title,lat,lng,image_url,cell_code,words,source,created_at,gps_accuracy_m,gps_timestamp,location_source,photographer_credit,photo_license";
+    const publicSelect = "id,title,lat,lng,image_url,cell_code,words,source,created_at,gps_accuracy_m,gps_timestamp,location_source,photographer_credit,photo_license,dominant_color,color_metadata";
     const requestedPublicLimit = Number.parseInt(requestUrl.searchParams.get("limit") || "500", 10);
     const publicLimit = Math.max(1, Math.min(Number.isFinite(requestedPublicLimit) ? requestedPublicLimit : 500, 2000));
     const response = await fetch(`${supabaseUrl}/rest/v1/azulejos?select=${publicSelect}&source=eq.web-camera&title=neq.api%20test&moderation_status=eq.approved&order=created_at.desc&limit=${publicLimit}`, {
@@ -691,6 +718,7 @@ module.exports = async function handler(req, res) {
     }
     if (conditionRequested) updatePayload.condition_codes = conditionCodes;
     if (editedImage) {
+      const colorMetadata = normalizedColorMetadata(body);
       const editedPath = `captures/${id}-edited.${editedImage.ext}`;
       const upload = await fetch(`${supabaseUrl}/storage/v1/object/${bucket}/${editedPath}`, {
         method: "POST",
@@ -716,6 +744,10 @@ module.exports = async function handler(req, res) {
       }
       updatePayload.edited_at = new Date().toISOString();
       if (FINGERPRINT_PATTERN.test(body.image_fingerprint || "")) updatePayload.image_fingerprint = body.image_fingerprint;
+      if (colorMetadata) {
+        updatePayload.dominant_color = colorMetadata.dominant;
+        updatePayload.color_metadata = colorMetadata.metadata;
+      }
     }
 
     const update = await fetch(`${supabaseUrl}/rest/v1/azulejos?id=eq.${id}`, {

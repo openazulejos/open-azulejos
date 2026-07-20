@@ -560,6 +560,35 @@ function dominantAdminColorFamily(data) {
   return ranked[0][0];
 }
 
+function adminColorMetadataFromCanvas(canvas) {
+  const sample = document.createElement("canvas");
+  sample.width = 32;
+  sample.height = 32;
+  const context = sample.getContext("2d", { willReadFrequently: true });
+  if (!context) return null;
+  context.drawImage(canvas, 0, 0, sample.width, sample.height);
+  const pixels = context.getImageData(0, 0, sample.width, sample.height).data;
+  const counts = new Map();
+  for (let index = 0; index < pixels.length; index += 4) {
+    if (pixels[index + 3] < 180) continue;
+    const family = adminColorFamilyFromRgb(pixels[index], pixels[index + 1], pixels[index + 2]);
+    if (family === "white") continue;
+    counts.set(family, (counts.get(family) || 0) + 1);
+  }
+  if (!counts.size) {
+    return {
+      dominant: "white",
+      families: { white: 1 },
+      source: "admin-treatment",
+    };
+  }
+  const ranked = [...counts.entries()].sort((first, second) => second[1] - first[1]);
+  const total = ranked.reduce((sum, [, count]) => sum + count, 0);
+  const dominant = ranked.length >= 3 && ranked[0][1] / total < 0.45 ? "multicolor" : ranked[0][0];
+  const families = Object.fromEntries(ranked.map(([family, count]) => [family, Number((count / total).toFixed(4))]));
+  return { dominant, families, source: "admin-treatment" };
+}
+
 function thumbnailImageUrl(imageUrl, size = 96) {
   const source = String(imageUrl || "");
   const marker = "/storage/v1/object/public/";
@@ -575,6 +604,10 @@ function thumbnailImageUrl(imageUrl, size = 96) {
 
 function analyzeAdminRecordColor(record, token) {
   if (!record?.id || adminColorCache.has(record.id) || typeof Image === "undefined") return;
+  if (record.dominant_color) {
+    adminColorCache.set(record.id, String(record.dominant_color));
+    return;
+  }
   const image = new Image();
   image.crossOrigin = "anonymous";
   image.onload = () => {
@@ -1925,6 +1958,7 @@ adminEditorSave.addEventListener("click", async () => {
     imageTools.renderEditedImage(output, editorState.image, editorState.points, editorState.settings, 1200, 28);
     const imageData = output.toDataURL("image/jpeg", 0.9);
     const imageFingerprint = similarityTools?.differenceHashFromCanvas(output) || null;
+    const colorMetadata = adminColorMetadataFromCanvas(output);
     const response = await fetch("/api/records", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -1933,6 +1967,8 @@ adminEditorSave.addEventListener("click", async () => {
         id: editorState.record.id,
         imageData,
         image_fingerprint: imageFingerprint,
+        dominant_color: colorMetadata?.dominant || null,
+        color_metadata: colorMetadata,
         condition_codes: selectedConditionCodes(),
         crop_points: editorState.usesOriginalSource ? editorState.points : null,
         edit_settings: editorState.usesOriginalSource ? editorState.settings : imageTools.normalizeSettings(),
@@ -1957,6 +1993,7 @@ adminEditorSave.addEventListener("click", async () => {
     }
     const cardImage = editorState.card?.querySelector("img");
     if (cardImage) cardImage.src = editorState.record.image_url;
+    if (editorState.record.dominant_color) adminColorCache.set(editorState.record.id, editorState.record.dominant_color);
     adminEditorStatus.textContent = "treatment saved";
     adminEditorSave.textContent = "saved";
   } catch (error) {

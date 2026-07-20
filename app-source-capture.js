@@ -890,6 +890,9 @@ function updateTileOpenData(tile, record) {
   if (!tile || !record) return;
   tile.photographerCredit = record.photographer_credit || record.photographerCredit || record.contributor || tile.photographerCredit || "";
   tile.photoLicense = record.photo_license || record.photoLicense || tile.photoLicense || "";
+  tile.dominantColor = record.dominant_color || record.color_metadata?.dominant || tile.dominantColor || "";
+  tile.colorMetadata = record.color_metadata || tile.colorMetadata || null;
+  if (tile.dominantColor) gridColorCache.set(tile.id, tile.dominantColor);
 }
 
 function displayCellForTile(tile) {
@@ -1760,6 +1763,8 @@ function gridRecordToTile(record) {
     cy: cell.cy,
     photographerCredit: record.photographer_credit || "",
     photoLicense: record.photo_license || "",
+    dominantColor: record.dominant_color || record.color_metadata?.dominant || "",
+    colorMetadata: record.color_metadata || null,
     neighborhood: neighborhoodNameForPoint(lat, lng),
   };
 }
@@ -1806,7 +1811,7 @@ function gridTileMatchesFilters(tile) {
   const type = normalizeGridFilterValue(gridTypeFilter?.value);
   const motif = normalizeGridFilterValue(gridMotifFilter?.value);
   if (neighborhood !== "all" && normalizeGridFilterValue(tile.neighborhood) !== neighborhood) return false;
-  if (color !== "all" && gridColorCache.get(tile.id) !== color) return false;
+  if (color !== "all" && normalizeGridFilterValue(tile.dominantColor || gridColorCache.get(tile.id)) !== color) return false;
   if (type !== "all" && normalizeGridFilterValue(tile.type) !== type) return false;
   if (motif !== "all" && normalizeGridFilterValue(tile.motif) !== motif) return false;
   return true;
@@ -1819,7 +1824,7 @@ function mapTileMatchesFilters(tile) {
   const type = normalizeGridFilterValue(gridTypeFilter?.value);
   const motif = normalizeGridFilterValue(gridMotifFilter?.value);
   if (neighborhood !== "all" && normalizeGridFilterValue(tile.neighborhood) !== neighborhood) return false;
-  if (color !== "all" && gridColorCache.get(tile.id) !== color) return false;
+  if (color !== "all" && normalizeGridFilterValue(tile.dominantColor || gridColorCache.get(tile.id)) !== color) return false;
   if (type !== "all" && normalizeGridFilterValue(tile.type) !== type) return false;
   if (motif !== "all" && normalizeGridFilterValue(tile.motif) !== motif) return false;
   return true;
@@ -1914,6 +1919,11 @@ function dominantColorFamilyFromPixels(data) {
 }
 
 function analyzeGridTileColor(tile, token) {
+  const storedColor = normalizeGridFilterValue(tile?.dominantColor);
+  if (storedColor !== "all") {
+    gridColorCache.set(tile.id, storedColor);
+    return;
+  }
   if (!tile?.id || gridColorCache.has(tile.id) || typeof Image === "undefined") return;
   const image = new Image();
   image.crossOrigin = "anonymous";
@@ -2034,6 +2044,8 @@ function addAzulejoTile(tile, options = {}) {
     source: tile.source || "manual",
     photographerCredit: tile.photographerCredit || tile.photographer_credit || tile.contributor || "",
     photoLicense: tile.photoLicense || tile.photo_license || "",
+    dominantColor: tile.dominantColor || tile.dominant_color || tile.color_metadata?.dominant || "",
+    colorMetadata: tile.colorMetadata || tile.color_metadata || null,
     neighborhood: tile.neighborhood || neighborhoodNameForPoint(Number(tile.lat), Number(tile.lng)),
     type: tile.type || "",
     motif: tile.motif || "",
@@ -3861,6 +3873,8 @@ function synchronizeServerTiles(records) {
         source: "supabase-camera",
         photographerCredit: record.photographer_credit,
         photoLicense: record.photo_license,
+        dominantColor: record.dominant_color || record.color_metadata?.dominant || "",
+        colorMetadata: record.color_metadata || null,
         minZoom: 12,
       }, {
         isServer: true,

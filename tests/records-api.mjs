@@ -309,6 +309,8 @@ await handler({
       id: "33333333-3333-4333-8333-333333333333",
       imageData: "data:image/jpeg;base64,AA==",
       image_fingerprint: "01".repeat(32),
+      dominant_color: "blue",
+      color_metadata: { dominant: "blue", families: { blue: 0.82, grey: 0.18 } },
       condition_codes: ["crazed", "chipped"],
       crop_points: [{ x: 0.1, y: 0.1 }, { x: 0.9, y: 0.1 }, { x: 0.9, y: 0.9 }, { x: 0.1, y: 0.9 }],
       edit_settings: { warmth: 40, tint: 20 },
@@ -325,6 +327,8 @@ assert(patchStatus === 200, "published-only image edit should succeed");
 assert(patchPayload.crop_points === null, "published-only image edit should clear crop points to avoid double crop");
 assert(patchPayload.edit_settings.warmth === 0 && patchPayload.edit_settings.tint === 0, "published-only image edit should clear baked color adjustments");
 assert(patchPayload.image_fingerprint === "01".repeat(32), "image treatment should persist its perceptual fingerprint");
+assert(patchPayload.dominant_color === "blue", "image treatment should persist recalculated dominant color");
+assert(patchPayload.color_metadata.families.blue === 0.82, "image treatment should persist recalculated color metadata");
 assert(patchPayload.condition_codes.join(",") === "crazed,chipped", "image treatment should persist structured condition evidence");
 assert(JSON.parse(patchBody).record.crop_points === null, "patched record should return cleared crop points");
 
