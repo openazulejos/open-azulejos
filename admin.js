@@ -1583,8 +1583,23 @@ function endEditorResize(event) {
   adminEditor.classList.remove("is-resizing");
 }
 
+function canvasContentRect(canvas) {
+  const rect = canvas.getBoundingClientRect();
+  const style = window.getComputedStyle ? window.getComputedStyle(canvas) : null;
+  const borderLeft = Number.parseFloat(style?.borderLeftWidth || "0") || 0;
+  const borderTop = Number.parseFloat(style?.borderTopWidth || "0") || 0;
+  const borderRight = Number.parseFloat(style?.borderRightWidth || "0") || 0;
+  const borderBottom = Number.parseFloat(style?.borderBottomWidth || "0") || 0;
+  return {
+    left: rect.left + borderLeft,
+    top: rect.top + borderTop,
+    width: Math.max(1, rect.width - borderLeft - borderRight),
+    height: Math.max(1, rect.height - borderTop - borderBottom),
+  };
+}
+
 function sourcePointerPosition(event) {
-  const rect = adminSourceCanvas.getBoundingClientRect();
+  const rect = canvasContentRect(adminSourceCanvas);
   return {
     x: Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width)),
     y: Math.max(0, Math.min(1, (event.clientY - rect.top) / rect.height)),
@@ -1638,19 +1653,28 @@ function drawPointMagnifier(position, event) {
   const cropSize = Math.max(54, Math.min(126, Math.min(sourceWidth, sourceHeight) / 10));
   const sourceX = Math.max(0, Math.min(sourceWidth, position.x * sourceWidth));
   const sourceY = Math.max(0, Math.min(sourceHeight, position.y * sourceHeight));
+  const sourceLeft = Math.max(0, sourceX - cropSize / 2);
+  const sourceTop = Math.max(0, sourceY - cropSize / 2);
+  const sourceRight = Math.min(sourceWidth, sourceX + cropSize / 2);
+  const sourceBottom = Math.min(sourceHeight, sourceY + cropSize / 2);
+  const sampleWidth = Math.max(1, sourceRight - sourceLeft);
+  const sampleHeight = Math.max(1, sourceBottom - sourceTop);
+  const scale = outputSize / cropSize;
+  const destinationX = outputSize / 2 - (sourceX - sourceLeft) * scale;
+  const destinationY = outputSize / 2 - (sourceY - sourceTop) * scale;
   context.clearRect(0, 0, outputSize, outputSize);
   context.fillStyle = "#fff";
   context.fillRect(0, 0, outputSize, outputSize);
   context.drawImage(
     image,
-    sourceX - cropSize / 2,
-    sourceY - cropSize / 2,
-    cropSize,
-    cropSize,
-    0,
-    0,
-    outputSize,
-    outputSize,
+    sourceLeft,
+    sourceTop,
+    sampleWidth,
+    sampleHeight,
+    destinationX,
+    destinationY,
+    sampleWidth * scale,
+    sampleHeight * scale,
   );
   const center = outputSize / 2;
   context.save();
