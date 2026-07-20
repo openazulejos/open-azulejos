@@ -1,6 +1,6 @@
 "use strict";
 
-const CACHE_NAME = "open-azulejos-shell-v58";
+const CACHE_NAME = "open-azulejos-shell-v59";
 const APP_SHELL = [
   "/",
   "/index.html",

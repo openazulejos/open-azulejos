@@ -316,6 +316,10 @@ assert(api.cellFromHash(`#${cell.code}`).code === cell.code, "cell hash parser s
 assert(api.formatZoomPercent(16, 16) === "100%", "opening zoom should display as 100 percent");
 assert(api.formatZoomPercent(17, 16) === "200%", "one zoom level in should double the zoom percentage");
 assert(api.formatZoomPercent(14, 16) === "25%", "two zoom levels out should quarter the zoom percentage");
+assert(
+  api.formatTargetCoordinates({ lat: api.homeView.center[0], lng: api.homeView.center[1] }) === "38.719152, -9.134188",
+  "default map view should open on the denser azulejo cluster",
+);
 assert(api.gridStepForZoom(15, 3) === 96, "grid should show a coarse city-scale mesh at opening zoom");
 assert(api.gridStepForZoom(12, 3) === 768, "grid should remain visible at city overview zoom");
 assert(api.gridStepForZoom(20, 3) === 3, "grid should resolve to true 3 m cells at fine zoom");

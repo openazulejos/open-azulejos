@@ -1,6 +1,6 @@
 const LISBON = [38.7223, -9.1393];
 const HOME_VIEW = {
-  center: [38.7148, -9.1452],
+  center: [38.719152, -9.134188],
   zoom: 16,
 };
 const LISBON_BOUNDS = {
@@ -4467,6 +4467,7 @@ if (hashCell) {
   highlightCell(hashCell, { hash: false });
 }
 window.AzulejoAtlas = {
+  homeView: { center: [...HOME_VIEW.center], zoom: HOME_VIEW.zoom },
   cellForLatLng,
   cellFromHash,
   cellHash,
