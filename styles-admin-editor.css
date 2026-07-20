@@ -4424,6 +4424,7 @@ button.admin-member-stat:focus-visible {
   .topbar {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    z-index: 900;
     height: auto;
     min-height: 54px;
     align-items: center;
@@ -4454,7 +4455,8 @@ button.admin-member-stat:focus-visible {
   }
 
   .view-switch {
-    position: static;
+    position: relative;
+    z-index: 980;
     transform: none;
     justify-self: center;
   }
@@ -4516,7 +4518,10 @@ button.admin-member-stat:focus-visible {
 
   .azulejo-filter-bar {
     top: 86px;
+    z-index: 820;
     width: min(100% - 24px, 560px);
+    padding: 10px 0 12px;
+    background: var(--paper);
   }
 
   body:not(.is-grid-view):not(.is-canva-view) .azulejo-filter-bar {
