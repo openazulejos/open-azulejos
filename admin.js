@@ -54,6 +54,8 @@ const adminPreviewCanvas = document.querySelector("#adminPreviewCanvas");
 const adminSourceResizer = document.querySelector("#adminSourceResizer");
 const adminPreviewResizer = document.querySelector("#adminPreviewResizer");
 const adminWorkspaceResizer = document.querySelector("#adminWorkspaceResizer");
+const adminPointMagnifier = document.querySelector("#adminPointMagnifier");
+const adminPointMagnifierCanvas = document.querySelector("#adminPointMagnifierCanvas");
 const adminWhitePoint = document.querySelector("#adminWhitePoint");
 const adminRecoverBorder = document.querySelector("#adminRecoverBorder");
 const adminResetCrop = document.querySelector("#adminResetCrop");
@@ -1388,6 +1390,7 @@ async function openEditor(record, card, options = {}) {
 }
 
 function stopEditorAsyncWork() {
+  hidePointMagnifier();
   closeNearbyViewer();
   editorState.nearbyController?.abort();
   window.clearTimeout(editorState.nearbyTimer);
@@ -1488,6 +1491,74 @@ function nearestPointIndex(position) {
   return nearest;
 }
 
+function hidePointMagnifier() {
+  if (!adminPointMagnifier) return;
+  adminPointMagnifier.hidden = true;
+}
+
+function positionPointMagnifier(event) {
+  if (!adminPointMagnifier) return;
+  const size = 180;
+  const margin = 14;
+  const preferredLeft = event.clientX + 22;
+  const preferredTop = event.clientY - size - 22;
+  const fallbackLeft = event.clientX - size - 22;
+  const fallbackTop = event.clientY + 22;
+  const left = preferredLeft + size + margin <= window.innerWidth
+    ? preferredLeft
+    : Math.max(margin, fallbackLeft);
+  const top = preferredTop >= margin
+    ? preferredTop
+    : Math.min(window.innerHeight - size - margin, fallbackTop);
+  adminPointMagnifier.style.left = `${Math.round(left)}px`;
+  adminPointMagnifier.style.top = `${Math.round(Math.max(margin, top))}px`;
+}
+
+function drawPointMagnifier(position, event) {
+  const { image } = editorState;
+  if (!image || !adminPointMagnifier || !adminPointMagnifierCanvas) return;
+  const sourceWidth = image.naturalWidth || image.width;
+  const sourceHeight = image.naturalHeight || image.height;
+  const context = adminPointMagnifierCanvas.getContext("2d");
+  if (!context) return;
+  const outputSize = adminPointMagnifierCanvas.width;
+  const cropSize = Math.max(54, Math.min(126, Math.min(sourceWidth, sourceHeight) / 10));
+  const sourceX = Math.max(0, Math.min(sourceWidth, position.x * sourceWidth));
+  const sourceY = Math.max(0, Math.min(sourceHeight, position.y * sourceHeight));
+  context.clearRect(0, 0, outputSize, outputSize);
+  context.fillStyle = "#fff";
+  context.fillRect(0, 0, outputSize, outputSize);
+  context.drawImage(
+    image,
+    sourceX - cropSize / 2,
+    sourceY - cropSize / 2,
+    cropSize,
+    cropSize,
+    0,
+    0,
+    outputSize,
+    outputSize,
+  );
+  const center = outputSize / 2;
+  context.save();
+  context.strokeStyle = "rgba(255, 231, 106, 0.92)";
+  context.lineWidth = 2;
+  context.beginPath();
+  context.moveTo(center - 28, center);
+  context.lineTo(center + 28, center);
+  context.moveTo(center, center - 28);
+  context.lineTo(center, center + 28);
+  context.stroke();
+  context.strokeStyle = "#111";
+  context.lineWidth = 1;
+  context.beginPath();
+  context.arc(center, center, 8, 0, Math.PI * 2);
+  context.stroke();
+  context.restore();
+  positionPointMagnifier(event);
+  adminPointMagnifier.hidden = false;
+}
+
 function sampleSourceColor(position) {
   const { image } = editorState;
   if (!image) return null;
@@ -1555,18 +1626,24 @@ adminSourceCanvas.addEventListener("pointerdown", (event) => {
   editorState.draggedPoint = nearestPointIndex(position);
   editorState.points[editorState.draggedPoint] = position;
   adminSourceCanvas.setPointerCapture?.(event.pointerId);
+  drawPointMagnifier(position, event);
   markEditorDirty();
   scheduleEditorRender();
 });
 
 adminSourceCanvas.addEventListener("pointermove", (event) => {
   if (editorState.draggedPoint === null) return;
-  editorState.points[editorState.draggedPoint] = sourcePointerPosition(event);
+  const position = sourcePointerPosition(event);
+  editorState.points[editorState.draggedPoint] = position;
+  drawPointMagnifier(position, event);
   markEditorDirty();
   scheduleEditorRender();
 });
 
-const stopPointDrag = () => { editorState.draggedPoint = null; };
+const stopPointDrag = () => {
+  editorState.draggedPoint = null;
+  hidePointMagnifier();
+};
 adminSourceCanvas.addEventListener("pointerup", stopPointDrag);
 adminSourceCanvas.addEventListener("pointercancel", stopPointDrag);
 adminSourceResizer.addEventListener("pointerdown", (event) => beginEditorResize("source", event));
