@@ -37,7 +37,11 @@ const loadedImageUrls = new Map();
 const FREGUESIAS_LAYER_URL = "./assets/lisbon-freguesias.geojson";
 
 function updateAppViewportHeight() {
-  const height = window.visualViewport?.height || window.innerHeight || document.documentElement?.clientHeight;
+  if (globalThis.CSS?.supports?.("height", "100lvh")) {
+    document.documentElement?.style?.setProperty("--app-viewport-height", "100lvh");
+    return;
+  }
+  const height = window.innerHeight || document.documentElement?.clientHeight;
   if (!Number.isFinite(height) || height <= 0) return;
   document.documentElement?.style?.setProperty("--app-viewport-height", `${height}px`);
 }

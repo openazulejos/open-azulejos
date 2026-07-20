@@ -23,6 +23,12 @@
   color-scheme: light;
 }
 
+@supports (height: 100lvh) {
+  :root {
+    --app-viewport-height: 100lvh;
+  }
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
     --ink: #f4f4ef;
