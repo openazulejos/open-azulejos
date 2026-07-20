@@ -141,6 +141,25 @@ textarea {
   pointer-events: auto;
 }
 
+.menu-trigger {
+  display: grid;
+  gap: 5px;
+  width: 34px;
+  height: 30px;
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.menu-trigger span {
+  display: block;
+  width: 34px;
+  height: 1px;
+  background: currentColor;
+}
+
 .view-switch {
   position: absolute;
   left: 50%;
@@ -222,6 +241,57 @@ textarea {
 
 .admin-trigger {
   color: var(--azul);
+  text-decoration: none;
+}
+
+.menu-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 1390;
+  display: none;
+  overflow: hidden;
+  background: var(--paper);
+  color: var(--ink);
+  text-transform: lowercase;
+}
+
+.menu-sheet.is-open {
+  display: grid;
+  place-items: center;
+}
+
+.menu-close {
+  position: fixed;
+  top: 14px;
+  right: 16px;
+  z-index: 2;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: 32px;
+  font-weight: 300;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.menu-sheet-nav {
+  display: grid;
+  gap: 24px;
+  justify-items: center;
+}
+
+.menu-sheet-nav [hidden] {
+  display: none !important;
+}
+
+.menu-sheet-nav .about-trigger,
+.menu-sheet-nav .account-trigger,
+.menu-sheet-nav .admin-trigger {
+  display: block;
+  color: var(--ink);
+  font-size: clamp(42px, 10vw, 96px);
+  font-weight: 300;
+  line-height: 0.95;
   text-decoration: none;
 }
 

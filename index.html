@@ -49,7 +49,7 @@
     <meta name="twitter:image" content="https://openazulejos.com/assets/icon-512.png" />
     <link rel="preconnect" href="https://unpkg.com" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="./styles-admin-editor.css?v=20260720-color-filter-options" />
+    <link rel="stylesheet" href="./styles-admin-editor.css?v=20260720-sandwich-menu" />
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
@@ -167,9 +167,11 @@
       <nav class="nav">
       </nav>
       <div class="topbar-actions">
-        <a class="admin-trigger" id="adminOpenButton" href="/admin" hidden>admin</a>
-        <button class="account-trigger" id="accountOpenButton" type="button">log in</button>
-        <button class="about-trigger" id="aboutOpenButton" type="button">about</button>
+        <button class="menu-trigger" id="menuOpenButton" type="button" aria-label="open menu" aria-haspopup="dialog" aria-expanded="false">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
       </div>
     </header>
 
@@ -534,6 +536,15 @@ azulejo-002.jpg,38.71072,-9.13908,Baixa</code></pre>
       </section>
     </noscript>
 
+    <section class="menu-sheet" id="menuSheet" aria-hidden="true" aria-label="menu">
+      <button class="menu-close" id="menuCloseButton" type="button" aria-label="close">×</button>
+      <nav class="menu-sheet-nav" aria-label="main menu">
+        <button class="account-trigger" id="accountOpenButton" type="button">log in</button>
+        <button class="about-trigger" id="aboutOpenButton" type="button">about</button>
+        <a class="admin-trigger" id="adminOpenButton" href="/admin" hidden>admin</a>
+      </nav>
+    </section>
+
     <section class="about-sheet" id="aboutSheet" aria-hidden="true" aria-label="about open azulejos">
       <button class="about-close" id="aboutCloseButton" type="button" aria-label="close">×</button>
       <article class="about-text">
@@ -675,6 +686,6 @@ azulejo-002.jpg,38.71072,-9.13908,Baixa</code></pre>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="./offline-queue.js?v=20260702-contribution-rights"></script>
-    <script src="./app-source-capture.js?v=20260720-color-filter-options"></script>
+    <script src="./app-source-capture.js?v=20260720-sandwich-menu"></script>
   </body>
 </html>

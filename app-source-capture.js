@@ -179,6 +179,9 @@ const azulejoViewerEditSeparator = document.querySelector("#azulejoViewerEditSep
 const azulejoViewerEdit = document.querySelector("#azulejoViewerEdit");
 const azulejoViewerMapLink = document.querySelector("#azulejoViewerMapLink");
 const azulejoViewerClose = document.querySelector("#azulejoViewerClose");
+const menuOpenButton = document.querySelector("#menuOpenButton");
+const menuSheet = document.querySelector("#menuSheet");
+const menuCloseButton = document.querySelector("#menuCloseButton");
 const aboutOpenButton = document.querySelector("#aboutOpenButton");
 const aboutSheet = document.querySelector("#aboutSheet");
 const aboutCloseButton = document.querySelector("#aboutCloseButton");
@@ -1290,7 +1293,20 @@ function stepAzulejoViewer(direction) {
   renderAzulejoViewerTile(tiles[nextIndex]);
 }
 
+function openMenuSheet() {
+  menuSheet?.classList.add("is-open");
+  menuSheet?.setAttribute("aria-hidden", "false");
+  menuOpenButton?.setAttribute("aria-expanded", "true");
+}
+
+function closeMenuSheet() {
+  menuSheet?.classList.remove("is-open");
+  menuSheet?.setAttribute("aria-hidden", "true");
+  menuOpenButton?.setAttribute("aria-expanded", "false");
+}
+
 function openAboutSheet() {
+  closeMenuSheet();
   aboutSheet?.classList.add("is-open");
   aboutSheet?.setAttribute("aria-hidden", "false");
   loadContributorStats().catch(() => {
@@ -1352,6 +1368,7 @@ function setAccountMode(mode) {
 }
 
 function openAccountSheet(options = {}) {
+  closeMenuSheet();
   if (options.mode) setAccountMode(options.mode);
   accountSheet?.classList.add("is-open");
   accountSheet?.setAttribute("aria-hidden", "false");
@@ -5086,6 +5103,9 @@ archiveFilterClearButton.addEventListener("click", () => {
 fitMosaicButton.addEventListener("click", () => fitTilesOnMap());
 copyActiveCellButton.addEventListener("click", copyActiveCell);
 targetCoordinates?.addEventListener("click", copyTargetCoordinates);
+menuOpenButton?.addEventListener("click", openMenuSheet);
+menuCloseButton?.addEventListener("click", closeMenuSheet);
+adminOpenButton?.addEventListener("click", closeMenuSheet);
 aboutOpenButton?.addEventListener("click", openAboutSheet);
 aboutCloseButton?.addEventListener("click", closeAboutSheet);
 viewSwitchButton?.addEventListener("click", (event) => {
@@ -5167,6 +5187,7 @@ azulejoViewer?.addEventListener("pointercancel", () => {
 });
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
+    closeMenuSheet();
     closeViewSwitchMenu();
     closeAzulejoViewer();
     closeAboutSheet();
