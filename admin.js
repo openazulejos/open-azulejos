@@ -1211,6 +1211,15 @@ function selectedConditionCodes() {
   return [...adminConditionCodes.querySelectorAll('input[type="checkbox"]:checked')].map((input) => input.value);
 }
 
+function fullSourceCropPoints() {
+  return [
+    { x: 0, y: 0 },
+    { x: 1, y: 0 },
+    { x: 1, y: 1 },
+    { x: 0, y: 1 },
+  ];
+}
+
 function setWhitePointMode(enabled) {
   editorState.whitePointMode = Boolean(enabled);
   adminWhitePoint.classList.toggle("is-active", editorState.whitePointMode);
@@ -1781,24 +1790,23 @@ adminConditionCodes.querySelectorAll('input[type="checkbox"]').forEach((input) =
 });
 
 adminRecoverBorder.addEventListener("click", () => {
-  if (!editorState.record?.original_image_url) {
+  if (!editorState.usesOriginalSource) {
     adminEditorStatus.textContent = "no source margin available";
     return;
   }
-  const before = editorState.points.map((point) => ({ ...point }));
-  editorState.points = imageTools.expandCropPoints(editorState.points, 0.18);
-  const movement = editorState.points.reduce((total, point, index) => (
-    total + Math.hypot(point.x - before[index].x, point.y - before[index].y)
-  ), 0);
-  adminEditorStatus.textContent = movement > 0.005
-    ? "border recovered from source"
-    : "source border already fully recovered";
+  editorState.points = fullSourceCropPoints();
+  adminEditorStatus.textContent = "full original source recovered";
   markEditorDirty();
   scheduleEditorRender();
 });
 
 adminResetCrop.addEventListener("click", () => {
-  editorState.points = editorState.initialPoints.map((point) => ({ ...point }));
+  editorState.points = editorState.usesOriginalSource
+    ? fullSourceCropPoints()
+    : editorState.initialPoints.map((point) => ({ ...point }));
+  adminEditorStatus.textContent = editorState.usesOriginalSource
+    ? "crop reset to full original source"
+    : "crop reset";
   markEditorDirty();
   scheduleEditorRender();
 });
@@ -1908,7 +1916,21 @@ adminEditorSave.addEventListener("click", async () => {
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || `save failed ${response.status}`);
+    const sourceBeforeSave = {
+      original_image_url: editorState.record.original_image_url || null,
+      original_image_path: editorState.record.original_image_path || null,
+      original_image_bucket: editorState.record.original_image_bucket || null,
+    };
     Object.assign(editorState.record, data.record || {});
+    if (!editorState.record.original_image_url && sourceBeforeSave.original_image_url) {
+      editorState.record.original_image_url = sourceBeforeSave.original_image_url;
+    }
+    if (!editorState.record.original_image_path && sourceBeforeSave.original_image_path) {
+      editorState.record.original_image_path = sourceBeforeSave.original_image_path;
+    }
+    if (!editorState.record.original_image_bucket && sourceBeforeSave.original_image_bucket) {
+      editorState.record.original_image_bucket = sourceBeforeSave.original_image_bucket;
+    }
     const cardImage = editorState.card?.querySelector("img");
     if (cardImage) cardImage.src = editorState.record.image_url;
     adminEditorStatus.textContent = "treatment saved";
