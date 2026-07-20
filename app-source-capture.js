@@ -1977,6 +1977,7 @@ const CANVA_MAX_ZOOM = 2.4;
 const CANVA_WORLD_CELLS = 92;
 const CANVA_RENDER_BUFFER = 3;
 const CANVA_MAX_RENDERED_TILES = 520;
+const CANVA_TILE_KEY_ATTRIBUTE = "data-canva-key";
 
 function seededHash(...values) {
   let hash = 2166136261;
@@ -2110,23 +2111,38 @@ function renderAzulejoCanva() {
 
   const colorGroups = recordsByDominantColor(records);
   const fragment = document.createDocumentFragment();
+  const desiredKeys = new Set();
+  const existingTiles = new Map(Array.from(azulejoCanvaWorld.children)
+    .map((element) => [element.getAttribute(CANVA_TILE_KEY_ATTRIBUTE), element])
+    .filter(([key]) => key));
   let rendered = 0;
   for (let y = firstY; y <= lastY && rendered < CANVA_MAX_RENDERED_TILES; y += 1) {
     for (let x = firstX; x <= lastX && rendered < CANVA_MAX_RENDERED_TILES; x += 1) {
       const generated = canvaTileForCell(x - Math.floor(CANVA_WORLD_CELLS / 2), y - Math.floor(CANVA_WORLD_CELLS / 2), records, colorGroups);
       if (!generated?.tile) continue;
+      const key = `${x}:${y}:${generated.tile.id}:${generated.rotation}`;
+      desiredKeys.add(key);
+      const existing = existingTiles.get(key);
+      if (existing) {
+        existing.style.left = `${x * cellSize}px`;
+        existing.style.top = `${y * cellSize}px`;
+        rendered += 1;
+        continue;
+      }
       const button = document.createElement("button");
       const image = document.createElement("img");
       button.className = "azulejo-canva-tile";
       button.type = "button";
+      button.setAttribute(CANVA_TILE_KEY_ATTRIBUTE, key);
       button.style.left = `${x * cellSize}px`;
       button.style.top = `${y * cellSize}px`;
       button.style.setProperty("--canva-rotation", `${generated.rotation}deg`);
       button.title = generated.tile.title || "recorded azulejo";
       image.src = generated.tile.displayImage;
       image.alt = generated.tile.title || "recorded azulejo";
-      image.loading = "lazy";
+      image.loading = "eager";
       image.decoding = "async";
+      image.fetchPriority = "low";
       image.draggable = false;
       button.append(image);
       button.addEventListener("dragstart", (event) => event.preventDefault());
@@ -2142,7 +2158,10 @@ function renderAzulejoCanva() {
       rendered += 1;
     }
   }
-  azulejoCanvaWorld.replaceChildren(fragment);
+  existingTiles.forEach((element, key) => {
+    if (!desiredKeys.has(key)) element.remove();
+  });
+  azulejoCanvaWorld.append(fragment);
 }
 
 function startCanvaMousePan(event) {

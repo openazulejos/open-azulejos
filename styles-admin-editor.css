@@ -480,6 +480,7 @@ body.is-filter-menu-open .filter-switch-arrow {
   width: var(--canva-world-width, 7200px);
   height: var(--canva-world-height, 7200px);
   background: var(--paper);
+  contain: layout paint size;
 }
 
 .azulejo-canva-tile {
@@ -494,6 +495,8 @@ body.is-filter-menu-open .filter-switch-arrow {
   overflow: hidden;
   cursor: pointer;
   user-select: none;
+  contain: layout paint;
+  transform: translateZ(0);
 }
 
 .azulejo-canva-tile img {
@@ -506,6 +509,7 @@ body.is-filter-menu-open .filter-switch-arrow {
   background: var(--tile-empty);
   -webkit-user-drag: none;
   user-select: none;
+  backface-visibility: hidden;
 }
 
 .azulejo-canva-status {
