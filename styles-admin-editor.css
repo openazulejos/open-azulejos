@@ -3151,6 +3151,14 @@ pre {
   border-bottom: 0;
 }
 
+.admin-editor-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
 .admin-editor-header div {
   display: flex;
   align-items: baseline;
@@ -3223,6 +3231,17 @@ pre {
   min-width: 130px;
   background: var(--ink);
   color: #fff;
+}
+
+#adminEditorApprove[hidden],
+#adminEditorReject[hidden] {
+  display: none;
+}
+
+#adminEditorReject,
+#adminEditorDelete {
+  border-color: #9f1f1f;
+  color: #9f1f1f;
 }
 
 .admin-editor-workspace {
@@ -3763,19 +3782,35 @@ pre {
 
   .admin-editor-footer {
     align-items: start;
+    flex-direction: column;
+    gap: 8px;
     min-height: calc(62px + env(safe-area-inset-bottom));
     padding: 9px 12px calc(9px + env(safe-area-inset-bottom));
   }
 
   .admin-editor-footer span {
     align-self: center;
-    max-width: calc(100vw - 170px);
+    width: 100%;
+    max-width: 100%;
     white-space: normal;
   }
 
+  .admin-editor-actions {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    width: 100%;
+    gap: 6px;
+  }
+
   #adminEditorSave {
-    min-width: 144px;
+    min-width: 0;
     min-height: 44px;
+  }
+
+  .admin-editor-actions button {
+    min-width: 0;
+    min-height: 44px;
+    padding: 0 6px;
   }
 
   .admin-nearby {

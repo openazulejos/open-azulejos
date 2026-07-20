@@ -38,6 +38,9 @@ const adminEditorClose = document.querySelector("#adminEditorClose");
 const adminEditorMeta = document.querySelector("#adminEditorMeta");
 const adminEditorStatus = document.querySelector("#adminEditorStatus");
 const adminEditorSave = document.querySelector("#adminEditorSave");
+const adminEditorApprove = document.querySelector("#adminEditorApprove");
+const adminEditorReject = document.querySelector("#adminEditorReject");
+const adminEditorDelete = document.querySelector("#adminEditorDelete");
 const adminEditorPrev = document.querySelector("#adminEditorPrev");
 const adminEditorNext = document.querySelector("#adminEditorNext");
 const adminSourceCanvas = document.querySelector("#adminSourceCanvas");
@@ -361,7 +364,7 @@ function updateCardStatus(card, record) {
 }
 
 function recordStatus(record) {
-  return record.moderation_status || "approved";
+  return record?.moderation_status || "approved";
 }
 
 function contributorKey(record) {
@@ -442,8 +445,12 @@ function editorRecordIndex() {
 function updateEditorNavigation() {
   const { records, index } = editorRecordIndex();
   const hasRecord = index >= 0;
+  const status = recordStatus(editorState.record);
   adminEditorPrev.disabled = !hasRecord || index <= 0;
   adminEditorNext.disabled = !hasRecord || index >= records.length - 1;
+  adminEditorApprove.hidden = !hasRecord || status === "approved";
+  adminEditorReject.hidden = !hasRecord || status === "rejected";
+  adminEditorDelete.disabled = !hasRecord;
 }
 
 function cardForRecord(record) {
@@ -608,11 +615,17 @@ async function loadRecords() {
   renderRecords([], "admin database returned 0 records");
 }
 
-async function deleteRecord(record, card) {
+async function deleteRecord(record, card = cardForRecord(record)) {
   if (!window.confirm(`delete ${record.title || record.id}?`)) return;
-  const button = card.querySelector(".admin-delete");
-  button.disabled = true;
-  button.textContent = "deleting...";
+  const button = card?.querySelector(".admin-delete");
+  if (button) {
+    button.disabled = true;
+    button.textContent = "deleting...";
+  }
+  if (editorState.record?.id === record.id) {
+    adminEditorDelete.disabled = true;
+    adminEditorDelete.textContent = "deleting...";
+  }
   const response = await fetch("/api/records", {
     method: "DELETE",
     headers: { "Content-Type": "application/json" },
@@ -621,12 +634,18 @@ async function deleteRecord(record, card) {
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    button.disabled = false;
-    button.textContent = "delete";
+    if (button) {
+      button.disabled = false;
+      button.textContent = "delete";
+    }
+    if (editorState.record?.id === record.id) {
+      adminEditorDelete.disabled = false;
+      adminEditorDelete.textContent = "delete";
+    }
     setAdminStatus(data.error || `delete failed ${response.status}`);
     return;
   }
-  card.remove();
+  card?.remove();
   adminRecords = adminRecords.filter((candidate) => candidate.id !== record.id);
   renderRecords(adminRecords, `deleted ${data.deleted}`);
   loadAdminStats();
@@ -649,9 +668,18 @@ function closeModerationDialog() {
 }
 
 async function moderateRecord(record, card, moderationStatus, moderationReason = "") {
-  const button = card.querySelector(moderationStatus === "approved" ? ".admin-approve" : ".admin-reject");
-  button.disabled = true;
-  button.textContent = moderationStatus === "approved" ? "approving..." : "rejecting...";
+  const currentCard = card || cardForRecord(record);
+  const button = currentCard?.querySelector(moderationStatus === "approved" ? ".admin-approve" : ".admin-reject");
+  const editorButton = moderationStatus === "approved" ? adminEditorApprove : adminEditorReject;
+  const activeInEditor = editorState.record?.id === record.id;
+  if (button) {
+    button.disabled = true;
+    button.textContent = moderationStatus === "approved" ? "approving..." : "rejecting...";
+  }
+  if (activeInEditor) {
+    editorButton.disabled = true;
+    editorButton.textContent = moderationStatus === "approved" ? "approving..." : "rejecting...";
+  }
   const response = await fetch("/api/records", {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
@@ -659,8 +687,14 @@ async function moderateRecord(record, card, moderationStatus, moderationReason =
     body: JSON.stringify({ id: record.id, moderation_status: moderationStatus, moderation_reason: moderationReason || null }),
   });
   const data = await response.json().catch(() => ({}));
-  button.disabled = false;
-  button.textContent = moderationStatus === "approved" ? "approve" : "reject";
+  if (button) {
+    button.disabled = false;
+    button.textContent = moderationStatus === "approved" ? "approve" : "reject";
+  }
+  if (activeInEditor) {
+    editorButton.disabled = false;
+    editorButton.textContent = moderationStatus === "approved" ? "approve" : "reject";
+  }
   if (!response.ok) {
     setAdminStatus(data.error || `moderation failed ${response.status}`);
     return;
@@ -668,7 +702,10 @@ async function moderateRecord(record, card, moderationStatus, moderationReason =
   Object.assign(record, data.record || {}, { moderation_status: moderationStatus });
   renderRecords(adminRecords, `${moderationStatus} ${record.id}`);
   loadAdminStats();
-  if (editorState.record?.id === record.id) updateEditorNavigation();
+  if (editorState.record?.id === record.id) {
+    editorState.card = cardForRecord(record);
+    updateEditorNavigation();
+  }
 }
 
 adminModerationForm.addEventListener("submit", async (event) => {
@@ -1016,6 +1053,12 @@ async function openEditor(record, card) {
   adminEditorStatus.textContent = "loading source...";
   adminEditorSave.disabled = true;
   adminEditorSave.textContent = "save treatment";
+  adminEditorApprove.disabled = false;
+  adminEditorApprove.textContent = "approve";
+  adminEditorReject.disabled = false;
+  adminEditorReject.textContent = "reject";
+  adminEditorDelete.disabled = false;
+  adminEditorDelete.textContent = "delete";
   editorState.record = record;
   editorState.card = card;
   updateEditorNavigation();
@@ -1297,6 +1340,18 @@ adminNearbyViewerDuplicate.addEventListener("click", async () => {
 
 adminEditorPrev.addEventListener("click", () => openEditorAdjacent(-1));
 adminEditorNext.addEventListener("click", () => openEditorAdjacent(1));
+adminEditorApprove.addEventListener("click", () => {
+  if (!editorState.record) return;
+  moderateRecord(editorState.record, cardForRecord(editorState.record), "approved");
+});
+adminEditorReject.addEventListener("click", () => {
+  if (!editorState.record) return;
+  openModerationDialog(editorState.record, cardForRecord(editorState.record));
+});
+adminEditorDelete.addEventListener("click", () => {
+  if (!editorState.record) return;
+  deleteRecord(editorState.record, cardForRecord(editorState.record));
+});
 
 adminEditorSave.addEventListener("click", async () => {
   if (!editorState.record || !editorState.image) return;
