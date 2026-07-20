@@ -329,21 +329,31 @@ textarea {
 }
 
 .record-action {
-  width: 64px;
-  height: 64px;
+  width: 68px;
+  height: 68px;
   border: 0;
-  background: #eef3f1;
-  color: #646d6d;
+  background: #edf4f2;
+  color: #66706f;
 }
 
 .record-action svg {
-  width: 31px;
-  height: 31px;
+  width: 34px;
+  height: 34px;
+  display: block;
+}
+
+.record-camera-body {
   fill: currentColor;
-  stroke: currentColor;
-  stroke-width: 0;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+}
+
+.record-camera-lens {
+  fill: none;
+  stroke: #edf4f2;
+  stroke-width: 2;
+}
+
+.record-camera-dot {
+  fill: #edf4f2;
 }
 
 .record-help-action {
@@ -4693,6 +4703,14 @@ button.admin-member-stat:focus-visible {
   .record-action {
     background: #25302f;
     color: #c5cecc;
+  }
+
+  .record-camera-lens {
+    stroke: #25302f;
+  }
+
+  .record-camera-dot {
+    fill: #25302f;
   }
 
   .record-help-action {
