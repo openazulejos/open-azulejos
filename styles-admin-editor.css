@@ -4881,6 +4881,12 @@ button.admin-member-stat:focus-visible {
     border-color: var(--line);
   }
 
+  .record-onboarding-actions button:last-child {
+    background: var(--ink);
+    color: var(--paper);
+    border-color: var(--ink);
+  }
+
   .azulejo-canva-controls button {
     background: var(--paper);
     color: var(--ink);
