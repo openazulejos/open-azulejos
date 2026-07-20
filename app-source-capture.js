@@ -182,6 +182,7 @@ const aboutSheet = document.querySelector("#aboutSheet");
 const aboutCloseButton = document.querySelector("#aboutCloseButton");
 const aboutContributorsStatus = document.querySelector("#aboutContributorsStatus");
 const aboutContributorsList = document.querySelector("#aboutContributorsList");
+const adminOpenButton = document.querySelector("#adminOpenButton");
 const accountOpenButton = document.querySelector("#accountOpenButton");
 const accountSheet = document.querySelector("#accountSheet");
 const accountCloseButton = document.querySelector("#accountCloseButton");
@@ -2617,6 +2618,25 @@ function applyContributorAccount(data) {
   if (authenticated) {
     const records = contributorAccount.records || [];
     renderContributionRecords(records, "");
+    refreshAdminShortcut();
+  } else if (adminOpenButton) {
+    adminOpenButton.hidden = true;
+  }
+}
+
+async function refreshAdminShortcut() {
+  if (!adminOpenButton || !contributorAccount) return;
+  adminOpenButton.hidden = true;
+  try {
+    const response = await fetch("/api/admin-session", {
+      headers: { Accept: "application/json" },
+      credentials: "same-origin",
+      cache: "no-store",
+    });
+    const data = await response.json().catch(() => ({}));
+    adminOpenButton.hidden = !response.ok || !data?.authenticated;
+  } catch {
+    adminOpenButton.hidden = true;
   }
 }
 
