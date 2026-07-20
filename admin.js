@@ -85,6 +85,7 @@ let renderedRecordCount = 0;
 let adminRecordFilter = "pending";
 let adminContributorFilterValue = "all";
 let adminAuthenticated = false;
+let adminAuthChecked = false;
 let activeAdminPage = "moderation";
 const editorState = {
   record: null,
@@ -177,6 +178,11 @@ async function loadAdminStats() {
 }
 
 function showAdminTools() {
+  if (!adminAuthChecked) {
+    adminAccessPanel.hidden = true;
+    adminTools.hidden = true;
+    return;
+  }
   adminAccessPanel.hidden = adminAuthenticated;
   adminTools.hidden = !adminAuthenticated;
   if (adminAuthenticated) setAdminPage(pageFromHash() || activeAdminPage, { replace: true });
@@ -1455,11 +1461,13 @@ adminAccountLogin.addEventListener("submit", async (event) => {
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || `login failed ${response.status}`);
     adminAuthenticated = true;
+    adminAuthChecked = true;
     adminPasswordInput.value = "";
     showAdminTools();
     await Promise.all([loadRecords(), loadAdminStats(), loadAdminMembers(), refreshAdminAccountState()]);
   } catch (error) {
     adminAuthenticated = false;
+    adminAuthChecked = true;
     showAdminTools();
     adminAccountLoginStatus.textContent = error.message;
   } finally {
@@ -1501,6 +1509,7 @@ adminAccountSetup.addEventListener("submit", async (event) => {
 adminForgetKeyButton.addEventListener("click", async () => {
   await fetch("/api/admin-session", { method: "DELETE", credentials: "same-origin" }).catch(() => {});
   adminAuthenticated = false;
+  adminAuthChecked = true;
   adminGrid.textContent = "";
   showAdminTools();
 });
@@ -1542,15 +1551,22 @@ window.addEventListener("hashchange", () => {
 
 localStorage.removeItem("open-azulejos-admin-key");
 showAdminTools();
-fetch("/api/admin-session", { credentials: "same-origin", cache: "no-store" })
-  .then((response) => {
-    if (!response.ok) return;
-    adminAuthenticated = true;
+
+async function bootstrapAdminSession() {
+  try {
+    const response = await fetch("/api/admin-session", { credentials: "same-origin", cache: "no-store" });
+    adminAuthenticated = response.ok;
+    adminAuthChecked = true;
     showAdminTools();
-    return Promise.all([loadRecords(), loadAdminStats(), loadAdminMembers(), refreshAdminAccountState()]);
-  })
-  .catch((error) => {
+    if (response.ok) {
+      await Promise.all([loadRecords(), loadAdminStats(), loadAdminMembers(), refreshAdminAccountState()]);
+    }
+  } catch (error) {
     adminAuthenticated = false;
+    adminAuthChecked = true;
     showAdminTools();
     adminAccountLoginStatus.textContent = error.message;
-  });
+  }
+}
+
+bootstrapAdminSession();
