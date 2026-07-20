@@ -313,9 +313,8 @@ textarea {
   left: 50%;
   bottom: max(18px, env(safe-area-inset-bottom));
   z-index: 720;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  display: grid;
+  place-items: center;
   transform: translateX(-50%);
 }
 
@@ -324,35 +323,41 @@ textarea {
   display: grid;
   place-items: center;
   padding: 0;
-  border: 1px solid var(--ink);
   border-radius: 50%;
-  color: var(--ink);
   font-weight: 300;
   cursor: pointer;
 }
 
 .record-action {
-  width: 46px;
-  height: 46px;
-  background: #d6d6d2;
+  width: 64px;
+  height: 64px;
+  border: 0;
+  background: #eef3f1;
+  color: #646d6d;
 }
 
 .record-action svg {
-  width: 22px;
-  height: 22px;
-  fill: none;
+  width: 31px;
+  height: 31px;
+  fill: currentColor;
   stroke: currentColor;
-  stroke-width: 1.7;
+  stroke-width: 0;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
 
 .record-help-action {
+  position: absolute;
+  left: calc(100% + 8px);
+  top: 50%;
   width: 29px;
   height: 29px;
+  border: 1px solid var(--ink);
   background: #fff;
+  color: var(--ink);
   font-size: 17px;
   line-height: 1;
+  transform: translateY(-50%);
 }
 
 .record-action:disabled {
@@ -4686,9 +4691,8 @@ button.admin-member-stat:focus-visible {
   }
 
   .record-action {
-    background: #4a4a46;
-    border-color: rgba(var(--ink-rgb), 0.42);
-    color: var(--ink);
+    background: #25302f;
+    color: #c5cecc;
   }
 
   .record-help-action {
