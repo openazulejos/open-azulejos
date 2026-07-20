@@ -4504,6 +4504,10 @@ button.admin-member-stat:focus-visible {
     width: min(100% - 24px, 560px);
   }
 
+  body:not(.is-grid-view):not(.is-canva-view) .azulejo-filter-bar {
+    display: none;
+  }
+
   .azulejo-filter-bar label,
   .azulejo-filter-bar select,
   .azulejo-grid-filters label,
