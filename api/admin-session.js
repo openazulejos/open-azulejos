@@ -1,9 +1,6 @@
 const {
   authorizeAdminRequest,
-  adminSessionCookie,
   clearedAdminSessionCookie,
-  createAdminSession,
-  safeEqual,
 } = require("./_admin-auth");
 const { authorizeContributorRequest } = require("./_contributor-auth");
 
@@ -13,22 +10,6 @@ const respond = (response, status, payload) => {
   response.setHeader("Cache-Control", "private, no-store");
   response.end(JSON.stringify(payload));
 };
-
-const readBody = (request) => new Promise((resolve, reject) => {
-  let body = "";
-  request.on("data", (chunk) => {
-    body += chunk;
-    if (body.length > 16_384) reject(new Error("payload too large"));
-  });
-  request.on("end", () => {
-    try {
-      resolve(body ? JSON.parse(body) : {});
-    } catch (error) {
-      reject(error);
-    }
-  });
-  request.on("error", reject);
-});
 
 const contributorAdminAuthorization = async (request) => {
   const contributor = authorizeContributorRequest(request);
@@ -83,21 +64,5 @@ module.exports = async function handler(request, response) {
     return respond(response, 405, { error: "method not allowed" });
   }
 
-  let body;
-  try {
-    body = await readBody(request);
-  } catch {
-    return respond(response, 400, { error: "invalid request" });
-  }
-  const configuredKey = process.env.ADMIN_KEY || "";
-  if (!configuredKey || !safeEqual(body.key, configuredKey)) {
-    return respond(response, 401, { error: "invalid admin key" });
-  }
-
-  response.setHeader("Set-Cookie", adminSessionCookie(createAdminSession({
-    actor: "founder-admin",
-    role: "owner",
-    method: "legacy",
-  })));
-  return respond(response, 200, { authenticated: true });
+  return respond(response, 410, { error: "temporary admin access has been removed" });
 };

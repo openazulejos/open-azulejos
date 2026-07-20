@@ -8,7 +8,7 @@
     <link rel="icon" href="./assets/favicon.ico" sizes="any" />
     <link rel="icon" href="./assets/favicon-32.png" type="image/png" />
     <link rel="apple-touch-icon" href="./assets/apple-touch-icon.png" />
-    <link rel="stylesheet" href="./styles-admin-editor.css?v=20260707-member-email" />
+    <link rel="stylesheet" href="./styles-admin-editor.css?v=20260720-admin-sidebar" />
   </head>
   <body class="admin-page">
     <header class="admin-header">
@@ -29,79 +29,85 @@
           <button id="adminAccountLoginButton" type="submit">open</button>
           <p id="adminAccountLoginStatus" role="status"></p>
         </form>
-        <div class="admin-login-divider">temporary access</div>
-        <form class="admin-login" id="adminLogin">
-          <label>
-            admin key
-            <input id="adminKeyInput" type="password" autocomplete="current-password" />
-          </label>
-          <button id="adminSaveKeyButton" type="submit">open</button>
-          <p id="adminLoginStatus" role="status"></p>
-        </form>
       </section>
       <section class="admin-tools" id="adminTools" hidden>
-        <form class="admin-account-setup" id="adminAccountSetup" hidden>
-          <strong>add named admin account</strong>
-          <label>email<input id="adminSetupEmail" type="email" autocomplete="username" required /></label>
-          <label>new password<input id="adminSetupPassword" type="password" autocomplete="new-password" minlength="12" required /></label>
-          <label>role<select id="adminSetupRole"><option value="admin">admin</option><option value="owner">owner</option><option value="moderator">moderator</option></select></label>
-          <button id="adminSetupButton" type="submit">create account</button>
-          <p id="adminSetupStatus" role="status"></p>
-        </form>
-        <section class="admin-dashboard" id="adminDashboard" aria-labelledby="adminDashboardTitle">
-          <header class="admin-dashboard-header">
-            <div>
-              <h1 id="adminDashboardTitle">beta launch</h1>
-              <p id="adminStatsPeriod">since 4 July 2026</p>
+        <aside class="admin-sidebar" aria-label="admin navigation">
+          <nav>
+            <a href="#adminDashboard">dashboard</a>
+            <a href="#adminModeration">moderation</a>
+            <a href="#adminMembers">members</a>
+            <a href="#adminAccountSetup">admin accounts</a>
+          </nav>
+        </aside>
+        <div class="admin-main-panel">
+          <form class="admin-account-setup" id="adminAccountSetup" hidden>
+            <strong>add named admin account</strong>
+            <label>email<input id="adminSetupEmail" type="email" autocomplete="username" required /></label>
+            <label>new password<input id="adminSetupPassword" type="password" autocomplete="new-password" minlength="12" required /></label>
+            <label>role<select id="adminSetupRole"><option value="admin">admin</option><option value="owner">owner</option><option value="moderator">moderator</option></select></label>
+            <button id="adminSetupButton" type="submit">create account</button>
+            <p id="adminSetupStatus" role="status"></p>
+          </form>
+          <section class="admin-dashboard" id="adminDashboard" aria-labelledby="adminDashboardTitle">
+            <header class="admin-dashboard-header">
+              <div>
+                <h1 id="adminDashboardTitle">beta launch</h1>
+                <p id="adminStatsPeriod">since 4 July 2026</p>
+              </div>
+              <span id="adminStatsStatus" role="status">loading stats...</span>
+            </header>
+            <div class="admin-stat-grid">
+              <article class="admin-stat is-primary"><span>new contributors</span><strong id="adminStatsNewContributors">—</strong></article>
+              <article class="admin-stat is-primary"><span>published since beta</span><strong id="adminStatsPublished">—</strong></article>
+              <article class="admin-stat"><span>submissions</span><strong id="adminStatsSubmissions">—</strong></article>
+              <article class="admin-stat"><span>pending review</span><strong id="adminStatsPending">—</strong></article>
+              <article class="admin-stat"><span>approval rate</span><strong id="adminStatsApprovalRate">—</strong></article>
+              <article class="admin-stat"><span>active contributors</span><strong id="adminStatsActiveContributors">—</strong></article>
+              <article class="admin-stat"><span>last 24 hours</span><strong id="adminStatsLast24Hours">—</strong></article>
+              <article class="admin-stat"><span>guest submissions</span><strong id="adminStatsGuestSubmissions">—</strong></article>
             </div>
-            <span id="adminStatsStatus" role="status">loading stats...</span>
-          </header>
-          <div class="admin-stat-grid">
-            <article class="admin-stat is-primary"><span>new contributors</span><strong id="adminStatsNewContributors">—</strong></article>
-            <article class="admin-stat is-primary"><span>published since beta</span><strong id="adminStatsPublished">—</strong></article>
-            <article class="admin-stat"><span>submissions</span><strong id="adminStatsSubmissions">—</strong></article>
-            <article class="admin-stat"><span>pending review</span><strong id="adminStatsPending">—</strong></article>
-            <article class="admin-stat"><span>approval rate</span><strong id="adminStatsApprovalRate">—</strong></article>
-            <article class="admin-stat"><span>active contributors</span><strong id="adminStatsActiveContributors">—</strong></article>
-            <article class="admin-stat"><span>last 24 hours</span><strong id="adminStatsLast24Hours">—</strong></article>
-            <article class="admin-stat"><span>guest submissions</span><strong id="adminStatsGuestSubmissions">—</strong></article>
-          </div>
-          <section class="admin-activity" aria-labelledby="adminActivityTitle">
-            <h2 id="adminActivityTitle">last 7 days</h2>
-            <div id="adminActivityChart" class="admin-activity-chart"></div>
+            <section class="admin-activity" aria-labelledby="adminActivityTitle">
+              <h2 id="adminActivityTitle">last 7 days</h2>
+              <div id="adminActivityChart" class="admin-activity-chart"></div>
+            </section>
+            <p class="admin-stats-summary" id="adminStatsSummary"></p>
           </section>
-          <p class="admin-stats-summary" id="adminStatsSummary"></p>
-        </section>
-        <section class="admin-members" id="adminMembers" aria-labelledby="adminMembersTitle">
-          <header class="admin-members-header">
-            <div>
-              <h2 id="adminMembersTitle">members</h2>
-              <p>registered contributor accounts</p>
+          <section class="admin-members" id="adminMembers" aria-labelledby="adminMembersTitle">
+            <header class="admin-members-header">
+              <div>
+                <h2 id="adminMembersTitle">members</h2>
+                <p>registered contributor accounts</p>
+              </div>
+              <button id="adminMembersRefresh" type="button">refresh</button>
+            </header>
+            <p class="admin-members-status" id="adminMembersStatus" role="status">loading members...</p>
+            <div class="admin-members-list" id="adminMembersList"></div>
+          </section>
+          <section class="admin-moderation" id="adminModeration" aria-labelledby="adminModerationTitle">
+            <header class="admin-section-header">
+              <h2 id="adminModerationTitle">moderation</h2>
+              <div class="admin-toolbar">
+                <button id="adminRefreshButton" type="button">refresh</button>
+                <button id="adminForgetKeyButton" type="button">lock</button>
+              </div>
+            </header>
+            <div class="admin-filters" id="adminFilters" aria-label="moderation filters">
+              <button type="button" data-filter="pending">pending <span>0</span></button>
+              <button type="button" data-filter="approved">approved <span>0</span></button>
+              <button type="button" data-filter="rejected">rejected <span>0</span></button>
+              <button type="button" data-filter="all">all <span>0</span></button>
             </div>
-            <button id="adminMembersRefresh" type="button">refresh</button>
-          </header>
-          <p class="admin-members-status" id="adminMembersStatus" role="status">loading members...</p>
-          <div class="admin-members-list" id="adminMembersList"></div>
-        </section>
-        <div class="admin-toolbar">
-          <button id="adminRefreshButton" type="button">refresh</button>
-          <button id="adminForgetKeyButton" type="button">lock</button>
+            <label class="admin-contributor-filter">
+              contributor
+              <select id="adminContributorFilter">
+                <option value="all">all contributors</option>
+              </select>
+            </label>
+            <div class="admin-status" id="adminStatus">loading</div>
+            <div class="admin-grid" id="adminGrid"></div>
+            <button class="admin-load-more" id="adminLoadMore" type="button" hidden>load more</button>
+          </section>
         </div>
-        <div class="admin-filters" id="adminFilters" aria-label="moderation filters">
-          <button type="button" data-filter="pending">pending <span>0</span></button>
-          <button type="button" data-filter="approved">approved <span>0</span></button>
-          <button type="button" data-filter="rejected">rejected <span>0</span></button>
-          <button type="button" data-filter="all">all <span>0</span></button>
-        </div>
-        <label class="admin-contributor-filter">
-          contributor
-          <select id="adminContributorFilter">
-            <option value="all">all contributors</option>
-          </select>
-        </label>
-        <div class="admin-status" id="adminStatus">loading</div>
-        <div class="admin-grid" id="adminGrid"></div>
-        <button class="admin-load-more" id="adminLoadMore" type="button" hidden>load more</button>
       </section>
     </main>
     <section class="admin-editor" id="adminEditor" aria-hidden="true" aria-label="azulejo image editor">

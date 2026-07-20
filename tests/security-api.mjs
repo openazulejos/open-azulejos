@@ -49,12 +49,9 @@ loginRequest.method = "POST";
 loginRequest.headers = {};
 const loginResponse = responseCapture();
 await sessionHandler(loginRequest, loginResponse);
-assert(loginResponse.statusCode === 200, "valid key should create a session");
-assert(/HttpOnly/.test(loginResponse.headers["set-cookie"]), "admin cookie should be HttpOnly");
-assert(/SameSite=Strict/.test(loginResponse.headers["set-cookie"]), "admin cookie should be same-site strict");
-assert(!loginResponse.headers["set-cookie"].includes(process.env.ADMIN_KEY), "cookie must not contain the admin key");
+assert(loginResponse.statusCode === 410, "temporary admin key login should be removed");
 
-const cookie = loginResponse.headers["set-cookie"].split(";", 1)[0];
+const cookie = `open_azulejos_admin=${namedToken}`;
 const checkRequest = { method: "GET", headers: { cookie } };
 const checkResponse = responseCapture();
 await sessionHandler(checkRequest, checkResponse);

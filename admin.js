@@ -1,4 +1,3 @@
-const adminLogin = document.querySelector("#adminLogin");
 const adminAccessPanel = document.querySelector("#adminAccessPanel");
 const adminAccountLogin = document.querySelector("#adminAccountLogin");
 const adminEmailInput = document.querySelector("#adminEmailInput");
@@ -12,9 +11,6 @@ const adminSetupRole = document.querySelector("#adminSetupRole");
 const adminSetupButton = document.querySelector("#adminSetupButton");
 const adminSetupStatus = document.querySelector("#adminSetupStatus");
 const adminTools = document.querySelector("#adminTools");
-const adminKeyInput = document.querySelector("#adminKeyInput");
-const adminSaveKeyButton = document.querySelector("#adminSaveKeyButton");
-const adminLoginStatus = document.querySelector("#adminLoginStatus");
 const adminForgetKeyButton = document.querySelector("#adminForgetKeyButton");
 const adminRefreshButton = document.querySelector("#adminRefreshButton");
 const adminStatus = document.querySelector("#adminStatus");
@@ -1339,36 +1335,6 @@ document.addEventListener("keydown", (event) => {
   }
 });
 
-adminLogin.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  const key = adminKeyInput.value.trim();
-  if (!key) return;
-  adminSaveKeyButton.disabled = true;
-  adminSaveKeyButton.textContent = "opening...";
-  adminLoginStatus.textContent = "";
-  try {
-    const response = await fetch("/api/admin-session", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "same-origin",
-      body: JSON.stringify({ key }),
-    });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.error || `login failed ${response.status}`);
-    adminAuthenticated = true;
-    adminKeyInput.value = "";
-    showAdminTools();
-    await Promise.all([loadRecords(), loadAdminStats(), loadAdminMembers(), refreshAdminAccountState()]);
-  } catch (error) {
-    adminAuthenticated = false;
-    showAdminTools();
-    adminLoginStatus.textContent = error.message === "invalid admin key" ? "invalid admin key" : error.message;
-  } finally {
-    adminSaveKeyButton.disabled = false;
-    adminSaveKeyButton.textContent = "open";
-  }
-});
-
 adminAccountLogin.addEventListener("submit", async (event) => {
   event.preventDefault();
   adminAccountLoginButton.disabled = true;
@@ -1474,5 +1440,5 @@ fetch("/api/admin-session", { credentials: "same-origin", cache: "no-store" })
   .catch((error) => {
     adminAuthenticated = false;
     showAdminTools();
-    adminLoginStatus.textContent = error.message;
+    adminAccountLoginStatus.textContent = error.message;
   });
