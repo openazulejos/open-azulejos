@@ -47,6 +47,9 @@ const adminEditorPrev = document.querySelector("#adminEditorPrev");
 const adminEditorNext = document.querySelector("#adminEditorNext");
 const adminSourceCanvas = document.querySelector("#adminSourceCanvas");
 const adminPreviewCanvas = document.querySelector("#adminPreviewCanvas");
+const adminSourceResizer = document.querySelector("#adminSourceResizer");
+const adminPreviewResizer = document.querySelector("#adminPreviewResizer");
+const adminWorkspaceResizer = document.querySelector("#adminWorkspaceResizer");
 const adminWhitePoint = document.querySelector("#adminWhitePoint");
 const adminRecoverBorder = document.querySelector("#adminRecoverBorder");
 const adminResetCrop = document.querySelector("#adminResetCrop");
@@ -105,6 +108,7 @@ const editorState = {
   nearbyRecord: null,
   moderationTarget: null,
   usesOriginalSource: false,
+  resizeTarget: null,
 };
 
 function setAdminStatus(message) {
@@ -1164,6 +1168,54 @@ function closeEditor() {
   setWhitePointMode(false);
 }
 
+function clampNumber(value, minimum, maximum) {
+  return Math.max(minimum, Math.min(maximum, value));
+}
+
+function beginEditorResize(kind, event) {
+  if (window.matchMedia("(max-width: 680px)").matches) return;
+  const workspaceRect = adminEditor.querySelector(".admin-editor-workspace").getBoundingClientRect();
+  editorState.resizeTarget = {
+    kind,
+    startX: event.clientX,
+    startY: event.clientY,
+    workspaceWidth: workspaceRect.width,
+    workspaceHeight: workspaceRect.height,
+    sourceWidth: adminEditor.style.getPropertyValue("--admin-source-width"),
+    previewWidth: adminEditor.style.getPropertyValue("--admin-preview-width"),
+  };
+  adminEditor.classList.add("is-resizing");
+  event.currentTarget.setPointerCapture?.(event.pointerId);
+  event.preventDefault();
+}
+
+function resizeEditorPanels(event) {
+  const target = editorState.resizeTarget;
+  if (!target) return;
+  if (target.kind === "workspace") {
+    const nextHeight = clampNumber(target.workspaceHeight + event.clientY - target.startY, 320, window.innerHeight - 230);
+    adminEditor.style.setProperty("--admin-editor-workspace-height", `${Math.round(nextHeight)}px`);
+  } else {
+    const minimum = 260;
+    const maximum = Math.max(minimum, target.workspaceWidth - 360);
+    const currentValue = target.kind === "source" ? target.sourceWidth : target.previewWidth;
+    const fallback = target.kind === "source"
+      ? adminSourceCanvas.getBoundingClientRect().width
+      : adminPreviewCanvas.getBoundingClientRect().width;
+    const currentWidth = Number.parseFloat(currentValue) || fallback;
+    const nextWidth = clampNumber(currentWidth + event.clientX - target.startX, minimum, maximum);
+    adminEditor.style.setProperty(target.kind === "source" ? "--admin-source-width" : "--admin-preview-width", `${Math.round(nextWidth)}px`);
+  }
+  scheduleEditorRender();
+}
+
+function endEditorResize(event) {
+  if (!editorState.resizeTarget) return;
+  event.target.releasePointerCapture?.(event.pointerId);
+  editorState.resizeTarget = null;
+  adminEditor.classList.remove("is-resizing");
+}
+
 function sourcePointerPosition(event) {
   const rect = adminSourceCanvas.getBoundingClientRect();
   return {
@@ -1266,6 +1318,12 @@ adminSourceCanvas.addEventListener("pointermove", (event) => {
 const stopPointDrag = () => { editorState.draggedPoint = null; };
 adminSourceCanvas.addEventListener("pointerup", stopPointDrag);
 adminSourceCanvas.addEventListener("pointercancel", stopPointDrag);
+adminSourceResizer.addEventListener("pointerdown", (event) => beginEditorResize("source", event));
+adminPreviewResizer.addEventListener("pointerdown", (event) => beginEditorResize("preview", event));
+adminWorkspaceResizer.addEventListener("pointerdown", (event) => beginEditorResize("workspace", event));
+window.addEventListener("pointermove", resizeEditorPanels);
+window.addEventListener("pointerup", endEditorResize);
+window.addEventListener("pointercancel", endEditorResize);
 
 adminAdjustments.querySelectorAll('input[type="range"]').forEach((input) => {
   input.addEventListener("input", () => {

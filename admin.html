@@ -8,7 +8,7 @@
     <link rel="icon" href="./assets/favicon.ico" sizes="any" />
     <link rel="icon" href="./assets/favicon-32.png" type="image/png" />
     <link rel="apple-touch-icon" href="./assets/apple-touch-icon.png" />
-    <link rel="stylesheet" href="./styles-admin-editor.css?v=20260720-admin-auth-check" />
+    <link rel="stylesheet" href="./styles-admin-editor.css?v=20260720-resizable-editor" />
   </head>
   <body class="admin-page">
     <header class="admin-header">
@@ -131,9 +131,11 @@
             <button id="adminResetCrop" type="button">reset crop</button>
           </div>
         </div>
+        <button class="admin-editor-column-resizer" id="adminSourceResizer" type="button" aria-label="resize source image panel"></button>
         <div class="admin-editor-preview">
           <canvas id="adminPreviewCanvas" width="720" height="720" aria-label="corrected square preview"></canvas>
         </div>
+        <button class="admin-editor-column-resizer" id="adminPreviewResizer" type="button" aria-label="resize preview panel"></button>
         <div class="admin-editor-adjustments" id="adminAdjustments">
           <label>brightness <output>0</output><input name="brightness" type="range" min="-100" max="100" value="0" /></label>
           <label>highlights <output>0</output><input name="highlights" type="range" min="-100" max="100" value="0" /></label>
@@ -155,6 +157,7 @@
           <button id="adminResetAdjustments" type="button">reset image</button>
         </div>
       </div>
+      <button class="admin-editor-row-resizer" id="adminWorkspaceResizer" type="button" aria-label="resize image workspace"></button>
       <section class="admin-nearby" aria-label="nearby submissions">
         <header>
           <div>

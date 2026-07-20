@@ -3134,7 +3134,10 @@ pre {
   inset: 0;
   z-index: 1500;
   display: none;
-  grid-template-rows: 58px minmax(0, 1fr) auto auto 58px;
+  --admin-editor-workspace-height: min(62dvh, 720px);
+  --admin-source-width: minmax(300px, 1fr);
+  --admin-preview-width: minmax(300px, 1fr);
+  grid-template-rows: 58px minmax(320px, var(--admin-editor-workspace-height)) 8px auto auto 58px;
   overflow: hidden;
   background: #fff;
   color: var(--ink);
@@ -3255,8 +3258,9 @@ pre {
 
 .admin-editor-workspace {
   display: grid;
-  grid-template-columns: minmax(300px, 1fr) minmax(300px, 1fr) 240px;
+  grid-template-columns: var(--admin-source-width) 8px var(--admin-preview-width) 8px 240px;
   min-height: 0;
+  overflow: hidden;
 }
 
 .admin-editor-source,
@@ -3270,6 +3274,7 @@ pre {
 .admin-editor-source,
 .admin-editor-preview {
   display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
   place-items: center;
   align-content: center;
   gap: 12px;
@@ -3283,7 +3288,7 @@ pre {
   width: auto;
   max-width: 100%;
   height: auto;
-  max-height: calc(100vh - 172px);
+  max-height: 100%;
   border: 1px solid var(--line);
   background: #fff;
   cursor: crosshair;
@@ -3296,11 +3301,39 @@ pre {
 
 .admin-editor-preview canvas {
   display: block;
-  width: min(100%, calc(100vh - 172px));
+  width: auto;
+  max-width: 100%;
+  max-height: 100%;
   height: auto;
   aspect-ratio: 1;
   border: 1px solid var(--line);
   background: #fff;
+}
+
+.admin-editor-column-resizer,
+.admin-editor-row-resizer {
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: #e5e5df;
+  cursor: col-resize;
+}
+
+.admin-editor-row-resizer {
+  width: 100%;
+  cursor: row-resize;
+}
+
+.admin-editor-column-resizer:hover,
+.admin-editor-column-resizer:focus-visible,
+.admin-editor-row-resizer:hover,
+.admin-editor-row-resizer:focus-visible,
+.admin-editor.is-resizing .admin-editor-column-resizer,
+.admin-editor.is-resizing .admin-editor-row-resizer {
+  background: var(--azul);
+  outline: none;
 }
 
 .admin-editor-source-actions {
@@ -3638,12 +3671,16 @@ pre {
 @media (max-width: 980px) {
   .admin-editor {
     overflow: hidden;
-    grid-template-rows: 58px minmax(0, 1fr) auto auto 58px;
+    grid-template-rows: 58px minmax(320px, var(--admin-editor-workspace-height)) 8px auto auto 58px;
   }
 
   .admin-editor-workspace {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(260px, 1fr) 8px minmax(260px, 1fr);
     overflow-y: auto;
+  }
+
+  #adminPreviewResizer {
+    display: none;
   }
 
   .admin-editor-adjustments {
@@ -3661,6 +3698,11 @@ pre {
       minmax(104px, 18dvh)
       minmax(104px, 18dvh)
       calc(62px + env(safe-area-inset-bottom));
+  }
+
+  .admin-editor-column-resizer,
+  .admin-editor-row-resizer {
+    display: none;
   }
 
   .admin-editor-header {
