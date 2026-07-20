@@ -643,9 +643,13 @@ body.is-filter-menu-open .filter-switch-arrow {
 }
 
 body.is-grid-view .map-stage,
-body.is-canva-view .map-stage,
-body.is-grid-view .record-controls {
+body.is-canva-view .map-stage {
   pointer-events: none;
+}
+
+body.is-grid-view .record-controls,
+body.is-canva-view .record-controls {
+  display: none;
 }
 
 body.is-canva-view .map-azulejo-count,
