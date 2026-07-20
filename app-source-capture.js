@@ -772,6 +772,7 @@ function allocateFineGridDisplayCells(tiles, zoom = map.getZoom(), density = Num
 
 function updateTileOverlayBounds(tile, displayCell = null) {
   if (!tile?.mosaicCell || typeof tile.mosaicCell.setBounds !== "function") return;
+  tile.displayCell = displayCell;
   tile.displayBounds = displayCell ? boundsForCell(displayCell) : boundsForSnappedGridSquare(tile.lat, tile.lng);
   tile.mosaicCell.setBounds(tile.displayBounds);
 }
@@ -806,11 +807,31 @@ function updateTileOpenData(tile, record) {
   tile.photoLicense = record.photo_license || record.photoLicense || tile.photoLicense || "";
 }
 
-function selectionCellForTile(tile) {
+function displayCellForTile(tile) {
+  const displayCell = tile?.displayCell;
+  if (!Number.isFinite(displayCell?.cx) || !Number.isFinite(displayCell?.cy)) return null;
+  return normalizedCellFromCell(displayCell);
+}
+
+function selectionCellForTile(tile, options = {}) {
+  const displayCell = options.preferDisplayCell ? displayCellForTile(tile) : null;
+  if (displayCell) {
+    const center = cellCenter(displayCell);
+    return { ...displayCell, lat: center.lat, lng: center.lng };
+  }
+  const storedCell = Number.isFinite(tile?.cx) && Number.isFinite(tile?.cy)
+    ? normalizedCellFromCell({ cx: tile.cx, cy: tile.cy, code: tile.cell, words: tile.words })
+    : parseCellCode(String(tile?.cell || ""));
+  if (options.preferStoredCell && storedCell) {
+    const center = cellCenter(storedCell);
+    return { ...storedCell, lat: center.lat, lng: center.lng };
+  }
   const lat = Number(tile?.lat);
   const lng = Number(tile?.lng);
-  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
-  return { ...cellForLatLng(lat, lng), lat, lng };
+  if (Number.isFinite(lat) && Number.isFinite(lng)) return { ...cellForLatLng(lat, lng), lat, lng };
+  if (!storedCell) return null;
+  const center = cellCenter(storedCell);
+  return { ...storedCell, lat: center.lat, lng: center.lng };
 }
 
 function viewerTileFromContribution(record) {
@@ -1116,7 +1137,7 @@ function showActiveViewerTileOnMap() {
   closeAzulejoViewer({ restoreMapSelection: false, reopenAccount: false });
   closeAccountSheet();
   map.setView([lat, lng], 21, { animate: false });
-  const selection = selectionCellForTile(tile);
+  const selection = selectionCellForTile(tile, { preferDisplayCell: true, preferStoredCell: true });
   if (selection) {
     highlightCell(selection, { fit: false, latlng: selection });
   }
@@ -4523,6 +4544,7 @@ window.AzulejoAtlas = {
   rowToTile,
   sceneAzulejoCounts,
   selectionCellForTile,
+  displayCellForTile,
   searchCell,
   boundsForSnappedGridSquare,
   tileVisibleAtZoom,

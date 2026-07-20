@@ -300,6 +300,9 @@ const contributionViewerTile = api.viewerTileFromContribution({
 assert(contributionViewerTile.id === "contribution-1" && contributionViewerTile.image.endsWith("tile.jpg"), "approved contributions should become viewer tiles immediately");
 assert(contributionViewerTile.cell === api.cellForLatLng(38.72, -9.14).code, "contribution viewer tiles should retain their map cell");
 assert(api.selectionCellForTile(contributionViewerTile).code === contributionViewerTile.cell, "viewer tiles should restore their selected cell when closed");
+const displacedViewerTile = { ...contributionViewerTile, displayCell: { cx: contributionViewerTile.cx + 1, cy: contributionViewerTile.cy } };
+assert(api.selectionCellForTile(displacedViewerTile, { preferDisplayCell: true }).cx === contributionViewerTile.cx + 1, "show-on-map should highlight the displayed tile cell when collision layout moves it");
+assert(api.selectionCellForTile(displacedViewerTile, { preferStoredCell: true }).cx === contributionViewerTile.cx, "stored cell selection should remain available for non-display flows");
 assert(api.viewerTileFromContribution({ id: "missing-image", lat: 38.72, lng: -9.14 }) === null, "contributions without an image should not open an empty viewer");
 
 const cell = api.cellForLatLng(38.71374, -9.13934);
