@@ -330,6 +330,10 @@ body.is-filter-menu-open .filter-switch-arrow {
   text-decoration: none;
 }
 
+.menu-view-options button[aria-selected="true"] {
+  color: var(--link-blue);
+}
+
 .map-azulejo-count {
   position: absolute;
   left: 16px;
@@ -4595,7 +4599,7 @@ button.admin-member-stat:focus-visible {
   .menu-view-options button {
     border: 0;
     background: transparent;
-    color: var(--muted);
+    color: var(--ink);
     font: inherit;
     font-size: clamp(42px, 10vw, 96px);
     font-weight: 300;
@@ -4604,7 +4608,7 @@ button.admin-member-stat:focus-visible {
   }
 
   .menu-view-options button[aria-selected="true"] {
-    color: var(--ink);
+    color: var(--link-blue);
   }
 
   .topbar-actions {
