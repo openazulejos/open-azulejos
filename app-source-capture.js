@@ -147,6 +147,7 @@ const userLayer = L.layerGroup().addTo(tileLayer);
 const gridCanvas = document.querySelector("#gridCanvas");
 const gridCtx = gridCanvas.getContext("2d");
 const mapAzulejoCount = document.querySelector("#mapAzulejoCount");
+const mapZoomPercent = document.querySelector("#mapZoomPercent");
 const mapLocationButton = document.querySelector("#mapLocationButton");
 const targetCoordinates = document.querySelector("#targetCoordinates");
 const cursorReadout = document.querySelector("#cursorReadout");
@@ -1398,6 +1399,17 @@ function gridStepForZoom(zoom, density) {
 
 function gridStepLabel(step) {
   return step === GRID_METERS ? "grille 3 m" : `aperçu ${step} m`;
+}
+
+function formatZoomPercent(zoom, baseZoom = HOME_VIEW.zoom) {
+  const value = 100 * (2 ** (Number(zoom) - Number(baseZoom)));
+  if (!Number.isFinite(value)) return "";
+  return `${Math.max(1, Math.round(value))}%`;
+}
+
+function updateZoomPercent() {
+  if (!mapZoomPercent) return;
+  mapZoomPercent.textContent = formatZoomPercent(map.getZoom());
 }
 
 function formatTargetCoordinates(latlng = map.getCenter()) {
@@ -4407,6 +4419,7 @@ map.on("moveend", () => {
 });
 map.on("zoomend", () => {
   invalidateServerViewportCounts();
+  updateZoomPercent();
   updateTargetCoordinates();
   refreshTileVisibility();
   renderHighlightedSelection({ fit: false });
@@ -4448,6 +4461,7 @@ restoreMosaicState();
 restoreContributionView();
 const initialCell = cellForLatLng(HOME_VIEW.center[0], HOME_VIEW.center[1]);
 cursorReadout.textContent = `Lisboa · grille 3 m · ${initialCell.code}`;
+updateZoomPercent();
 updateTargetCoordinates();
 if (hashCell) {
   highlightCell(hashCell, { hash: false });
@@ -4478,6 +4492,7 @@ window.AzulejoAtlas = {
   fragmentsToCsv,
   escapeCsvValue,
   edgeMatchedMosaicRotations,
+  formatZoomPercent,
   gridStepForZoom,
   isInsideLisbonBounds,
   isReliableGpsFix,

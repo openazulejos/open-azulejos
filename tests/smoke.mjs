@@ -313,6 +313,9 @@ assert(/\| -?\d+\.\d{6}, -?\d+\.\d{6}$/.test(activeText), "active cell copy text
 assert(api.cellHash(cell) === `cell=${encodeURIComponent(cell.code)}`, "cell hash should encode the cell code");
 assert(api.cellFromHash(`#cell=${encodeURIComponent(cell.code)}`).code === cell.code, "cell hash parser should restore cell code");
 assert(api.cellFromHash(`#${cell.code}`).code === cell.code, "cell hash parser should support compact legacy hashes");
+assert(api.formatZoomPercent(16, 16) === "100%", "opening zoom should display as 100 percent");
+assert(api.formatZoomPercent(17, 16) === "200%", "one zoom level in should double the zoom percentage");
+assert(api.formatZoomPercent(14, 16) === "25%", "two zoom levels out should quarter the zoom percentage");
 assert(api.gridStepForZoom(15, 3) === 96, "grid should show a coarse city-scale mesh at opening zoom");
 assert(api.gridStepForZoom(12, 3) === 768, "grid should remain visible at city overview zoom");
 assert(api.gridStepForZoom(20, 3) === 3, "grid should resolve to true 3 m cells at fine zoom");
