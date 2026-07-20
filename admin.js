@@ -255,11 +255,11 @@ function renderAdminMembers(members = []) {
 
     const stats = document.createElement("div");
     stats.className = "admin-member-stats";
-    stats.innerHTML = `
-      <span><strong>${member.totalCount}</strong> total</span>
-      <span><strong>${member.approvedCount}</strong> accepted</span>
-      <span><strong>${member.pendingCount}</strong> pending</span>
-    `;
+    stats.append(
+      memberStat("total", member.totalCount),
+      memberStat("accepted", member.approvedCount),
+      memberStat("pending", member.pendingCount, () => showMemberPendingModeration(member)),
+    );
 
     const meta = document.createElement("p");
     meta.className = "admin-member-meta";
@@ -299,6 +299,30 @@ function renderAdminMembers(members = []) {
     adminMembersList.append(card);
   });
   adminMembersStatus.textContent = `${members.length} member${members.length > 1 ? "s" : ""}`;
+}
+
+function memberStat(label, value, action = null) {
+  const tagName = action && Number(value) > 0 ? "button" : "span";
+  const element = document.createElement(tagName);
+  element.className = "admin-member-stat";
+  if (tagName === "button") {
+    element.type = "button";
+    element.addEventListener("click", action);
+    element.title = `show ${label} in moderation`;
+  }
+  const count = document.createElement("strong");
+  count.textContent = String(value ?? 0);
+  const text = document.createElement("span");
+  text.textContent = label;
+  element.append(count, text);
+  return element;
+}
+
+function showMemberPendingModeration(member) {
+  adminRecordFilter = "pending";
+  adminContributorFilterValue = String(member.userId || "").trim() || "anonymous";
+  renderRecords(adminRecords);
+  setAdminPage("moderation");
 }
 
 async function loadAdminMembers() {

@@ -3006,15 +3006,29 @@ pre {
   gap: 6px;
 }
 
-.admin-member-stats span {
+.admin-member-stat {
   display: grid;
   gap: 3px;
   min-height: 52px;
   align-content: space-between;
   padding: 8px;
   border: 1px solid var(--line);
+  background: #fff;
   color: var(--muted);
   font-size: 10px;
+  text-align: left;
+  font: inherit;
+}
+
+button.admin-member-stat {
+  cursor: pointer;
+}
+
+button.admin-member-stat:hover,
+button.admin-member-stat:focus-visible {
+  border-color: var(--ink);
+  color: var(--ink);
+  outline: none;
 }
 
 .admin-member-stats strong {
