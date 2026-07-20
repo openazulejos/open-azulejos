@@ -1072,10 +1072,16 @@ function shouldRestoreViewerMapSelection(origin, options = {}) {
   return origin !== "contributions" && options.restoreMapSelection !== false;
 }
 
+function shouldReopenAccountAfterViewerClose(origin, options = {}) {
+  return origin === "contributions" && options.reopenAccount !== false;
+}
+
 function closeAzulejoViewer(options = {}) {
   if (!azulejoViewer || !azulejoViewerImage) return;
   const selectedTile = activeViewerTile;
+  const origin = activeViewerOrigin;
   const shouldRestoreMapSelection = shouldRestoreViewerMapSelection(activeViewerOrigin, options);
+  const shouldReopenAccount = shouldReopenAccountAfterViewerClose(origin, options);
   azulejoViewer.classList.remove("is-open");
   azulejoViewer.classList.remove("is-contribution-origin");
   azulejoViewer.setAttribute("aria-hidden", "true");
@@ -1084,6 +1090,10 @@ function closeAzulejoViewer(options = {}) {
   activeViewerTileId = null;
   activeViewerTile = null;
   activeViewerOrigin = "map";
+  if (shouldReopenAccount) {
+    openAccountSheet();
+    return;
+  }
   if (!shouldRestoreMapSelection) return;
   const selection = selectionCellForTile(selectedTile);
   if (selection) {
@@ -1096,7 +1106,7 @@ function showActiveViewerTileOnMap() {
   const lat = Number(tile?.lat);
   const lng = Number(tile?.lng);
   if (!tile || !Number.isFinite(lat) || !Number.isFinite(lng)) return;
-  closeAzulejoViewer({ restoreMapSelection: false });
+  closeAzulejoViewer({ restoreMapSelection: false, reopenAccount: false });
   closeAccountSheet();
   map.setView([lat, lng], 21, { animate: false });
   const selection = selectionCellForTile(tile);
@@ -2497,6 +2507,7 @@ function focusContributionRecord(record) {
     || serverTileCacheById.get(record.id)
     || fallbackTile;
   if (!tile) return;
+  closeAccountSheet();
   openAzulejoViewer(tile, { origin: "contributions" });
   loadRecordedAzulejos().then(() => {
     if (activeViewerTileId !== record.id) return;
@@ -4479,6 +4490,7 @@ window.AzulejoAtlas = {
   tilesInMapScene,
   viewerMosaicCells,
   viewerMosaicRotation,
+  shouldReopenAccountAfterViewerClose,
   shouldRestoreViewerMapSelection,
   viewerTileFromContribution,
   visibleTiles,

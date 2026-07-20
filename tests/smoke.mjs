@@ -253,6 +253,9 @@ assert(api.viewerMosaicRotation(3, 3, 0) !== api.viewerMosaicRotation(3, 3, 6), 
 assert(api.shouldRestoreViewerMapSelection("map") === true, "map-opened viewer should restore the selected cell on close");
 assert(api.shouldRestoreViewerMapSelection("contributions") === false, "contribution-opened viewer should close back to account without restoring map selection");
 assert(api.shouldRestoreViewerMapSelection("map", { restoreMapSelection: false }) === false, "show-on-map flow should be able to suppress viewer close restoration");
+assert(api.shouldReopenAccountAfterViewerClose("contributions") === true, "contribution-opened viewer should reopen account when closed");
+assert(api.shouldReopenAccountAfterViewerClose("contributions", { reopenAccount: false }) === false, "show-on-map flow should suppress account reopen");
+assert(api.shouldReopenAccountAfterViewerClose("map") === false, "map-opened viewer should not open account when closed");
 const horizontalEdgeCosts = Array.from({ length: 4 }, (_, first) => Array.from({ length: 4 }, (_, second) => second === (first + 1) % 4 ? 0 : 100));
 const verticalEdgeCosts = Array.from({ length: 4 }, (_, first) => Array.from({ length: 4 }, (_, second) => second === (first + 2) % 4 ? 0 : 100));
 const matchedRotations = api.edgeMatchedMosaicRotations(horizontalEdgeCosts, verticalEdgeCosts, mosaicCells);
