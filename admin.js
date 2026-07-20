@@ -286,6 +286,11 @@ function googleMapsUrl(record) {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${record.lat},${record.lng}`)}`;
 }
 
+function publicRecordUrl(record) {
+  const code = String(record?.cell_code || "").trim();
+  return code ? `./#cell=${encodeURIComponent(code)}` : "";
+}
+
 function formatSubmissionDate(value) {
   const date = new Date(value);
   if (!Number.isFinite(date.getTime())) return "date de soumission inconnue";
@@ -347,6 +352,12 @@ function updateCardStatus(card, record) {
   approve.hidden = moderationStatus === "approved";
   const reject = card.querySelector(".admin-reject");
   reject.hidden = moderationStatus === "rejected";
+  const publicLink = card.querySelector(".admin-public-link");
+  if (publicLink) {
+    const href = publicRecordUrl(record);
+    publicLink.href = href;
+    publicLink.hidden = moderationStatus !== "approved" || !href;
+  }
 }
 
 function recordStatus(record) {
@@ -492,6 +503,13 @@ function appendRecordCard(record, index) {
     mapLink.rel = "noopener";
     mapLink.textContent = "map";
 
+    const publicLink = document.createElement("a");
+    publicLink.className = "admin-public-link";
+    publicLink.href = publicRecordUrl(record);
+    publicLink.target = "_blank";
+    publicLink.rel = "noopener";
+    publicLink.textContent = "website";
+
     const id = document.createElement("span");
     id.textContent = record.id;
 
@@ -523,7 +541,7 @@ function appendRecordCard(record, index) {
     deleteButton.addEventListener("click", () => deleteRecord(record, card));
 
     actions.append(editButton, approveButton, rejectButton, deleteButton);
-    card.append(image, title, status, moderationReason, meta, submissionDate, contributor, mapLink, id, actions);
+    card.append(image, title, status, moderationReason, meta, submissionDate, contributor, mapLink, publicLink, id, actions);
     updateCardStatus(card, record);
     adminGrid.append(card);
 }

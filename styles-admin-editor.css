@@ -3056,6 +3056,19 @@ pre {
   overflow-wrap: anywhere;
 }
 
+.admin-card a {
+  color: var(--azul);
+  font-size: 11px;
+  line-height: 1.25;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  overflow-wrap: anywhere;
+}
+
+.admin-card a[hidden] {
+  display: none;
+}
+
 .admin-card .admin-moderation-reason {
   margin: 0;
   padding: 7px;
