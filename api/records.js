@@ -379,7 +379,9 @@ module.exports = async function handler(req, res) {
       }
     }
     const publicSelect = "id,title,lat,lng,image_url,cell_code,words,source,created_at,gps_accuracy_m,gps_timestamp,location_source,photographer_credit,photo_license";
-    const response = await fetch(`${supabaseUrl}/rest/v1/azulejos?select=${publicSelect}&source=eq.web-camera&title=neq.api%20test&moderation_status=eq.approved&order=created_at.desc&limit=500`, {
+    const requestedPublicLimit = Number.parseInt(requestUrl.searchParams.get("limit") || "500", 10);
+    const publicLimit = Math.max(1, Math.min(Number.isFinite(requestedPublicLimit) ? requestedPublicLimit : 500, 2000));
+    const response = await fetch(`${supabaseUrl}/rest/v1/azulejos?select=${publicSelect}&source=eq.web-camera&title=neq.api%20test&moderation_status=eq.approved&order=created_at.desc&limit=${publicLimit}`, {
       headers,
     });
     if (!response.ok) {

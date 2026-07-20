@@ -183,6 +183,16 @@ const aboutCloseButton = document.querySelector("#aboutCloseButton");
 const aboutContributorsStatus = document.querySelector("#aboutContributorsStatus");
 const aboutContributorsList = document.querySelector("#aboutContributorsList");
 const adminOpenButton = document.querySelector("#adminOpenButton");
+const viewSwitchButton = document.querySelector("#viewSwitchButton");
+const viewSwitchLabel = document.querySelector("#viewSwitchLabel");
+const viewSwitchMenu = document.querySelector("#viewSwitchMenu");
+const azulejoGridView = document.querySelector("#azulejoGridView");
+const azulejoGridList = document.querySelector("#azulejoGridList");
+const azulejoGridStatus = document.querySelector("#azulejoGridStatus");
+const gridNeighborhoodFilter = document.querySelector("#gridNeighborhoodFilter");
+const gridColorFilter = document.querySelector("#gridColorFilter");
+const gridTypeFilter = document.querySelector("#gridTypeFilter");
+const gridMotifFilter = document.querySelector("#gridMotifFilter");
 const accountOpenButton = document.querySelector("#accountOpenButton");
 const accountSheet = document.querySelector("#accountSheet");
 const accountCloseButton = document.querySelector("#accountCloseButton");
@@ -314,6 +324,13 @@ let serverViewportSequence = 0;
 let serverViewportTimer = null;
 let accountRecoveryAccessToken = "";
 let contributorStatsLoaded = false;
+let activeViewMode = "map";
+let gridRecords = [];
+let gridRecordsLoaded = false;
+let gridRecordsLoading = false;
+let gridRecordsError = "";
+const gridColorCache = new Map();
+let gridColorAnalysisToken = 0;
 
 const sampleTiles = [
   {
@@ -1651,6 +1668,249 @@ function thumbnailImageUrl(imageUrl, size = 128) {
     q: "50",
   });
   return `/api/image?${params}`;
+}
+
+function gridRecordToTile(record) {
+  const lat = Number(record?.lat);
+  const lng = Number(record?.lng);
+  if (!record?.id || !record.image_url || !Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  const cell = cellForLatLng(lat, lng);
+  return {
+    id: record.id,
+    title: record.title || "recorded azulejo",
+    lat,
+    lng,
+    image: record.image_url,
+    displayImage: thumbnailImageUrl(record.image_url, 160),
+    source: "supabase-camera",
+    cell: record.cell_code || cell.code,
+    words: record.words || cell.words,
+    cx: cell.cx,
+    cy: cell.cy,
+    photographerCredit: record.photographer_credit || "",
+    photoLicense: record.photo_license || "",
+    neighborhood: neighborhoodNameForPoint(lat, lng),
+  };
+}
+
+function pointInsidePolygon(lat, lng, polygon) {
+  if (!Array.isArray(polygon) || polygon.length < 3) return false;
+  let inside = false;
+  for (let index = 0, previous = polygon.length - 1; index < polygon.length; previous = index++) {
+    const currentPoint = polygon[index];
+    const previousPoint = polygon[previous];
+    const currentLat = Number(currentPoint?.[0]);
+    const currentLng = Number(currentPoint?.[1]);
+    const previousLat = Number(previousPoint?.[0]);
+    const previousLng = Number(previousPoint?.[1]);
+    if (![currentLat, currentLng, previousLat, previousLng].every(Number.isFinite)) continue;
+    const intersects = ((currentLng > lng) !== (previousLng > lng))
+      && (lat < ((previousLat - currentLat) * (lng - currentLng)) / (previousLng - currentLng) + currentLat);
+    if (intersects) inside = !inside;
+  }
+  return inside;
+}
+
+function neighborhoodNameForPoint(lat, lng) {
+  const neighborhood = LISBON_NEIGHBORHOODS.find((item) => pointInsidePolygon(lat, lng, item.polygon));
+  return neighborhood?.name || "unknown";
+}
+
+function normalizeGridFilterValue(value) {
+  return String(value || "all").trim().toLowerCase();
+}
+
+function gridTileMatchesFilters(tile) {
+  const neighborhood = normalizeGridFilterValue(gridNeighborhoodFilter?.value);
+  const color = normalizeGridFilterValue(gridColorFilter?.value);
+  const type = normalizeGridFilterValue(gridTypeFilter?.value);
+  const motif = normalizeGridFilterValue(gridMotifFilter?.value);
+  if (neighborhood !== "all" && normalizeGridFilterValue(tile.neighborhood) !== neighborhood) return false;
+  if (color !== "all" && gridColorCache.get(tile.id) !== color) return false;
+  if (type !== "all" && normalizeGridFilterValue(tile.type) !== type) return false;
+  if (motif !== "all" && normalizeGridFilterValue(tile.motif) !== motif) return false;
+  return true;
+}
+
+function renderGridNeighborhoodOptions() {
+  if (!gridNeighborhoodFilter) return;
+  const previousValue = gridNeighborhoodFilter.value || "all";
+  const counts = new Map();
+  gridRecords.forEach((tile) => {
+    const name = tile.neighborhood || "unknown";
+    counts.set(name, (counts.get(name) || 0) + 1);
+  });
+  gridNeighborhoodFilter.textContent = "";
+  const allOption = document.createElement("option");
+  allOption.value = "all";
+  allOption.textContent = "all neighborhoods";
+  gridNeighborhoodFilter.append(allOption);
+  [...counts.entries()]
+    .sort((first, second) => first[0].localeCompare(second[0]))
+    .forEach(([name, count]) => {
+      const option = document.createElement("option");
+      option.value = name;
+      option.textContent = `${name} (${count})`;
+      gridNeighborhoodFilter.append(option);
+    });
+  gridNeighborhoodFilter.value = [...gridNeighborhoodFilter.options].some((option) => option.value === previousValue)
+    ? previousValue
+    : "all";
+}
+
+function renderAzulejoGrid() {
+  if (!azulejoGridList || !azulejoGridStatus) return;
+  const filtered = gridRecords.filter(gridTileMatchesFilters);
+  azulejoGridStatus.textContent = gridRecordsError
+    || (gridRecordsLoading
+    ? "loading azulejos"
+    : `${filtered.length}/${gridRecords.length} azulejos`);
+  azulejoGridList.textContent = "";
+  const fragment = document.createDocumentFragment();
+  filtered.forEach((tile) => {
+    const card = document.createElement("button");
+    const image = document.createElement("img");
+    const meta = document.createElement("span");
+    card.className = "azulejo-grid-card";
+    card.type = "button";
+    image.src = tile.displayImage;
+    image.alt = tile.title;
+    image.loading = "lazy";
+    image.decoding = "async";
+    meta.textContent = tile.neighborhood || "unknown";
+    card.append(image, meta);
+    card.addEventListener("click", () => openAzulejoViewer(tile, { origin: "grid" }));
+    fragment.append(card);
+  });
+  azulejoGridList.append(fragment);
+}
+
+function colorFamilyFromRgb(red, green, blue) {
+  const max = Math.max(red, green, blue);
+  const min = Math.min(red, green, blue);
+  const delta = max - min;
+  const lightness = (max + min) / 2;
+  if (max < 48) return "black";
+  if (min > 214 && delta < 36) return "white";
+  if (delta < 22) return lightness < 150 ? "grey" : "white";
+  let hue = 0;
+  if (max === red) hue = ((green - blue) / delta) % 6;
+  else if (max === green) hue = (blue - red) / delta + 2;
+  else hue = (red - green) / delta + 4;
+  hue = (hue * 60 + 360) % 360;
+  if (hue >= 195 && hue <= 258) return "blue";
+  if (hue >= 80 && hue < 175) return "green";
+  if (hue >= 38 && hue < 80) return "yellow";
+  if (hue >= 350 || hue < 16) return "red";
+  if (hue >= 16 && hue < 38) return "brown";
+  return "multicolor";
+}
+
+function dominantColorFamilyFromPixels(data) {
+  const counts = new Map();
+  for (let index = 0; index < data.length; index += 16) {
+    const alpha = data[index + 3];
+    if (alpha < 180) continue;
+    const family = colorFamilyFromRgb(data[index], data[index + 1], data[index + 2]);
+    if (family === "white") continue;
+    counts.set(family, (counts.get(family) || 0) + 1);
+  }
+  if (!counts.size) return "white";
+  const ranked = [...counts.entries()].sort((first, second) => second[1] - first[1]);
+  const total = ranked.reduce((sum, [, count]) => sum + count, 0);
+  if (ranked.length >= 3 && ranked[0][1] / total < 0.45) return "multicolor";
+  return ranked[0][0];
+}
+
+function analyzeGridTileColor(tile, token) {
+  if (!tile?.id || gridColorCache.has(tile.id) || typeof Image === "undefined") return;
+  const image = new Image();
+  image.crossOrigin = "anonymous";
+  image.onload = () => {
+    if (token !== gridColorAnalysisToken) return;
+    try {
+      const canvas = document.createElement("canvas");
+      canvas.width = 24;
+      canvas.height = 24;
+      const context = canvas.getContext("2d", { willReadFrequently: true });
+      if (!context) return;
+      context.drawImage(image, 0, 0, 24, 24);
+      const pixels = context.getImageData(0, 0, 24, 24).data;
+      gridColorCache.set(tile.id, dominantColorFamilyFromPixels(pixels));
+      if (activeViewMode === "grid" && normalizeGridFilterValue(gridColorFilter?.value) !== "all") {
+        renderAzulejoGrid();
+      }
+    } catch {
+      gridColorCache.set(tile.id, "multicolor");
+    }
+  };
+  image.onerror = () => {
+    gridColorCache.set(tile.id, "multicolor");
+  };
+  image.src = tile.displayImage;
+}
+
+function scheduleGridColorAnalysis() {
+  const token = ++gridColorAnalysisToken;
+  gridRecords.slice(0, 800).forEach((tile, index) => {
+    window.setTimeout(() => analyzeGridTileColor(tile, token), index * 12);
+  });
+}
+
+async function loadGridAzulejos() {
+  if (gridRecordsLoaded || gridRecordsLoading || typeof fetch !== "function") return;
+  gridRecordsLoading = true;
+  gridRecordsError = "";
+  renderAzulejoGrid();
+  try {
+    const response = await fetch("/api/records?grid=1&limit=1000");
+    if (!response.ok) throw new Error("grid records unavailable");
+    const data = await response.json();
+    gridRecords = (Array.isArray(data.records) ? data.records : [])
+      .map(gridRecordToTile)
+      .filter(Boolean);
+    gridRecordsLoaded = true;
+    renderGridNeighborhoodOptions();
+    renderAzulejoGrid();
+    scheduleGridColorAnalysis();
+  } catch (error) {
+    gridRecordsError = "azulejos could not be loaded";
+    console.warn(error);
+  } finally {
+    gridRecordsLoading = false;
+    renderAzulejoGrid();
+  }
+}
+
+function closeViewSwitchMenu() {
+  viewSwitchMenu?.setAttribute("hidden", "");
+  viewSwitchButton?.setAttribute("aria-expanded", "false");
+}
+
+function openViewSwitchMenu() {
+  viewSwitchMenu?.removeAttribute("hidden");
+  viewSwitchButton?.setAttribute("aria-expanded", "true");
+}
+
+function setViewMode(mode) {
+  const nextMode = mode === "grid" ? "grid" : "map";
+  activeViewMode = nextMode;
+  document.body.classList.toggle("is-grid-view", nextMode === "grid");
+  if (viewSwitchLabel) viewSwitchLabel.textContent = nextMode;
+  if (azulejoGridView) {
+    azulejoGridView.hidden = nextMode !== "grid";
+    azulejoGridView.setAttribute("aria-hidden", nextMode === "grid" ? "false" : "true");
+  }
+  viewSwitchMenu?.querySelectorAll?.("[data-view-mode]")?.forEach((button) => {
+    button.setAttribute("aria-selected", button.dataset.viewMode === nextMode ? "true" : "false");
+  });
+  closeViewSwitchMenu();
+  if (nextMode === "grid") {
+    loadGridAzulejos();
+  } else {
+    map.invalidateSize();
+    updateMapAzulejoCount();
+  }
 }
 
 function addAzulejoTile(tile, options = {}) {
@@ -4350,6 +4610,22 @@ copyActiveCellButton.addEventListener("click", copyActiveCell);
 targetCoordinates?.addEventListener("click", copyTargetCoordinates);
 aboutOpenButton?.addEventListener("click", openAboutSheet);
 aboutCloseButton?.addEventListener("click", closeAboutSheet);
+viewSwitchButton?.addEventListener("click", (event) => {
+  event.stopPropagation();
+  if (viewSwitchMenu?.hasAttribute("hidden")) openViewSwitchMenu();
+  else closeViewSwitchMenu();
+});
+viewSwitchMenu?.querySelectorAll?.("[data-view-mode]")?.forEach((button) => {
+  button.addEventListener("click", () => setViewMode(button.dataset.viewMode));
+});
+document.addEventListener("click", (event) => {
+  if (!viewSwitchMenu || viewSwitchMenu.hasAttribute("hidden")) return;
+  if (viewSwitchButton?.contains?.(event.target) || viewSwitchMenu.contains?.(event.target)) return;
+  closeViewSwitchMenu();
+});
+[gridNeighborhoodFilter, gridColorFilter, gridTypeFilter, gridMotifFilter].forEach((filter) => {
+  filter?.addEventListener("change", renderAzulejoGrid);
+});
 accountOpenButton?.addEventListener("click", openAccountSheet);
 accountCloseButton?.addEventListener("click", closeAccountSheet);
 accountLoginMode?.addEventListener("click", () => setAccountMode("log-in"));
@@ -4386,6 +4662,7 @@ azulejoViewer?.addEventListener("pointercancel", () => {
 });
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
+    closeViewSwitchMenu();
     closeAzulejoViewer();
     closeAboutSheet();
     closeAccountSheet();

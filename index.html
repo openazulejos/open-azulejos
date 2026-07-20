@@ -49,7 +49,7 @@
     <meta name="twitter:image" content="https://openazulejos.com/assets/icon-512.png" />
     <link rel="preconnect" href="https://unpkg.com" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="./styles-admin-editor.css?v=20260720-admin-shortcut" />
+    <link rel="stylesheet" href="./styles-admin-editor.css?v=20260720-grid-view" />
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
@@ -153,6 +153,16 @@
         <a class="brand" href="./" aria-label="open azulejos">open azulejos</a>
         <span class="beta-label">beta</span>
       </div>
+      <div class="view-switch" id="viewSwitch">
+        <button class="view-switch-button" id="viewSwitchButton" type="button" aria-haspopup="listbox" aria-expanded="false">
+          <span id="viewSwitchLabel">map</span>
+          <span class="view-switch-arrow" aria-hidden="true"></span>
+        </button>
+        <div class="view-switch-menu" id="viewSwitchMenu" role="listbox" hidden>
+          <button type="button" role="option" aria-selected="true" data-view-mode="map">map</button>
+          <button type="button" role="option" aria-selected="false" data-view-mode="grid">grid</button>
+        </div>
+      </div>
       <nav class="nav">
       </nav>
       <div class="topbar-actions">
@@ -176,6 +186,48 @@
       </section>
       <button class="record-action" id="recordHistoryButton" type="button">record azulejos now</button>
       <input class="record-camera-input" id="recordCameraInput" type="file" accept="image/*" />
+
+      <section class="azulejo-grid-view" id="azulejoGridView" aria-hidden="true" hidden>
+        <div class="azulejo-grid-inner">
+          <div class="azulejo-grid-filters" aria-label="grid filters">
+            <label>
+              <span>neighborhood</span>
+              <select id="gridNeighborhoodFilter">
+                <option value="all">all neighborhoods</option>
+              </select>
+            </label>
+            <label>
+              <span>color</span>
+              <select id="gridColorFilter">
+                <option value="all">all colors</option>
+                <option value="blue">blue</option>
+                <option value="green">green</option>
+                <option value="yellow">yellow</option>
+                <option value="red">red</option>
+                <option value="brown">brown</option>
+                <option value="black">black</option>
+                <option value="white">white</option>
+                <option value="grey">grey</option>
+                <option value="multicolor">multicolor</option>
+              </select>
+            </label>
+            <label>
+              <span>type</span>
+              <select id="gridTypeFilter" disabled>
+                <option value="all">all types</option>
+              </select>
+            </label>
+            <label>
+              <span>motif</span>
+              <select id="gridMotifFilter" disabled>
+                <option value="all">all motifs</option>
+              </select>
+            </label>
+          </div>
+          <p class="azulejo-grid-status" id="azulejoGridStatus">loading azulejos</p>
+          <div class="azulejo-grid-list" id="azulejoGridList" aria-live="polite"></div>
+        </div>
+      </section>
 
       <section class="record-onboarding" id="recordOnboarding" role="dialog" aria-modal="true" aria-hidden="true" aria-label="before recording an azulejo">
         <button class="record-onboarding-close" id="recordOnboardingClose" type="button" aria-label="close">×</button>
@@ -607,6 +659,6 @@ azulejo-002.jpg,38.71072,-9.13908,Baixa</code></pre>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="./offline-queue.js?v=20260702-contribution-rights"></script>
-    <script src="./app-source-capture.js?v=20260720-hide-admin-shortcut"></script>
+    <script src="./app-source-capture.js?v=20260720-grid-view"></script>
   </body>
 </html>
