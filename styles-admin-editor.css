@@ -4439,6 +4439,7 @@ button.admin-member-stat:focus-visible {
     align-items: center;
     gap: 8px;
     padding: 9px 10px;
+    background: var(--paper);
   }
 
   .brand-lockup {
@@ -4526,10 +4527,10 @@ button.admin-member-stat:focus-visible {
   }
 
   .azulejo-filter-bar {
-    top: 86px;
+    top: 51px;
     z-index: 820;
     width: min(100% - 24px, 560px);
-    padding: 10px 0 12px;
+    padding: 4px 0 12px;
     background: var(--paper);
   }
 
