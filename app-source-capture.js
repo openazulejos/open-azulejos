@@ -290,6 +290,7 @@ let activeViewerOrigin = "map";
 let viewerMosaicMode = 0;
 let viewerGesture = null;
 let viewerMosaicRenderToken = 0;
+let targetCoordinatesCopyTimer = null;
 const viewerMosaicMatchCache = new Map();
 let userLocationMarker = null;
 let userLocationWatchId = null;
@@ -523,28 +524,33 @@ function setActiveCell(cell) {
   return normalized;
 }
 
-async function copyActiveCell() {
-  const text = activeCellText();
+async function copyTextToClipboard(text, fallbackInput = activeCellCopyValue) {
   if (!text) return false;
-  activeCellCopyValue.value = text;
+  if (fallbackInput) fallbackInput.value = text;
   try {
     await navigator.clipboard.writeText(text);
-    copyActiveCellButton.textContent = "copié";
-    activeCellCopyValue.classList.remove("is-visible");
     return true;
   } catch {
-    activeCellCopyValue.classList.add("is-visible");
-    activeCellCopyValue.focus();
-    activeCellCopyValue.select();
+    fallbackInput?.classList.add("is-visible");
+    fallbackInput?.focus();
+    fallbackInput?.select();
     let copied = false;
     try {
       copied = document.execCommand("copy");
     } catch {
       copied = false;
     }
-    copyActiveCellButton.textContent = copied ? "copié" : "texte prêt";
     return copied;
   }
+}
+
+async function copyActiveCell() {
+  const text = activeCellText();
+  if (!text) return false;
+  const copied = await copyTextToClipboard(text, activeCellCopyValue);
+  if (copied) activeCellCopyValue.classList.remove("is-visible");
+  copyActiveCellButton.textContent = copied ? "copié" : "texte prêt";
+  return copied;
 }
 
 function highlightCell(cell, options = {}) {
@@ -1404,6 +1410,23 @@ function formatTargetCoordinates(latlng = map.getCenter()) {
 function updateTargetCoordinates() {
   if (!targetCoordinates) return;
   targetCoordinates.textContent = formatTargetCoordinates(map.getCenter());
+}
+
+async function copyTargetCoordinates(event) {
+  event?.preventDefault?.();
+  event?.stopPropagation?.();
+  if (!targetCoordinates) return false;
+  const text = formatTargetCoordinates(map.getCenter());
+  const copied = await copyTextToClipboard(text, activeCellCopyValue);
+  if (copied) activeCellCopyValue.classList.remove("is-visible");
+  targetCoordinates.textContent = copied ? "copied" : "select text";
+  targetCoordinates.classList.toggle("is-copied", copied);
+  window.clearTimeout?.(targetCoordinatesCopyTimer);
+  targetCoordinatesCopyTimer = window.setTimeout?.(() => {
+    targetCoordinates.classList.remove("is-copied");
+    updateTargetCoordinates();
+  }, 900);
+  return copied;
 }
 
 function drawGrid() {
@@ -4288,6 +4311,7 @@ archiveFilterClearButton.addEventListener("click", () => {
 });
 fitMosaicButton.addEventListener("click", () => fitTilesOnMap());
 copyActiveCellButton.addEventListener("click", copyActiveCell);
+targetCoordinates?.addEventListener("click", copyTargetCoordinates);
 aboutOpenButton?.addEventListener("click", openAboutSheet);
 aboutCloseButton?.addEventListener("click", closeAboutSheet);
 accountOpenButton?.addEventListener("click", openAccountSheet);
@@ -4465,6 +4489,7 @@ window.AzulejoAtlas = {
   rememberLoadedImageUrl,
   thumbnailImageUrl,
   viewportRenderBudget,
+  copyTextToClipboard,
   formatTargetCoordinates,
   looksLikeSwappedLisbonCoordinates,
   normalizedCellFromCell,

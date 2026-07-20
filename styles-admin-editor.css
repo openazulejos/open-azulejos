@@ -740,12 +740,22 @@ textarea {
   bottom: max(5px, env(safe-area-inset-bottom));
   z-index: 650;
   min-width: 124px;
+  border: 0;
+  padding: 0;
+  background: transparent;
   color: var(--ink);
+  font-family: "Helvetica Neue", Arial, sans-serif;
   font-size: 11px;
+  font-weight: 300;
   line-height: 1.2;
   text-align: right;
   letter-spacing: 0;
-  pointer-events: none;
+  cursor: copy;
+  pointer-events: auto;
+}
+
+.target-coordinates.is-copied {
+  color: #1769e0;
 }
 
 .map-location-probe {
