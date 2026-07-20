@@ -334,6 +334,8 @@ let gridRecordsLoading = false;
 let gridRecordsError = "";
 const gridColorCache = new Map();
 let gridColorAnalysisToken = 0;
+let allCityClipPolygons = [];
+const neighborhoodClipPolygons = new Map();
 
 const sampleTiles = [
   {
@@ -354,20 +356,67 @@ const sampleTiles = [
   },
 ];
 
+function normalizeNeighborhoodKey(value) {
+  return normalizeGridFilterValue(value);
+}
+
+function selectedNeighborhoodKey() {
+  const key = normalizeNeighborhoodKey(gridNeighborhoodFilter?.value);
+  return key && key !== "all" ? key : "";
+}
+
+function activeClipPolygons() {
+  const selected = selectedNeighborhoodKey();
+  if (selected && neighborhoodClipPolygons.has(selected)) return neighborhoodClipPolygons.get(selected);
+  return allCityClipPolygons.length ? allCityClipPolygons : cityClipPolygons;
+}
+
+function drawBoundaryPolygon(latLngPolygons) {
+  L.polygon(latLngPolygons.length === 1 ? latLngPolygons[0] : latLngPolygons, {
+    className: "neighborhood-cut",
+    color: "#151515",
+    weight: 1,
+    fillColor: "#ffffff",
+    fillOpacity: 0,
+    opacity: 0.72,
+    pane: "boundaries",
+    interactive: false,
+  }).addTo(neighborhoodLayer);
+}
+
 function drawFallbackNeighborhoods() {
-  cityClipPolygons = LISBON_NEIGHBORHOODS.map((neighborhood) => [neighborhood.polygon]);
+  allCityClipPolygons = LISBON_NEIGHBORHOODS.map((neighborhood) => [neighborhood.polygon]);
+  cityClipPolygons = allCityClipPolygons;
+  neighborhoodClipPolygons.clear();
   LISBON_NEIGHBORHOODS.forEach((neighborhood) => {
-    L.polygon(neighborhood.polygon, {
-      className: "neighborhood-cut",
-      color: "#151515",
-      weight: 1,
-      fillColor: "#ffffff",
-      fillOpacity: 0,
-      opacity: 0.72,
-      pane: "boundaries",
-      interactive: false,
-    }).addTo(neighborhoodLayer);
+    neighborhoodClipPolygons.set(normalizeNeighborhoodKey(neighborhood.name), [[...neighborhood.polygon]]);
   });
+  renderNeighborhoodLayer();
+}
+
+function renderNeighborhoodLayer() {
+  neighborhoodLayer.clearLayers();
+  const selected = selectedNeighborhoodKey();
+  if (selected && neighborhoodClipPolygons.has(selected)) {
+    drawBoundaryPolygon(neighborhoodClipPolygons.get(selected));
+    return;
+  }
+  const polygons = allCityClipPolygons.length ? allCityClipPolygons : cityClipPolygons;
+  polygons.forEach((polygon) => {
+    drawBoundaryPolygon(polygon);
+  });
+}
+
+function fitSelectedNeighborhoodOnMap() {
+  const selected = selectedNeighborhoodKey();
+  if (!selected || !neighborhoodClipPolygons.has(selected)) return;
+  const points = neighborhoodClipPolygons.get(selected)
+    .flatMap((polygon) => polygon.flatMap((ring) => ring));
+  if (!points.length) return;
+  const bounds = L.latLngBounds(points);
+  if (bounds.isValid()) {
+    map.fitBounds(bounds, { padding: [90, 90], maxZoom: 17 });
+  }
 }
 
 function featurePolygons(feature) {
@@ -383,23 +432,6 @@ function polygonToLatLngs(polygon) {
     .filter((ring) => ring.length >= 4);
 }
 
-function drawNeighborhoodFeature(feature) {
-  const latLngPolygons = featurePolygons(feature)
-    .map(polygonToLatLngs)
-    .filter((polygon) => polygon.length);
-  if (!latLngPolygons.length) return;
-  L.polygon(latLngPolygons.length === 1 ? latLngPolygons[0] : latLngPolygons, {
-    className: "neighborhood-cut",
-    color: "#151515",
-    weight: 1,
-    fillColor: "#ffffff",
-    fillOpacity: 0,
-    opacity: 0.72,
-    pane: "boundaries",
-    interactive: false,
-  }).addTo(neighborhoodLayer);
-}
-
 async function loadNeighborhoodLayer() {
   if (typeof fetch !== "function") {
     drawFallbackNeighborhoods();
@@ -410,10 +442,19 @@ async function loadNeighborhoodLayer() {
     if (!response.ok) throw new Error(`layer ${response.status}`);
     const collection = await response.json();
     neighborhoodLayer.clearLayers();
-    cityClipPolygons = collection.features
+    neighborhoodClipPolygons.clear();
+    allCityClipPolygons = collection.features
       .flatMap((feature) => featurePolygons(feature).map(polygonToLatLngs))
       .filter((polygon) => polygon.length);
-    collection.features.forEach(drawNeighborhoodFeature);
+    cityClipPolygons = allCityClipPolygons;
+    collection.features.forEach((feature) => {
+      const latLngPolygons = featurePolygons(feature)
+        .map(polygonToLatLngs)
+        .filter((polygon) => polygon.length);
+      const name = feature.properties?.name;
+      if (name && latLngPolygons.length) neighborhoodClipPolygons.set(normalizeNeighborhoodKey(name), latLngPolygons);
+    });
+    renderNeighborhoodLayer();
     drawGrid();
     return true;
   } catch {
@@ -624,7 +665,7 @@ function cellOccupancy() {
 
 function visibleTiles() {
   if (!mosaicToggle.checked) return [];
-  return displayedTiles.filter((tile) => tileVisibleAtZoom(tile) && !tile.isLayoutHidden);
+  return displayedTiles.filter((tile) => tileVisibleAtZoom(tile) && mapTileMatchesFilters(tile) && !tile.isLayoutHidden);
 }
 
 function tileInsideMapScene(tile, bounds = map.getBounds()) {
@@ -638,12 +679,21 @@ function tileInsideMapScene(tile, bounds = map.getBounds()) {
 }
 
 function localSceneAzulejoCounts(tiles = displayedTiles, bounds = map.getBounds(), zoom = map.getZoom()) {
-  const registered = tiles.filter((tile) => tile.source === "supabase-camera");
+  const registered = tiles.filter((tile) => tile.source === "supabase-camera" && mapTileMatchesFilters(tile));
   const visible = tilesInMapScene(registered, bounds, zoom);
   return { visible: visible.length, total: registered.length };
 }
 
 function sceneAzulejoCounts(tiles = displayedTiles, bounds = map.getBounds(), zoom = map.getZoom()) {
+  const filteredMap = normalizeGridFilterValue(gridNeighborhoodFilter?.value) !== "all"
+    || normalizeGridFilterValue(gridColorFilter?.value) !== "all"
+    || normalizeGridFilterValue(gridTypeFilter?.value) !== "all"
+    || normalizeGridFilterValue(gridMotifFilter?.value) !== "all";
+  if (filteredMap) {
+    const local = localSceneAzulejoCounts(tiles, bounds, zoom);
+    const total = gridRecordsLoaded ? gridRecords.filter(gridTileMatchesFilters).length : local.total;
+    return { visible: local.visible, total: Math.max(total, local.visible) };
+  }
   const fallback = localSceneAzulejoCounts(tiles, bounds, zoom);
   if (serverCountsLoaded && tiles === displayedTiles) {
     if (serverViewportCount > 0 || serverTotalCount > 0 || fallback.total === 0) {
@@ -719,7 +769,7 @@ function setLayerPresence(parentLayer, childLayer, visible) {
 function refreshTileVisibility() {
   const sceneBounds = map.getBounds();
   const fineGridLayout = allocateFineGridDisplayCells(
-    displayedTiles.filter((tile) => tileVisibleAtZoom(tile)),
+    displayedTiles.filter((tile) => tileVisibleAtZoom(tile) && mapTileMatchesFilters(tile)),
     map.getZoom(),
     Number(gridDensity.value),
   );
@@ -727,6 +777,7 @@ function refreshTileVisibility() {
     const displayCell = fineGridLayout?.get(tile);
     tile.isLayoutHidden = fineGridLayout instanceof Map && !displayCell;
     const visible = tileVisibleAtZoom(tile)
+      && mapTileMatchesFilters(tile)
       && !tile.isLayoutHidden
       && tileInsideMapScene(tile, sceneBounds);
     updateTileOverlayBounds(tile, displayCell);
@@ -1550,9 +1601,10 @@ function drawGrid() {
 }
 
 function applyCityClipPath() {
-  if (!cityClipPolygons.length) return;
+  const clipPolygons = activeClipPolygons();
+  if (!clipPolygons.length) return;
   gridCtx.beginPath();
-  cityClipPolygons.forEach((polygon) => {
+  clipPolygons.forEach((polygon) => {
     polygon.forEach((ring) => {
       ring.forEach(([lat, lng], index) => {
         const point = map.latLngToContainerPoint([lat, lng]);
@@ -1730,16 +1782,38 @@ function pointInsidePolygon(lat, lng, polygon) {
   return inside;
 }
 
+function pointInsideLatLngPolygons(lat, lng, polygons) {
+  if (!Array.isArray(polygons)) return false;
+  return polygons.some((polygon) => polygon.some((ring) => pointInsidePolygon(lat, lng, ring)));
+}
+
 function neighborhoodNameForPoint(lat, lng) {
+  for (const [name, polygons] of neighborhoodClipPolygons) {
+    if (pointInsideLatLngPolygons(lat, lng, polygons)) return name;
+  }
   const neighborhood = LISBON_NEIGHBORHOODS.find((item) => pointInsidePolygon(lat, lng, item.polygon));
   return neighborhood?.name || "unknown";
 }
 
 function normalizeGridFilterValue(value) {
-  return String(value || "all").trim().toLowerCase();
+  const normalized = String(value || "all").trim().toLowerCase();
+  return normalized === "0" ? "all" : normalized;
 }
 
 function gridTileMatchesFilters(tile) {
+  const neighborhood = normalizeGridFilterValue(gridNeighborhoodFilter?.value);
+  const color = normalizeGridFilterValue(gridColorFilter?.value);
+  const type = normalizeGridFilterValue(gridTypeFilter?.value);
+  const motif = normalizeGridFilterValue(gridMotifFilter?.value);
+  if (neighborhood !== "all" && normalizeGridFilterValue(tile.neighborhood) !== neighborhood) return false;
+  if (color !== "all" && gridColorCache.get(tile.id) !== color) return false;
+  if (type !== "all" && normalizeGridFilterValue(tile.type) !== type) return false;
+  if (motif !== "all" && normalizeGridFilterValue(tile.motif) !== motif) return false;
+  return true;
+}
+
+function mapTileMatchesFilters(tile) {
+  if (!tile || tile.isSample) return true;
   const neighborhood = normalizeGridFilterValue(gridNeighborhoodFilter?.value);
   const color = normalizeGridFilterValue(gridColorFilter?.value);
   const type = normalizeGridFilterValue(gridTypeFilter?.value);
@@ -1857,6 +1931,9 @@ function analyzeGridTileColor(tile, token) {
       if (activeViewMode === "grid" && normalizeGridFilterValue(gridColorFilter?.value) !== "all") {
         renderAzulejoGrid();
       }
+      if (activeViewMode === "map" && normalizeGridFilterValue(gridColorFilter?.value) !== "all") {
+        refreshTileVisibility();
+      }
     } catch {
       gridColorCache.set(tile.id, "multicolor");
     }
@@ -1889,6 +1966,7 @@ async function loadGridAzulejos() {
     gridRecordsLoaded = true;
     renderGridNeighborhoodOptions();
     renderAzulejoGrid();
+    refreshTileVisibility();
     scheduleGridColorAnalysis();
   } catch (error) {
     gridRecordsError = "azulejos could not be loaded";
@@ -1897,6 +1975,18 @@ async function loadGridAzulejos() {
     gridRecordsLoading = false;
     renderAzulejoGrid();
   }
+}
+
+function applyAzulejoFilters(options = {}) {
+  renderAzulejoGrid();
+  renderNeighborhoodLayer();
+  drawGrid();
+  refreshTileVisibility();
+  invalidateServerViewportCounts();
+  if (activeViewMode === "map" && options.fitNeighborhood) {
+    fitSelectedNeighborhoodOnMap();
+  }
+  scheduleRecordedAzulejoLoad(0);
 }
 
 function closeViewSwitchMenu() {
@@ -1944,6 +2034,9 @@ function addAzulejoTile(tile, options = {}) {
     source: tile.source || "manual",
     photographerCredit: tile.photographerCredit || tile.photographer_credit || tile.contributor || "",
     photoLicense: tile.photoLicense || tile.photo_license || "",
+    neighborhood: tile.neighborhood || neighborhoodNameForPoint(Number(tile.lat), Number(tile.lng)),
+    type: tile.type || "",
+    motif: tile.motif || "",
     crop: tile.crop || null,
     isSample: !!options.skipRecord,
     isServer: !!options.isServer,
@@ -4647,8 +4740,9 @@ document.addEventListener("click", (event) => {
   if (viewSwitchButton?.contains?.(event.target) || viewSwitchMenu.contains?.(event.target)) return;
   closeViewSwitchMenu();
 });
-[gridNeighborhoodFilter, gridColorFilter, gridTypeFilter, gridMotifFilter].forEach((filter) => {
-  filter?.addEventListener("change", renderAzulejoGrid);
+gridNeighborhoodFilter?.addEventListener("change", () => applyAzulejoFilters({ fitNeighborhood: true }));
+[gridColorFilter, gridTypeFilter, gridMotifFilter].forEach((filter) => {
+  filter?.addEventListener("change", () => applyAzulejoFilters());
 });
 accountOpenButton?.addEventListener("click", openAccountSheet);
 accountCloseButton?.addEventListener("click", closeAccountSheet);
@@ -4760,13 +4854,16 @@ map.on("click", (event) => {
   highlightCell(cellForLatLng(event.latlng.lat, event.latlng.lng), { fit: false, latlng: event.latlng });
 });
 
-loadNeighborhoodLayer();
+const neighborhoodLayerReady = loadNeighborhoodLayer();
 const hashCell = cellFromHash(window.location.hash);
 if (!hashCell) {
   map.setView(HOME_VIEW.center, HOME_VIEW.zoom, { animate: false });
 }
 sampleTiles.forEach((tile) => addAzulejoTile(tile, { skipRecord: true }));
-loadRecordedAzulejos();
+neighborhoodLayerReady.finally(() => {
+  loadRecordedAzulejos();
+  loadGridAzulejos();
+});
 window.addEventListener?.("online", () => {
   flushOfflineContributions().catch((error) => console.error("Offline contribution sync failed:", error));
 });

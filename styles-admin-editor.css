@@ -234,7 +234,7 @@ textarea {
   overflow: auto;
   background: #fff;
   color: var(--ink);
-  padding: 58px max(24px, 5vw) max(52px, env(safe-area-inset-bottom));
+  padding: 112px max(24px, 5vw) max(52px, env(safe-area-inset-bottom));
 }
 
 .azulejo-grid-view[hidden] {
@@ -246,6 +246,7 @@ textarea {
   margin: 0 auto;
 }
 
+.azulejo-filter-bar,
 .azulejo-grid-filters {
   display: flex;
   flex-wrap: wrap;
@@ -255,12 +256,25 @@ textarea {
   margin-bottom: 30px;
 }
 
+.azulejo-filter-bar {
+  position: fixed;
+  left: 50%;
+  top: 92px;
+  z-index: 725;
+  width: min(100% - 32px, 980px);
+  margin-bottom: 0;
+  transform: translateX(-50%);
+  pointer-events: auto;
+}
+
+.azulejo-filter-bar label,
 .azulejo-grid-filters label {
   position: relative;
   display: grid;
   min-width: 150px;
 }
 
+.azulejo-filter-bar select,
 .azulejo-grid-filters select {
   appearance: none;
   -webkit-appearance: none;
@@ -280,10 +294,12 @@ textarea {
   text-align-last: center;
 }
 
+.azulejo-filter-bar select:disabled,
 .azulejo-grid-filters select:disabled {
   color: #aaa;
 }
 
+.azulejo-filter-bar label::after,
 .azulejo-grid-filters label::after {
   content: "";
   position: absolute;
@@ -4289,15 +4305,23 @@ button.admin-member-stat:focus-visible {
 
   .azulejo-grid-view {
     inset: 62px 0 0 0;
-    padding: 54px 16px max(42px, env(safe-area-inset-bottom));
+    padding: 122px 16px max(42px, env(safe-area-inset-bottom));
   }
 
+  .azulejo-filter-bar,
   .azulejo-grid-filters {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 16px 14px;
   }
 
+  .azulejo-filter-bar {
+    top: 86px;
+    width: min(100% - 24px, 560px);
+  }
+
+  .azulejo-filter-bar label,
+  .azulejo-filter-bar select,
   .azulejo-grid-filters label,
   .azulejo-grid-filters select {
     min-width: 0;
