@@ -49,7 +49,7 @@
     <meta name="twitter:image" content="https://openazulejos.com/assets/icon-512.png" />
     <link rel="preconnect" href="https://unpkg.com" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="./styles-admin-editor.css?v=20260720-mobile-menu-views" />
+    <link rel="stylesheet" href="./styles-admin-editor.css?v=20260720-mobile-filter-toggle" />
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
@@ -164,6 +164,10 @@
           <button type="button" role="option" aria-selected="false" data-view-mode="canva">canva</button>
         </div>
       </div>
+      <button class="filter-switch" id="filterSwitchButton" type="button" aria-controls="azulejoFilterBar" aria-expanded="false">
+        <span>filter</span>
+        <span class="filter-switch-arrow" aria-hidden="true"></span>
+      </button>
       <nav class="nav">
       </nav>
       <div class="topbar-actions">
@@ -692,6 +696,6 @@ azulejo-002.jpg,38.71072,-9.13908,Baixa</code></pre>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="./offline-queue.js?v=20260702-contribution-rights"></script>
-    <script src="./app-source-capture.js?v=20260720-mobile-menu-views"></script>
+    <script src="./app-source-capture.js?v=20260720-mobile-filter-toggle"></script>
   </body>
 </html>

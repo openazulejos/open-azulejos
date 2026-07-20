@@ -227,6 +227,33 @@ textarea {
   color: var(--ink);
 }
 
+.filter-switch {
+  display: none;
+  align-items: center;
+  gap: 5px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 300;
+  line-height: 1;
+  letter-spacing: 0;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.filter-switch-arrow {
+  width: 7px;
+  height: 7px;
+  border-right: 1px solid currentColor;
+  border-bottom: 1px solid currentColor;
+  transform: translateY(-3px) rotate(45deg);
+}
+
+body.is-filter-menu-open .filter-switch-arrow {
+  transform: translateY(1px) rotate(225deg);
+}
+
 .about-trigger,
 .account-trigger,
 .admin-trigger {
@@ -4512,7 +4539,7 @@ button.admin-member-stat:focus-visible {
 @media (max-width: 760px) {
   .topbar {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     z-index: 900;
     height: auto;
     min-height: 54px;
@@ -4546,6 +4573,12 @@ button.admin-member-stat:focus-visible {
 
   .view-switch {
     display: none;
+  }
+
+  .filter-switch {
+    display: inline-flex;
+    justify-self: center;
+    z-index: 980;
   }
 
   .menu-view-options {
@@ -4628,6 +4661,10 @@ button.admin-member-stat:focus-visible {
     background: var(--paper);
   }
 
+  body:not(.is-filter-menu-open) .azulejo-filter-bar {
+    display: none;
+  }
+
   .azulejo-filter-bar label,
   .azulejo-filter-bar select,
   .azulejo-grid-filters label,
@@ -4685,6 +4722,7 @@ button.admin-member-stat:focus-visible {
 
   .brand,
   .view-switch-button,
+  .filter-switch,
   .about-trigger,
   .account-trigger,
   .admin-trigger,

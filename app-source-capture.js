@@ -182,6 +182,7 @@ const azulejoViewerClose = document.querySelector("#azulejoViewerClose");
 const menuOpenButton = document.querySelector("#menuOpenButton");
 const menuSheet = document.querySelector("#menuSheet");
 const menuCloseButton = document.querySelector("#menuCloseButton");
+const filterSwitchButton = document.querySelector("#filterSwitchButton");
 const aboutOpenButton = document.querySelector("#aboutOpenButton");
 const aboutSheet = document.querySelector("#aboutSheet");
 const aboutCloseButton = document.querySelector("#aboutCloseButton");
@@ -1303,6 +1304,15 @@ function closeMenuSheet() {
   menuSheet?.classList.remove("is-open");
   menuSheet?.setAttribute("aria-hidden", "true");
   menuOpenButton?.setAttribute("aria-expanded", "false");
+}
+
+function setFilterMenuOpen(open) {
+  document.body.classList.toggle("is-filter-menu-open", Boolean(open));
+  filterSwitchButton?.setAttribute("aria-expanded", String(Boolean(open)));
+}
+
+function toggleFilterMenu() {
+  setFilterMenuOpen(!document.body.classList.contains("is-filter-menu-open"));
 }
 
 function openAboutSheet() {
@@ -5107,6 +5117,7 @@ targetCoordinates?.addEventListener("click", copyTargetCoordinates);
 menuOpenButton?.addEventListener("click", openMenuSheet);
 menuCloseButton?.addEventListener("click", closeMenuSheet);
 adminOpenButton?.addEventListener("click", closeMenuSheet);
+filterSwitchButton?.addEventListener("click", toggleFilterMenu);
 aboutOpenButton?.addEventListener("click", openAboutSheet);
 aboutCloseButton?.addEventListener("click", closeAboutSheet);
 viewSwitchButton?.addEventListener("click", (event) => {
