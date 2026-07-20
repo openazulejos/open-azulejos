@@ -4609,9 +4609,7 @@ button.admin-member-stat:focus-visible {
   }
 
   .menu-view-options {
-    display: grid;
-    gap: 14px;
-    justify-items: center;
+    display: contents;
   }
 
   .menu-view-options button {
