@@ -3873,12 +3873,20 @@ async function beginRecordingFlow() {
   openSquareCamera();
 }
 
-const RECORD_ONBOARDING_STORAGE_KEY = "open-azulejos-record-onboarding-v1";
+const RECORD_ONBOARDING_ANONYMOUS_STORAGE_KEY = "open-azulejos-record-onboarding-anonymous-v2";
+const RECORD_ONBOARDING_ACCOUNT_STORAGE_PREFIX = "open-azulejos-record-onboarding-account-v2:";
 let recordOnboardingStep = 0;
+
+function recordOnboardingStorageKey() {
+  const accountId = String(contributorAccount?.profile?.id || "").trim();
+  return accountId
+    ? `${RECORD_ONBOARDING_ACCOUNT_STORAGE_PREFIX}${accountId}`
+    : RECORD_ONBOARDING_ANONYMOUS_STORAGE_KEY;
+}
 
 function hasSeenRecordOnboarding() {
   try {
-    return localStorage.getItem(RECORD_ONBOARDING_STORAGE_KEY) === "seen";
+    return localStorage.getItem(recordOnboardingStorageKey()) === "seen";
   } catch {
     return false;
   }
@@ -3886,7 +3894,7 @@ function hasSeenRecordOnboarding() {
 
 function markRecordOnboardingSeen() {
   try {
-    localStorage.setItem(RECORD_ONBOARDING_STORAGE_KEY, "seen");
+    localStorage.setItem(recordOnboardingStorageKey(), "seen");
   } catch {
     // Recording still works when private browsing blocks local storage.
   }
