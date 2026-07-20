@@ -251,15 +251,18 @@ textarea {
 }
 
 .filter-switch-arrow {
+  display: block;
+  flex: 0 0 auto;
   width: 7px;
   height: 7px;
   border-right: 1px solid currentColor;
   border-bottom: 1px solid currentColor;
-  transform: translateY(-3px) rotate(45deg);
+  transform: translateY(-2px) rotate(45deg);
+  transform-origin: center;
 }
 
 body.is-filter-menu-open .filter-switch-arrow {
-  transform: translateY(1px) rotate(225deg);
+  transform: translateY(2px) rotate(225deg);
 }
 
 .about-trigger,
@@ -4558,7 +4561,7 @@ button.admin-member-stat:focus-visible {
 @media (max-width: 760px) {
   .topbar {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    grid-template-columns: auto minmax(0, 1fr) auto;
     z-index: 900;
     height: auto;
     min-height: 54px;
@@ -4597,6 +4600,7 @@ button.admin-member-stat:focus-visible {
   .filter-switch {
     display: inline-flex;
     justify-self: center;
+    align-self: center;
     z-index: 980;
   }
 
