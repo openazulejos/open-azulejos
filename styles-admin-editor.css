@@ -1493,7 +1493,7 @@ pre {
 .azulejo-viewer-map-link {
   display: none;
   position: fixed;
-  top: 14px;
+  top: 30px;
   right: 58px;
   border: 0;
   background: transparent;
@@ -1503,6 +1503,7 @@ pre {
   font-weight: 300;
   line-height: 1;
   letter-spacing: 0;
+  transform: translateY(-50%);
   cursor: pointer;
 }
 
