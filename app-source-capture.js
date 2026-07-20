@@ -1552,6 +1552,12 @@ async function copyTargetCoordinates(event) {
   return copied;
 }
 
+function cssVariable(name, fallback) {
+  if (typeof getComputedStyle !== "function") return fallback;
+  const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  return value || fallback;
+}
+
 function drawGrid() {
   resizeGridCanvas();
   gridCtx.clearRect(0, 0, gridCanvas.width, gridCanvas.height);
@@ -1572,7 +1578,9 @@ function drawGrid() {
 
   gridCtx.save();
   applyCityClipPath();
-  gridCtx.strokeStyle = map.getZoom() < 14 ? "rgba(16, 16, 16, 0.20)" : "rgba(0, 92, 157, 0.34)";
+  gridCtx.strokeStyle = map.getZoom() < 14
+    ? cssVariable("--map-grid-muted", "rgba(16, 16, 16, 0.20)")
+    : cssVariable("--map-grid", "rgba(0, 92, 157, 0.34)");
   gridCtx.lineWidth = 0.7;
 
   for (let x = startX; x <= endX; x += step) {
@@ -3438,7 +3446,13 @@ function setCameraPermissionStep(step, state) {
 function setCameraPageState(active) {
   document.documentElement?.classList.toggle("is-camera-open", active);
   document.body?.classList.toggle("is-camera-open", active);
-  themeColorMeta?.setAttribute("content", active ? "#000000" : "#ffffff");
+  updateThemeColor(active);
+}
+
+function updateThemeColor(forceCamera = document.body?.classList.contains("is-camera-open")) {
+  if (!themeColorMeta?.setAttribute) return;
+  const isDark = window.matchMedia?.("(prefers-color-scheme: dark)")?.matches;
+  themeColorMeta.setAttribute("content", forceCamera || isDark ? "#0d0d0c" : "#ffffff");
 }
 
 function openPermissionCameraShell() {
@@ -4843,6 +4857,15 @@ mosaicToggle.addEventListener("change", setMosaicVisibility);
 sampleToggle.addEventListener("change", setSampleVisibility);
 mosaicOpacity.addEventListener("input", setMosaicOpacity);
 
+const colorSchemeMedia = window.matchMedia?.("(prefers-color-scheme: dark)");
+const handleColorSchemeChange = () => {
+  updateThemeColor();
+  drawGrid();
+  refreshTileVisibility();
+};
+if (colorSchemeMedia?.addEventListener) colorSchemeMedia.addEventListener("change", handleColorSchemeChange);
+else colorSchemeMedia?.addListener?.(handleColorSchemeChange);
+
 map.on("move zoom resize", drawGrid);
 map.on("moveend", () => {
   invalidateServerViewportCounts();
@@ -4897,6 +4920,7 @@ restoreMosaicState();
 restoreContributionView();
 const initialCell = cellForLatLng(HOME_VIEW.center[0], HOME_VIEW.center[1]);
 cursorReadout.textContent = `Lisboa · grille 3 m · ${initialCell.code}`;
+updateThemeColor();
 updateZoomPercent();
 updateTargetCoordinates();
 if (hashCell) {

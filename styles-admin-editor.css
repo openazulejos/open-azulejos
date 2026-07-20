@@ -6,7 +6,45 @@
   --accent: #005c9d;
   --azul: #0e6eae;
   --tile: #fdfaf0;
+  --paper-rgb: 255, 255, 255;
+  --ink-rgb: 16, 16, 16;
+  --panel: rgba(255, 255, 255, 0.9);
+  --panel-strong: rgba(255, 255, 255, 0.98);
+  --field: rgba(255, 255, 255, 0.58);
+  --field-soft: rgba(255, 255, 255, 0.34);
+  --map-paper: #ffffff;
+  --map-grid: rgba(0, 92, 157, 0.34);
+  --map-grid-muted: rgba(16, 16, 16, 0.20);
+  --tile-empty: #f1f0eb;
+  --viewer-surface: rgba(255, 255, 255, 0.98);
+  --link-blue: #1769e0;
   font-family: "Helvetica Neue", Arial, sans-serif;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink: #f4f4ef;
+    --paper: #0d0d0c;
+    --muted: #b9b9b0;
+    --line: rgba(244, 244, 239, 0.24);
+    --accent: #78bdf3;
+    --azul: #5eb4ff;
+    --tile: #181816;
+    --paper-rgb: 13, 13, 12;
+    --ink-rgb: 244, 244, 239;
+    --panel: rgba(13, 13, 12, 0.88);
+    --panel-strong: rgba(13, 13, 12, 0.98);
+    --field: rgba(244, 244, 239, 0.09);
+    --field-soft: rgba(244, 244, 239, 0.06);
+    --map-paper: #0b0b0a;
+    --map-grid: rgba(99, 169, 228, 0.42);
+    --map-grid-muted: rgba(244, 244, 239, 0.20);
+    --tile-empty: #181816;
+    --viewer-surface: rgba(13, 13, 12, 0.98);
+    --link-blue: #78bdf3;
+    color-scheme: dark;
+  }
 }
 
 * {
@@ -141,7 +179,7 @@ textarea {
   min-width: 88px;
   padding: 5px 0;
   border: 1px solid rgba(16, 16, 16, 0.18);
-  background: rgba(255, 255, 255, 0.96);
+  background: var(--panel-strong);
   transform: translateX(-50%);
 }
 
@@ -210,7 +248,7 @@ textarea {
   padding: 0 12px;
   border: 1px solid var(--ink);
   border-radius: 0;
-  background: rgba(255, 255, 255, 0.92);
+  background: var(--panel);
   color: var(--ink);
   font-size: 12px;
   font-weight: 300;
@@ -232,7 +270,7 @@ textarea {
   inset: 52px 0 0 0;
   z-index: 610;
   overflow: auto;
-  background: #fff;
+  background: var(--paper);
   color: var(--ink);
   padding: 112px max(24px, 5vw) max(52px, env(safe-area-inset-bottom));
 }
@@ -345,7 +383,7 @@ textarea {
   aspect-ratio: 1;
   object-fit: cover;
   border: 1px solid rgba(16, 16, 16, 0.12);
-  background: #f2f2f2;
+  background: var(--tile-empty);
 }
 
 body.is-grid-view .map-stage,
@@ -719,7 +757,7 @@ body.is-grid-view .record-action {
   display: none;
   place-items: center;
   padding: 24px;
-  background: #fff;
+  background: var(--paper);
 }
 
 .location-permission-sheet.is-open {
@@ -835,7 +873,7 @@ body.is-grid-view .record-action {
 
 #map {
   z-index: 1;
-  background: #fff;
+  background: var(--map-paper);
 }
 
 #gridCanvas {
@@ -845,7 +883,7 @@ body.is-grid-view .record-action {
 
 .leaflet-container {
   font: inherit;
-  background: #fff;
+  background: var(--map-paper);
 }
 
 .leaflet-tile-pane {
@@ -918,7 +956,7 @@ body.is-grid-view .record-action {
   border: 0;
   border-radius: 0;
   background: transparent;
-  color: #1769e0;
+  color: var(--link-blue);
   cursor: pointer;
 }
 
@@ -977,7 +1015,7 @@ body.is-grid-view .record-action {
 }
 
 .target-coordinates.is-copied {
-  color: #1769e0;
+  color: var(--link-blue);
 }
 
 .map-location-probe {
@@ -1021,7 +1059,7 @@ body.is-grid-view .record-action {
   z-index: 650;
   padding: 7px 9px;
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--panel);
   color: var(--ink);
   font-size: 11px;
 }
@@ -1037,7 +1075,7 @@ body.is-grid-view .record-action {
   overflow: auto;
   padding: 12px;
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.86);
+  background: var(--panel);
   box-shadow: none;
 }
 
@@ -1124,7 +1162,7 @@ input[type="checkbox"] {
   padding: 0 8px;
   border: 1px solid var(--line);
   border-radius: 0;
-  background: rgba(255, 255, 255, 0.58);
+  background: var(--field);
   color: var(--ink);
 }
 
@@ -1215,7 +1253,7 @@ input[type="checkbox"] {
   padding: 7px;
   border: 1px solid var(--line);
   border-radius: 0;
-  background: rgba(255, 255, 255, 0.62);
+  background: var(--field);
   color: var(--ink);
   font-size: 11px;
   line-height: 1.35;
@@ -1258,7 +1296,7 @@ input[type="checkbox"] {
   padding: 0 8px;
   border: 1px solid var(--line);
   border-radius: 0;
-  background: rgba(255, 255, 255, 0.58);
+  background: var(--field);
   color: var(--ink);
   text-transform: none;
 }
@@ -1268,7 +1306,7 @@ input[type="checkbox"] {
   height: 34px;
   border: 1px solid var(--line);
   border-radius: 0;
-  background: rgba(255, 255, 255, 0.42);
+  background: var(--field-soft);
   color: var(--ink);
   cursor: pointer;
 }
@@ -1296,7 +1334,7 @@ input[type="checkbox"] {
   padding: 6px;
   border: 1px solid var(--line);
   border-radius: 0;
-  background: rgba(255, 255, 255, 0.42);
+  background: var(--field-soft);
   color: var(--ink);
   text-align: left;
   cursor: pointer;
@@ -1331,7 +1369,7 @@ input[type="checkbox"] {
   margin: 0;
   padding: 8px;
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.32);
+  background: var(--field-soft);
   font-size: 12px;
 }
 
@@ -1389,7 +1427,7 @@ canvas {
   width: 100%;
   aspect-ratio: 1;
   border: 1px solid var(--line);
-  background: #fff;
+  background: var(--paper);
 }
 
 figcaption {
@@ -1402,7 +1440,7 @@ figcaption {
   margin-top: 10px;
   padding: 8px;
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.48);
+  background: var(--field);
   color: var(--muted);
   font-size: 12px;
   line-height: 1.35;
@@ -1414,7 +1452,7 @@ figcaption {
   margin-top: 10px;
   padding: 8px;
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.32);
+  background: var(--field-soft);
 }
 
 .crop-controls label {
@@ -1445,7 +1483,7 @@ figcaption {
   padding: 0 8px;
   border: 1px solid var(--line);
   border-radius: 0;
-  background: rgba(255, 255, 255, 0.58);
+  background: var(--field);
   color: var(--ink);
 }
 
@@ -1502,7 +1540,7 @@ figcaption {
   place-items: center;
   border: 1px solid var(--line);
   color: var(--ink);
-  background: rgba(255, 255, 255, 0.34);
+  background: var(--field-soft);
   font-size: 12px;
   text-decoration: none;
 }
@@ -1517,7 +1555,7 @@ figcaption {
   margin: 4px 0 10px;
   padding: 9px;
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.48);
+  background: var(--field);
   color: var(--muted);
   font-size: 12px;
   line-height: 1.35;
@@ -1554,14 +1592,14 @@ pre {
   margin: 0 0 10px;
   padding: 12px;
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.5);
+  background: var(--field);
   font-size: 12px;
 }
 
 .azulejo-cell {
   image-rendering: auto;
   outline: 1px solid rgba(16, 16, 16, 0.46);
-  background: #f1f0eb;
+  background: var(--tile-empty);
   color: transparent;
   font-size: 0;
   opacity: 1 !important;
@@ -1572,7 +1610,7 @@ pre {
 }
 
 .azulejo-cell.is-image-unavailable {
-  background: #f1f0eb;
+  background: var(--tile-empty);
 }
 
 #azulejoViewerImage.is-image-unavailable {
@@ -1587,7 +1625,7 @@ pre {
   grid-template-rows: 1fr auto;
   place-items: center;
   padding: 18px;
-  background: rgba(255, 255, 255, 0.98);
+  background: var(--viewer-surface);
   cursor: default;
   touch-action: none;
   user-select: none;
@@ -1609,7 +1647,7 @@ pre {
   height: 100%;
   object-fit: contain;
   border: 1px solid var(--line);
-  background: #fff;
+  background: var(--paper);
 }
 
 .azulejo-viewer-visual.is-mosaic #azulejoViewerImage {
@@ -1633,7 +1671,7 @@ pre {
   min-width: 0;
   min-height: 0;
   overflow: hidden;
-  background: #fff;
+  background: var(--paper);
 }
 
 .azulejo-viewer-mosaic-cell img {
@@ -1724,7 +1762,7 @@ pre {
   z-index: 1400;
   display: none;
   overflow: auto;
-  background: #fff;
+  background: var(--paper);
   color: var(--ink);
   text-transform: none;
 }
@@ -4350,5 +4388,284 @@ button.admin-member-stat:focus-visible {
     left: 10px;
     bottom: calc(42vh + 22px);
     max-width: calc(100vw - 20px);
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  input,
+  textarea,
+  select {
+    background-color: var(--field);
+    color: var(--ink);
+    border-color: var(--line);
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--muted);
+  }
+
+  button {
+    color: var(--ink);
+  }
+
+  a {
+    color: var(--link-blue);
+  }
+
+  .brand,
+  .view-switch-button,
+  .about-trigger,
+  .account-trigger,
+  .admin-trigger,
+  .record-action,
+  .coordinates,
+  .target-coordinates,
+  .map-azulejo-count,
+  .zoom-readout {
+    text-shadow: 0 0 3px var(--paper);
+  }
+
+  .beta-label,
+  .about-trigger,
+  .account-trigger,
+  .view-switch-menu button,
+  .azulejo-grid-status,
+  .azulejo-filter-bar label,
+  .azulejo-grid-filters label {
+    color: var(--muted);
+  }
+
+  .view-switch-menu,
+  .record-action,
+  .coordinates,
+  .panel,
+  .location-permission-sheet,
+  .about-sheet,
+  .account-sheet,
+  .azulejo-viewer,
+  .record-onboarding,
+  .capture-preview {
+    background: var(--panel-strong);
+    color: var(--ink);
+  }
+
+  .leaflet-tile-pane {
+    filter: grayscale(1) invert(1) contrast(0.9) brightness(0.58);
+    opacity: 0.16;
+  }
+
+  .leaflet-control-attribution {
+    background: var(--panel) !important;
+    color: var(--muted) !important;
+  }
+
+  .leaflet-control-attribution a {
+    color: var(--ink) !important;
+  }
+
+  .leaflet-control-zoom a {
+    color: var(--ink) !important;
+  }
+
+  .neighborhood-cut {
+    stroke: rgba(var(--ink-rgb), 0.72) !important;
+  }
+
+  .cell-highlight {
+    stroke: var(--ink) !important;
+  }
+
+  .azulejo-cell,
+  .azulejo-grid-card img,
+  .preview-grid canvas,
+  #azulejoViewerImage,
+  .azulejo-viewer-mosaic-cell,
+  .admin-card img,
+  .admin-nearby-card img,
+  .admin-nearby-viewer img {
+    background: var(--tile-empty);
+  }
+
+  .azulejo-grid-view,
+  .azulejo-grid-toolbar,
+  .azulejo-filter-bar,
+  .azulejo-grid-filters {
+    background: var(--paper);
+    color: var(--ink);
+  }
+
+  .azulejo-filter-bar select,
+  .azulejo-grid-filters select,
+  .search-row input,
+  .active-cell textarea,
+  .archive-filter input,
+  .field-grid input,
+  .capture-preview input,
+  .account-sheet input,
+  .account-sheet textarea,
+  .account-sheet select {
+    background: var(--field);
+    color: var(--ink);
+    border-color: var(--line);
+  }
+
+  .nav-button,
+  .template-links a,
+  .archive-filter button,
+  .fragment-index-item,
+  .fragment-index-empty,
+  .crop-controls,
+  .capture-preview button,
+  .account-sheet button,
+  .location-permission-sheet button,
+  .record-onboarding button {
+    background: var(--field-soft);
+    color: var(--ink);
+    border-color: var(--line);
+  }
+
+  .nav-button.is-active,
+  .fragment-index-item:hover,
+  .fragment-index-item:focus-visible,
+  .account-sheet button[type="submit"],
+  .capture-preview button:last-child {
+    border-color: var(--ink);
+  }
+
+  .admin-page,
+  .dashboard-page {
+    background: var(--paper);
+    color: var(--ink);
+  }
+
+  .admin-header,
+  .admin-sidebar,
+  .dashboard-refresh-indicator,
+  .admin-login,
+  .admin-account-setup,
+  .admin-dashboard,
+  .admin-stat,
+  .admin-members,
+  .admin-card,
+  .admin-editor,
+  .admin-editor-header,
+  .admin-editor-footer,
+  .admin-editor-source,
+  .admin-editor-preview,
+  .admin-editor-adjustments,
+  .admin-moderation-dialog form,
+  .admin-nearby,
+  .admin-nearby-viewer,
+  .dashboard-primary-card,
+  .dashboard-metrics article,
+  .dashboard-summary {
+    background: var(--paper);
+    color: var(--ink);
+  }
+
+  .admin-header,
+  .admin-sidebar {
+    background: var(--panel-strong);
+  }
+
+  .admin-login input,
+  .admin-account-setup input,
+  .admin-account-setup select,
+  .admin-sidebar a,
+  .admin-login button,
+  .admin-toolbar button,
+  .admin-card button,
+  .admin-filters button,
+  .admin-contributor-filter select,
+  .admin-advanced-filters select,
+  .admin-motif-chip,
+  .admin-members-header button,
+  .admin-member-name button,
+  .admin-member-name input,
+  .admin-member-stat,
+  .admin-load-more,
+  .admin-editor button,
+  .admin-card-actions button,
+  .admin-moderation-dialog select,
+  .admin-moderation-dialog textarea,
+  .admin-moderation-dialog button,
+  .admin-nearby-viewer div button,
+  .admin-nearby-viewer div select,
+  .dashboard-login input,
+  .dashboard-login button,
+  .dashboard-hero button,
+  .dashboard-actions button,
+  .dashboard-actions a {
+    background: var(--field);
+    color: var(--ink);
+    border-color: var(--line);
+  }
+
+  .admin-sidebar a:hover,
+  .admin-sidebar a:focus-visible,
+  .admin-sidebar a.is-active,
+  .admin-filters button.is-active,
+  button.admin-member-stat:hover,
+  button.admin-member-stat:focus-visible,
+  .admin-load-more:hover,
+  .admin-load-more:focus-visible {
+    border-color: var(--ink);
+    color: var(--ink);
+  }
+
+  #adminEditorSave,
+  .admin-moderation-dialog button[type="submit"],
+  .admin-editor-source-actions button.is-active {
+    background: var(--ink);
+    color: var(--paper);
+  }
+
+  .admin-editor-source canvas,
+  .admin-editor-preview canvas,
+  .admin-point-magnifier,
+  .admin-nearby-viewer img {
+    background: var(--paper);
+  }
+
+  .admin-editor-column-resizer,
+  .admin-editor-row-resizer {
+    background: rgba(var(--ink-rgb), 0.18);
+  }
+
+  .admin-moderation-dialog {
+    background: rgba(var(--paper-rgb), 0.94);
+  }
+
+  .admin-activity-bars,
+  .dashboard-activity-track {
+    background: rgba(var(--ink-rgb), 0.13);
+  }
+
+  .admin-activity-submitted,
+  .dashboard-activity-submitted {
+    background: rgba(var(--ink-rgb), 0.34);
+  }
+
+  .admin-status-pill.is-pending,
+  .admin-card-actions .admin-reject {
+    border-color: #e3b84f;
+    color: #e3b84f;
+  }
+
+  .admin-status-pill.is-approved {
+    border-color: #65c880;
+    color: #65c880;
+  }
+
+  .admin-status-pill.is-rejected,
+  .admin-card-actions .admin-delete,
+  #adminEditorReject,
+  #adminEditorDelete,
+  .admin-card .admin-moderation-reason,
+  .admin-login p,
+  .admin-moderation-dialog p {
+    border-color: #ff8a8a;
+    color: #ff8a8a;
   }
 }
