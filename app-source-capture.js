@@ -1878,6 +1878,34 @@ function renderGridNeighborhoodOptions() {
     : "all";
 }
 
+function renderGridColorOptions() {
+  if (!gridColorFilter) return;
+  const previousValue = normalizeGridFilterValue(gridColorFilter.value);
+  const counts = new Map();
+  gridRecords.forEach((tile) => {
+    const color = normalizeGridFilterValue(tile.dominantColor || gridColorCache.get(tile.id));
+    if (color === "all") return;
+    counts.set(color, (counts.get(color) || 0) + 1);
+  });
+  const orderedColors = ["blue", "green", "yellow", "red", "brown", "black", "white", "grey", "multicolor"];
+  gridColorFilter.textContent = "";
+  const allOption = document.createElement("option");
+  allOption.value = "all";
+  allOption.textContent = "all colors";
+  gridColorFilter.append(allOption);
+  orderedColors
+    .filter((color) => counts.has(color))
+    .forEach((color) => {
+      const option = document.createElement("option");
+      option.value = color;
+      option.textContent = `${color} (${counts.get(color)})`;
+      gridColorFilter.append(option);
+    });
+  gridColorFilter.value = [...gridColorFilter.options].some((option) => option.value === previousValue)
+    ? previousValue
+    : "all";
+}
+
 function renderAzulejoGrid() {
   if (!azulejoGridList || !azulejoGridStatus) return;
   const filtered = gridRecords.filter(gridTileMatchesFilters);
@@ -2216,6 +2244,7 @@ function analyzeGridTileColor(tile, token) {
       context.drawImage(image, 0, 0, 24, 24);
       const pixels = context.getImageData(0, 0, 24, 24).data;
       gridColorCache.set(tile.id, dominantColorFamilyFromPixels(pixels));
+      renderGridColorOptions();
       if (activeViewMode === "grid" && normalizeGridFilterValue(gridColorFilter?.value) !== "all") {
         renderAzulejoGrid();
       }
@@ -2232,6 +2261,7 @@ function analyzeGridTileColor(tile, token) {
   };
   image.onerror = () => {
     gridColorCache.set(tile.id, "multicolor");
+    renderGridColorOptions();
   };
   image.src = tile.displayImage;
 }
@@ -2258,6 +2288,7 @@ async function loadGridAzulejos() {
       .filter(Boolean);
     gridRecordsLoaded = true;
     renderGridNeighborhoodOptions();
+    renderGridColorOptions();
     renderAzulejoGrid();
     renderAzulejoCanva();
     refreshTileVisibility();
