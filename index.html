@@ -49,7 +49,7 @@
     <meta name="twitter:image" content="https://openazulejos.com/assets/icon-512.png" />
     <link rel="preconnect" href="https://unpkg.com" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="./styles-admin-editor.css?v=20260720-record-button-help" />
+    <link rel="stylesheet" href="./styles-admin-editor.css?v=20260720-canva-view" />
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
@@ -161,6 +161,7 @@
         <div class="view-switch-menu" id="viewSwitchMenu" role="listbox" hidden>
           <button type="button" role="option" aria-selected="true" data-view-mode="map">map</button>
           <button type="button" role="option" aria-selected="false" data-view-mode="grid">grid</button>
+          <button type="button" role="option" aria-selected="false" data-view-mode="canva">canva</button>
         </div>
       </div>
       <nav class="nav">
@@ -235,6 +236,18 @@
         <div class="azulejo-grid-inner">
           <p class="azulejo-grid-status" id="azulejoGridStatus">loading azulejos</p>
           <div class="azulejo-grid-list" id="azulejoGridList" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <section class="azulejo-canva-view" id="azulejoCanvaView" aria-hidden="true" hidden>
+        <div class="azulejo-canva-status" id="azulejoCanvaStatus">loading azulejos</div>
+        <div class="azulejo-canva-viewport" id="azulejoCanvaViewport" tabindex="0" aria-label="generative azulejo canva">
+          <div class="azulejo-canva-world" id="azulejoCanvaWorld"></div>
+        </div>
+        <div class="azulejo-canva-controls" aria-label="canva zoom controls">
+          <button id="azulejoCanvaZoomOut" type="button" aria-label="zoom out">−</button>
+          <span id="azulejoCanvaZoomLabel">100%</span>
+          <button id="azulejoCanvaZoomIn" type="button" aria-label="zoom in">+</button>
         </div>
       </section>
 
@@ -677,6 +690,6 @@ azulejo-002.jpg,38.71072,-9.13908,Baixa</code></pre>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="./offline-queue.js?v=20260702-contribution-rights"></script>
-    <script src="./app-source-capture.js?v=20260720-record-button-help"></script>
+    <script src="./app-source-capture.js?v=20260720-canva-view"></script>
   </body>
 </html>

@@ -191,6 +191,13 @@ const viewSwitchMenu = document.querySelector("#viewSwitchMenu");
 const azulejoGridView = document.querySelector("#azulejoGridView");
 const azulejoGridList = document.querySelector("#azulejoGridList");
 const azulejoGridStatus = document.querySelector("#azulejoGridStatus");
+const azulejoCanvaView = document.querySelector("#azulejoCanvaView");
+const azulejoCanvaViewport = document.querySelector("#azulejoCanvaViewport");
+const azulejoCanvaWorld = document.querySelector("#azulejoCanvaWorld");
+const azulejoCanvaStatus = document.querySelector("#azulejoCanvaStatus");
+const azulejoCanvaZoomOut = document.querySelector("#azulejoCanvaZoomOut");
+const azulejoCanvaZoomIn = document.querySelector("#azulejoCanvaZoomIn");
+const azulejoCanvaZoomLabel = document.querySelector("#azulejoCanvaZoomLabel");
 const gridNeighborhoodFilter = document.querySelector("#gridNeighborhoodFilter");
 const gridColorFilter = document.querySelector("#gridColorFilter");
 const gridTypeFilter = document.querySelector("#gridTypeFilter");
@@ -336,6 +343,9 @@ let gridRecordsLoading = false;
 let gridRecordsError = "";
 const gridColorCache = new Map();
 let gridColorAnalysisToken = 0;
+let canvaZoom = 1;
+let canvaRenderTimer = null;
+let canvaRenderSignature = "";
 let allCityClipPolygons = [];
 const neighborhoodClipPolygons = new Map();
 
@@ -1891,6 +1901,211 @@ function renderAzulejoGrid() {
   azulejoGridList.append(fragment);
 }
 
+const CANVA_BASE_CELL_SIZE = 92;
+const CANVA_MIN_ZOOM = 0.55;
+const CANVA_MAX_ZOOM = 2.4;
+const CANVA_WORLD_CELLS = 92;
+const CANVA_RENDER_BUFFER = 3;
+const CANVA_MAX_RENDERED_TILES = 520;
+
+function seededHash(...values) {
+  let hash = 2166136261;
+  values.forEach((value) => {
+    const text = String(value);
+    for (let index = 0; index < text.length; index += 1) {
+      hash ^= text.charCodeAt(index);
+      hash = Math.imul(hash, 16777619);
+    }
+  });
+  return hash >>> 0;
+}
+
+function seededPick(items, ...seedValues) {
+  if (!items.length) return null;
+  return items[seededHash(...seedValues) % items.length];
+}
+
+function recordsByDominantColor(records) {
+  const groups = new Map();
+  records.forEach((tile) => {
+    const color = normalizeGridFilterValue(gridColorCache.get(tile.id) || tile.dominantColor || "multicolor");
+    const key = color === "all" ? "multicolor" : color;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(tile);
+  });
+  return groups;
+}
+
+function canvaBiomeForCell(cellX, cellY, colorGroups) {
+  const biomeX = Math.floor(cellX / 9);
+  const biomeY = Math.floor(cellY / 9);
+  const colors = [...colorGroups.keys()].filter((color) => color !== "white");
+  const fallbackColors = colors.length ? colors : [...colorGroups.keys()];
+  const primary = seededPick(fallbackColors, "primary", biomeX, biomeY) || "multicolor";
+  const secondary = seededPick(fallbackColors, "secondary", biomeX + 17, biomeY - 11) || primary;
+  const rhythm = seededHash("rhythm", biomeX, biomeY) % 5;
+  return { biomeX, biomeY, primary, secondary, rhythm };
+}
+
+function canvaPatchForCell(cellX, cellY, biome) {
+  const patchRoll = seededHash("patch", biome.biomeX, biome.biomeY) % 100;
+  const size = patchRoll > 92 ? 8 : patchRoll > 78 ? 5 : patchRoll > 54 ? 3 : patchRoll > 25 ? 2 : 1;
+  if (size <= 1) return { size: 1, anchorX: cellX, anchorY: cellY, localX: 0, localY: 0 };
+  const anchorX = Math.floor(cellX / size) * size;
+  const anchorY = Math.floor(cellY / size) * size;
+  return {
+    size,
+    anchorX,
+    anchorY,
+    localX: cellX - anchorX,
+    localY: cellY - anchorY,
+  };
+}
+
+function canvaRotationForPatch(patch) {
+  if (patch.size === 2) {
+    const rotations = [[0, 90], [270, 180]];
+    return rotations[patch.localY]?.[patch.localX] || 0;
+  }
+  if (patch.size === 3) {
+    const center = 1;
+    if (patch.localX === center && patch.localY === center) return 0;
+    if (patch.localY < center) return patch.localX < center ? 0 : patch.localX > center ? 90 : 0;
+    if (patch.localY > center) return patch.localX < center ? 270 : patch.localX > center ? 180 : 180;
+    return patch.localX < center ? 270 : 90;
+  }
+  return [0, 90, 180, 270][seededHash("rotation", patch.anchorX, patch.anchorY, patch.localX, patch.localY) % 4];
+}
+
+function canvaTileForCell(cellX, cellY, records, colorGroups) {
+  if (!records.length) return null;
+  const biome = canvaBiomeForCell(cellX, cellY, colorGroups);
+  const patch = canvaPatchForCell(cellX, cellY, biome);
+  const useSecondary = biome.rhythm === 1
+    ? (cellX + cellY) % 3 === 0
+    : biome.rhythm === 2
+    ? cellX % 4 === 0
+    : biome.rhythm === 3
+    ? cellY % 4 === 0
+    : seededHash("speckle", cellX, cellY) % 11 === 0;
+  const color = useSecondary ? biome.secondary : biome.primary;
+  const colorCandidates = colorGroups.get(color) || records;
+  const motifCandidates = patch.size > 1
+    ? colorCandidates.filter((tile) => normalizeGridFilterValue(tile.motif) !== "all")
+    : [];
+  const candidates = motifCandidates.length ? motifCandidates : colorCandidates;
+  const tile = seededPick(candidates, "tile", patch.anchorX, patch.anchorY, patch.size, biome.primary, biome.secondary)
+    || seededPick(records, "fallback", cellX, cellY);
+  return {
+    tile,
+    rotation: canvaRotationForPatch(patch),
+    patchSize: patch.size,
+    biome,
+  };
+}
+
+function canvaFilteredRecords() {
+  return gridRecords.filter(gridTileMatchesFilters);
+}
+
+function updateCanvaZoomLabel() {
+  if (azulejoCanvaZoomLabel) azulejoCanvaZoomLabel.textContent = `${Math.round(canvaZoom * 100)}%`;
+  if (azulejoCanvaWorld) {
+    const cellSize = Math.round(CANVA_BASE_CELL_SIZE * canvaZoom);
+    azulejoCanvaWorld.style.setProperty("--canva-cell-size", `${cellSize}px`);
+    azulejoCanvaWorld.style.setProperty("--canva-world-width", `${cellSize * CANVA_WORLD_CELLS}px`);
+    azulejoCanvaWorld.style.setProperty("--canva-world-height", `${cellSize * CANVA_WORLD_CELLS}px`);
+  }
+}
+
+function renderAzulejoCanva() {
+  if (!azulejoCanvaWorld || !azulejoCanvaViewport || !azulejoCanvaStatus) return;
+  const records = canvaFilteredRecords();
+  azulejoCanvaStatus.textContent = gridRecordsError
+    || (gridRecordsLoading
+      ? "loading azulejos"
+      : `${records.length}/${gridRecords.length} azulejos · generative canva`);
+  updateCanvaZoomLabel();
+  if (!records.length) {
+    azulejoCanvaWorld.textContent = "";
+    canvaRenderSignature = "";
+    return;
+  }
+
+  const cellSize = Math.round(CANVA_BASE_CELL_SIZE * canvaZoom);
+  const firstX = Math.max(0, Math.floor(azulejoCanvaViewport.scrollLeft / cellSize) - CANVA_RENDER_BUFFER);
+  const firstY = Math.max(0, Math.floor(azulejoCanvaViewport.scrollTop / cellSize) - CANVA_RENDER_BUFFER);
+  const lastX = Math.min(CANVA_WORLD_CELLS - 1, Math.ceil((azulejoCanvaViewport.scrollLeft + azulejoCanvaViewport.clientWidth) / cellSize) + CANVA_RENDER_BUFFER);
+  const lastY = Math.min(CANVA_WORLD_CELLS - 1, Math.ceil((azulejoCanvaViewport.scrollTop + azulejoCanvaViewport.clientHeight) / cellSize) + CANVA_RENDER_BUFFER);
+  const signature = `${firstX}:${firstY}:${lastX}:${lastY}:${cellSize}:${records.map((tile) => tile.id).join(",")}:${[gridColorFilter?.value, gridNeighborhoodFilter?.value, gridTypeFilter?.value, gridMotifFilter?.value].join("|")}`;
+  if (signature === canvaRenderSignature) return;
+  canvaRenderSignature = signature;
+
+  const colorGroups = recordsByDominantColor(records);
+  const fragment = document.createDocumentFragment();
+  let rendered = 0;
+  for (let y = firstY; y <= lastY && rendered < CANVA_MAX_RENDERED_TILES; y += 1) {
+    for (let x = firstX; x <= lastX && rendered < CANVA_MAX_RENDERED_TILES; x += 1) {
+      const generated = canvaTileForCell(x - Math.floor(CANVA_WORLD_CELLS / 2), y - Math.floor(CANVA_WORLD_CELLS / 2), records, colorGroups);
+      if (!generated?.tile) continue;
+      const button = document.createElement("button");
+      const image = document.createElement("img");
+      button.className = "azulejo-canva-tile";
+      button.type = "button";
+      button.style.left = `${x * cellSize}px`;
+      button.style.top = `${y * cellSize}px`;
+      button.style.setProperty("--canva-rotation", `${generated.rotation}deg`);
+      button.title = generated.tile.title || "recorded azulejo";
+      image.src = generated.tile.displayImage;
+      image.alt = generated.tile.title || "recorded azulejo";
+      image.loading = "lazy";
+      image.decoding = "async";
+      button.append(image);
+      button.addEventListener("click", () => openAzulejoViewer(generated.tile, { origin: "canva" }));
+      fragment.append(button);
+      rendered += 1;
+    }
+  }
+  azulejoCanvaWorld.replaceChildren(fragment);
+}
+
+function scheduleAzulejoCanvaRender(delay = 40) {
+  if (activeViewMode !== "canva") return;
+  if (canvaRenderTimer !== null) window.clearTimeout(canvaRenderTimer);
+  canvaRenderTimer = window.setTimeout(() => {
+    canvaRenderTimer = null;
+    renderAzulejoCanva();
+  }, delay);
+}
+
+function setCanvaZoom(nextZoom) {
+  if (!azulejoCanvaViewport) return;
+  const previousCellSize = Math.round(CANVA_BASE_CELL_SIZE * canvaZoom);
+  const centerX = azulejoCanvaViewport.scrollLeft + azulejoCanvaViewport.clientWidth / 2;
+  const centerY = azulejoCanvaViewport.scrollTop + azulejoCanvaViewport.clientHeight / 2;
+  canvaZoom = Math.max(CANVA_MIN_ZOOM, Math.min(CANVA_MAX_ZOOM, nextZoom));
+  updateCanvaZoomLabel();
+  const nextCellSize = Math.round(CANVA_BASE_CELL_SIZE * canvaZoom);
+  const scale = previousCellSize ? nextCellSize / previousCellSize : 1;
+  azulejoCanvaViewport.scrollLeft = centerX * scale - azulejoCanvaViewport.clientWidth / 2;
+  azulejoCanvaViewport.scrollTop = centerY * scale - azulejoCanvaViewport.clientHeight / 2;
+  canvaRenderSignature = "";
+  renderAzulejoCanva();
+}
+
+function centerAzulejoCanva() {
+  if (!azulejoCanvaViewport || !azulejoCanvaWorld) return;
+  updateCanvaZoomLabel();
+  const center = () => {
+    azulejoCanvaViewport.scrollLeft = (azulejoCanvaWorld.offsetWidth - azulejoCanvaViewport.clientWidth) / 2;
+    azulejoCanvaViewport.scrollTop = (azulejoCanvaWorld.offsetHeight - azulejoCanvaViewport.clientHeight) / 2;
+    canvaRenderSignature = "";
+    renderAzulejoCanva();
+  };
+  if (typeof window.requestAnimationFrame === "function") window.requestAnimationFrame(center);
+  else center();
+}
+
 function colorFamilyFromRgb(red, green, blue) {
   const max = Math.max(red, green, blue);
   const min = Math.min(red, green, blue);
@@ -1951,6 +2166,10 @@ function analyzeGridTileColor(tile, token) {
       if (activeViewMode === "grid" && normalizeGridFilterValue(gridColorFilter?.value) !== "all") {
         renderAzulejoGrid();
       }
+      if (activeViewMode === "canva" && normalizeGridFilterValue(gridColorFilter?.value) !== "all") {
+        canvaRenderSignature = "";
+        renderAzulejoCanva();
+      }
       if (activeViewMode === "map" && normalizeGridFilterValue(gridColorFilter?.value) !== "all") {
         refreshTileVisibility();
       }
@@ -1976,6 +2195,7 @@ async function loadGridAzulejos() {
   gridRecordsLoading = true;
   gridRecordsError = "";
   renderAzulejoGrid();
+  renderAzulejoCanva();
   try {
     const response = await fetch("/api/records?grid=1&limit=1000");
     if (!response.ok) throw new Error("grid records unavailable");
@@ -1986,6 +2206,7 @@ async function loadGridAzulejos() {
     gridRecordsLoaded = true;
     renderGridNeighborhoodOptions();
     renderAzulejoGrid();
+    renderAzulejoCanva();
     refreshTileVisibility();
     scheduleGridColorAnalysis();
   } catch (error) {
@@ -1994,11 +2215,14 @@ async function loadGridAzulejos() {
   } finally {
     gridRecordsLoading = false;
     renderAzulejoGrid();
+    renderAzulejoCanva();
   }
 }
 
 function applyAzulejoFilters(options = {}) {
   renderAzulejoGrid();
+  canvaRenderSignature = "";
+  renderAzulejoCanva();
   renderNeighborhoodLayer();
   drawGrid();
   refreshTileVisibility();
@@ -2020,20 +2244,30 @@ function openViewSwitchMenu() {
 }
 
 function setViewMode(mode) {
-  const nextMode = mode === "grid" ? "grid" : "map";
+  const nextMode = ["map", "grid", "canva"].includes(mode) ? mode : "map";
   activeViewMode = nextMode;
   document.body.classList.toggle("is-grid-view", nextMode === "grid");
+  document.body.classList.toggle("is-canva-view", nextMode === "canva");
   if (viewSwitchLabel) viewSwitchLabel.textContent = nextMode;
   if (azulejoGridView) {
     azulejoGridView.hidden = nextMode !== "grid";
     azulejoGridView.setAttribute("aria-hidden", nextMode === "grid" ? "false" : "true");
   }
+  if (azulejoCanvaView) {
+    azulejoCanvaView.hidden = nextMode !== "canva";
+    azulejoCanvaView.setAttribute("aria-hidden", nextMode === "canva" ? "false" : "true");
+  }
   viewSwitchMenu?.querySelectorAll?.("[data-view-mode]")?.forEach((button) => {
     button.setAttribute("aria-selected", button.dataset.viewMode === nextMode ? "true" : "false");
   });
   closeViewSwitchMenu();
-  if (nextMode === "grid") {
+  if (nextMode === "grid" || nextMode === "canva") {
     loadGridAzulejos();
+    if (nextMode === "canva") {
+      canvaRenderSignature = "";
+      if (!azulejoCanvaViewport?.scrollLeft && !azulejoCanvaViewport?.scrollTop) centerAzulejoCanva();
+      else renderAzulejoCanva();
+    }
   } else {
     map.invalidateSize();
     updateMapAzulejoCount();
@@ -4778,6 +5012,14 @@ viewSwitchButton?.addEventListener("click", (event) => {
 viewSwitchMenu?.querySelectorAll?.("[data-view-mode]")?.forEach((button) => {
   button.addEventListener("click", () => setViewMode(button.dataset.viewMode));
 });
+azulejoCanvaViewport?.addEventListener("scroll", () => scheduleAzulejoCanvaRender());
+azulejoCanvaViewport?.addEventListener("wheel", (event) => {
+  if (!event.ctrlKey && !event.metaKey) return;
+  event.preventDefault();
+  setCanvaZoom(canvaZoom + (event.deltaY < 0 ? 0.12 : -0.12));
+}, { passive: false });
+azulejoCanvaZoomOut?.addEventListener("click", () => setCanvaZoom(canvaZoom - 0.18));
+azulejoCanvaZoomIn?.addEventListener("click", () => setCanvaZoom(canvaZoom + 0.18));
 document.addEventListener("click", (event) => {
   if (!viewSwitchMenu || viewSwitchMenu.hasAttribute("hidden")) return;
   if (viewSwitchButton?.contains?.(event.target) || viewSwitchMenu.contains?.(event.target)) return;
@@ -4918,6 +5160,10 @@ neighborhoodLayerReady.finally(() => {
 });
 window.addEventListener?.("online", () => {
   flushOfflineContributions().catch((error) => console.error("Offline contribution sync failed:", error));
+});
+window.addEventListener?.("resize", () => {
+  canvaRenderSignature = "";
+  scheduleAzulejoCanvaRender(0);
 });
 flushOfflineContributions().catch((error) => console.error("Offline contribution sync failed:", error));
 if (typeof fetch === "function") {

@@ -309,6 +309,107 @@ textarea {
   display: none;
 }
 
+.azulejo-canva-view {
+  position: fixed;
+  inset: 52px 0 0 0;
+  z-index: 612;
+  display: grid;
+  grid-template-rows: 1fr;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.azulejo-canva-view[hidden] {
+  display: none;
+}
+
+.azulejo-canva-viewport {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  overscroll-behavior: contain;
+  background: var(--paper);
+  outline: none;
+  touch-action: pan-x pan-y pinch-zoom;
+}
+
+.azulejo-canva-world {
+  position: relative;
+  width: var(--canva-world-width, 7200px);
+  height: var(--canva-world-height, 7200px);
+  background: var(--paper);
+}
+
+.azulejo-canva-tile {
+  position: absolute;
+  display: block;
+  width: var(--canva-cell-size, 96px);
+  height: var(--canva-cell-size, 96px);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: transparent;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.azulejo-canva-tile img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: rotate(var(--canva-rotation, 0deg)) scale(var(--canva-image-scale, 1.01));
+  transform-origin: center;
+  background: var(--tile-empty);
+}
+
+.azulejo-canva-status {
+  position: fixed;
+  left: 16px;
+  bottom: calc(max(18px, env(safe-area-inset-bottom)) + 54px);
+  z-index: 725;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 300;
+  pointer-events: none;
+}
+
+.azulejo-canva-controls {
+  position: fixed;
+  right: 18px;
+  bottom: max(18px, env(safe-area-inset-bottom));
+  z-index: 725;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 300;
+}
+
+.azulejo-canva-controls button {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--ink);
+  border-radius: 50%;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.azulejo-canva-controls span {
+  min-width: 42px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
 .azulejo-grid-inner {
   width: min(100%, 1480px);
   margin: 0 auto;
@@ -417,6 +518,7 @@ textarea {
 }
 
 body.is-grid-view .map-stage,
+body.is-canva-view .map-stage,
 body.is-grid-view .record-controls {
   pointer-events: none;
 }
@@ -4376,6 +4478,20 @@ button.admin-member-stat:focus-visible {
     padding: 122px 16px max(42px, env(safe-area-inset-bottom));
   }
 
+  .azulejo-canva-view {
+    inset: 62px 0 0 0;
+  }
+
+  .azulejo-canva-status {
+    left: 12px;
+    bottom: calc(max(18px, env(safe-area-inset-bottom)) + 48px);
+  }
+
+  .azulejo-canva-controls {
+    right: 12px;
+    bottom: max(18px, env(safe-area-inset-bottom));
+  }
+
   .azulejo-filter-bar,
   .azulejo-grid-filters {
     display: grid;
@@ -4520,6 +4636,7 @@ button.admin-member-stat:focus-visible {
 
   .azulejo-cell,
   .azulejo-grid-card img,
+  .azulejo-canva-tile img,
   .preview-grid canvas,
   #azulejoViewerImage,
   .azulejo-viewer-mosaic-cell,
@@ -4530,6 +4647,9 @@ button.admin-member-stat:focus-visible {
   }
 
   .azulejo-grid-view,
+  .azulejo-canva-view,
+  .azulejo-canva-viewport,
+  .azulejo-canva-world,
   .azulejo-grid-toolbar,
   .azulejo-filter-bar,
   .azulejo-grid-filters {
@@ -4565,6 +4685,12 @@ button.admin-member-stat:focus-visible {
     background: var(--field-soft);
     color: var(--ink);
     border-color: var(--line);
+  }
+
+  .azulejo-canva-controls button {
+    background: var(--paper);
+    color: var(--ink);
+    border-color: var(--ink);
   }
 
   .nav-button.is-active,
