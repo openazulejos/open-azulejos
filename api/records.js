@@ -185,7 +185,7 @@ const enrichAdminContributorMetadata = async (records, supabaseUrl, headers) => 
   const contributionRows = [];
   for (const group of chunks(ids, 120)) {
     const query = new URLSearchParams({
-      select: "legacy_azulejo_id,contributor_id,submitted_at",
+      select: "id,legacy_azulejo_id,contributor_id,submitted_at",
       legacy_azulejo_id: `in.(${group.join(",")})`,
       order: "submitted_at.desc",
     });
@@ -211,15 +211,122 @@ const enrichAdminContributorMetadata = async (records, supabaseUrl, headers) => 
     const profiles = await response.json();
     profiles.forEach((profile) => profileById.set(profile.user_id, profile));
   }
+  const contributionIds = [...new Set(contributionRows
+    .map((row) => row.id)
+    .filter((id) => UUID_PATTERN.test(String(id))))];
+  const latestModerationByContribution = new Map();
+  for (const group of chunks(contributionIds, 120)) {
+    const query = new URLSearchParams({
+      select: "contribution_id,next_status,created_at",
+      contribution_id: `in.(${group.join(",")})`,
+      order: "created_at.desc",
+    });
+    const response = await fetch(`${supabaseUrl}/rest/v1/moderation_events?${query}`, { headers });
+    if (!response.ok) continue;
+    const events = await response.json();
+    events.forEach((event) => {
+      if (!latestModerationByContribution.has(event.contribution_id)) {
+        latestModerationByContribution.set(event.contribution_id, event);
+      }
+    });
+  }
   return records.map((record) => {
     const contribution = contributionByRecord.get(record.id);
     const profile = contribution?.contributor_id ? profileById.get(contribution.contributor_id) : null;
     const pseudonym = String(profile?.pseudonym || record.photographer_credit || "").trim();
+    const moderationEvent = contribution?.id ? latestModerationByContribution.get(contribution.id) : null;
     return {
       ...record,
       contributor_id: contribution?.contributor_id || null,
       contributor_pseudonym: pseudonym || "anonymous",
+      moderation_updated_at: moderationEvent?.created_at || null,
     };
+  });
+};
+
+const enrichAdminMotifMetadata = async (records, supabaseUrl, headers) => {
+  const ids = [...new Set(records.map((record) => record.id).filter((id) => UUID_PATTERN.test(String(id))))];
+  if (!ids.length) return records;
+  const observationRows = [];
+  for (const group of chunks(ids, 120)) {
+    const query = new URLSearchParams({
+      select: "legacy_azulejo_id,physical_instance_id",
+      legacy_azulejo_id: `in.(${group.join(",")})`,
+    });
+    const response = await fetch(`${supabaseUrl}/rest/v1/observations?${query}`, { headers });
+    if (!response.ok) continue;
+    observationRows.push(...await response.json());
+  }
+  const instanceByRecord = new Map();
+  observationRows.forEach((row) => {
+    if (UUID_PATTERN.test(String(row.legacy_azulejo_id)) && UUID_PATTERN.test(String(row.physical_instance_id))) {
+      instanceByRecord.set(row.legacy_azulejo_id, row.physical_instance_id);
+    }
+  });
+  const instanceIds = [...new Set([...instanceByRecord.values()])];
+  if (!instanceIds.length) return records;
+  const parent = new Map(instanceIds.map((id) => [id, id]));
+  const find = (id) => {
+    if (!parent.has(id)) parent.set(id, id);
+    let root = id;
+    while (parent.get(root) !== root) root = parent.get(root);
+    while (parent.get(id) !== id) {
+      const next = parent.get(id);
+      parent.set(id, root);
+      id = next;
+    }
+    return root;
+  };
+  const unite = (first, second) => {
+    const firstRoot = find(first);
+    const secondRoot = find(second);
+    if (firstRoot !== secondRoot) parent.set(secondRoot, firstRoot);
+  };
+  for (const group of chunks(instanceIds, 80)) {
+    const list = group.join(",");
+    const query = new URLSearchParams({
+      select: "first_instance_id,second_instance_id,relation,score,reviewed,created_at",
+      reviewed: "eq.true",
+      relation: "in.(duplicate,same-pattern,variation)",
+      or: `(first_instance_id.in.(${list}),second_instance_id.in.(${list}))`,
+    });
+    const response = await fetch(`${supabaseUrl}/rest/v1/similarity_links?${query}`, { headers });
+    if (!response.ok) continue;
+    const links = await response.json();
+    links.forEach((link) => {
+      if (UUID_PATTERN.test(String(link.first_instance_id)) && UUID_PATTERN.test(String(link.second_instance_id))) {
+        unite(link.first_instance_id, link.second_instance_id);
+      }
+    });
+  }
+  const recordIdsByRoot = new Map();
+  records.forEach((record) => {
+    const instanceId = instanceByRecord.get(record.id);
+    if (!instanceId) return;
+    const root = find(instanceId);
+    if (!recordIdsByRoot.has(root)) recordIdsByRoot.set(root, []);
+    recordIdsByRoot.get(root).push(record.id);
+  });
+  const motifGroups = [...recordIdsByRoot.entries()]
+    .filter(([, recordIds]) => recordIds.length > 1)
+    .sort((first, second) => second[1].length - first[1].length || first[0].localeCompare(second[0]));
+  const motifByRecord = new Map();
+  motifGroups.forEach(([root, recordIds], index) => {
+    const group = {
+      id: `motif-${root}`,
+      label: `motif ${index + 1}`,
+      size: recordIds.length,
+    };
+    recordIds.forEach((recordId) => motifByRecord.set(recordId, group));
+  });
+  return records.map((record) => {
+    const motif = motifByRecord.get(record.id);
+    return motif ? {
+      ...record,
+      motif_group_id: motif.id,
+      motif_group_label: motif.label,
+      motif_group_size: motif.size,
+    } : record;
   });
 };
 
@@ -383,7 +490,8 @@ module.exports = async function handler(req, res) {
       try {
         const storedRecords = await readWebCameraRecordsByStatus(supabaseUrl, adminHeaders);
         const contributorRecords = await enrichAdminContributorMetadata(storedRecords, supabaseUrl, adminHeaders);
-        const records = await hydrateAdminMediaUrls(contributorRecords, supabaseUrl, adminHeaders, bucket);
+        const motifRecords = await enrichAdminMotifMetadata(contributorRecords, supabaseUrl, adminHeaders);
+        const records = await hydrateAdminMediaUrls(motifRecords, supabaseUrl, adminHeaders, bucket);
         res.setHeader("Vary", "x-admin-key");
         res.setHeader("Cache-Control", "private, no-store");
         return json(res, 200, { records });

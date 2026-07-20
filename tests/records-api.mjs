@@ -162,6 +162,90 @@ assert(statusCalls.some((url) => url.includes("moderation_status=eq.rejected")),
 
 global.fetch = async (url) => {
   const requestUrl = String(url);
+  if (requestUrl.includes("/rest/v1/azulejos?")) {
+    const status = requestUrl.match(/moderation_status=eq\.([^&]+)/)?.[1] || "unknown";
+    return {
+      ok: true,
+      json: async () => status === "pending" ? [
+        {
+          id: "aaaaaaaa-1111-4111-8111-aaaaaaaa1111",
+          created_at: "2026-06-29T22:00:00Z",
+          moderation_status: "pending",
+        },
+        {
+          id: "bbbbbbbb-2222-4222-8222-bbbbbbbb2222",
+          created_at: "2026-06-29T21:00:00Z",
+          moderation_status: "pending",
+        },
+      ] : [],
+    };
+  }
+  if (requestUrl.includes("/rest/v1/contributions?")) {
+    return {
+      ok: true,
+      json: async () => [
+        {
+          id: "cccccccc-3333-4333-8333-cccccccc3333",
+          legacy_azulejo_id: "aaaaaaaa-1111-4111-8111-aaaaaaaa1111",
+          contributor_id: null,
+          submitted_at: "2026-06-29T22:00:00Z",
+        },
+        {
+          id: "dddddddd-4444-4444-8444-dddddddd4444",
+          legacy_azulejo_id: "bbbbbbbb-2222-4222-8222-bbbbbbbb2222",
+          contributor_id: null,
+          submitted_at: "2026-06-29T21:00:00Z",
+        },
+      ],
+    };
+  }
+  if (requestUrl.includes("/rest/v1/moderation_events?")) {
+    return { ok: true, json: async () => [] };
+  }
+  if (requestUrl.includes("/rest/v1/observations?")) {
+    return {
+      ok: true,
+      json: async () => [
+        {
+          legacy_azulejo_id: "aaaaaaaa-1111-4111-8111-aaaaaaaa1111",
+          physical_instance_id: "eeeeeeee-5555-4555-8555-eeeeeeee5555",
+        },
+        {
+          legacy_azulejo_id: "bbbbbbbb-2222-4222-8222-bbbbbbbb2222",
+          physical_instance_id: "ffffffff-6666-4666-8666-ffffffff6666",
+        },
+      ],
+    };
+  }
+  if (requestUrl.includes("/rest/v1/similarity_links?")) {
+    return {
+      ok: true,
+      json: async () => [{
+        first_instance_id: "eeeeeeee-5555-4555-8555-eeeeeeee5555",
+        second_instance_id: "ffffffff-6666-4666-8666-ffffffff6666",
+        relation: "same-pattern",
+        reviewed: true,
+      }],
+    };
+  }
+  throw new Error(`unexpected motif admin read fetch: ${requestUrl}`);
+};
+let motifAdminReadBody = "";
+await handler({
+  method: "GET",
+  headers: { host: "localhost", "x-admin-key": "admin-test" },
+  url: "/api/records?admin=1",
+}, {
+  setHeader() {},
+  end(value) { motifAdminReadBody = value; },
+  set statusCode(value) { void value; },
+});
+const motifRecords = JSON.parse(motifAdminReadBody).records;
+assert(motifRecords.length === 2, "motif admin read should preserve linked records");
+assert(motifRecords[0].motif_group_id && motifRecords[0].motif_group_id === motifRecords[1].motif_group_id, "linked observations should share an admin motif group");
+
+global.fetch = async (url) => {
+  const requestUrl = String(url);
   const status = requestUrl.match(/moderation_status=eq\.([^&]+)/)?.[1] || "unknown";
   return {
     ok: true,

@@ -8,7 +8,7 @@
     <link rel="icon" href="./assets/favicon.ico" sizes="any" />
     <link rel="icon" href="./assets/favicon-32.png" type="image/png" />
     <link rel="apple-touch-icon" href="./assets/apple-touch-icon.png" />
-    <link rel="stylesheet" href="./styles-admin-editor.css?v=20260720-point-magnifier" />
+    <link rel="stylesheet" href="./styles-admin-editor.css?v=20260720-moderation-sort-motif" />
   </head>
   <body class="admin-page">
     <header class="admin-header">
@@ -105,6 +105,16 @@
             </label>
             <div class="admin-advanced-filters" aria-label="advanced moderation filters">
               <label>
+                sort
+                <select id="adminSortFilter">
+                  <option value="status-latest">status queue</option>
+                  <option value="latest-published">last published</option>
+                  <option value="latest-approved">last approved</option>
+                  <option value="latest-rejected">last rejected</option>
+                  <option value="oldest-published">oldest published</option>
+                </select>
+              </label>
+              <label>
                 neighborhood
                 <select id="adminNeighborhoodFilter">
                   <option value="all">all neighborhoods</option>
@@ -133,7 +143,7 @@
               </label>
               <label>
                 motif
-                <select id="adminMotifFilter" disabled>
+                <select id="adminMotifFilter">
                   <option value="all">all motifs</option>
                 </select>
               </label>
@@ -277,6 +287,6 @@
     </section>
     <script src="./admin-image.js?v=20260630-expand-border"></script>
     <script src="./admin-similarity.js?v=20260708-pattern-similarity"></script>
-    <script src="./admin.js?v=20260720-point-magnifier"></script>
+    <script src="./admin.js?v=20260720-moderation-sort-motif"></script>
   </body>
 </html>

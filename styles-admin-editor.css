@@ -3125,6 +3125,34 @@ pre {
   color: #aaa;
 }
 
+.admin-motif-chip {
+  justify-self: start;
+  min-height: 24px;
+  padding: 0 7px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--muted);
+  font: inherit;
+  font-size: 10px;
+  font-weight: 300;
+  cursor: pointer;
+}
+
+.admin-motif-chip::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 5px;
+  border: 1px solid currentColor;
+  transform: rotate(45deg) translateY(-1px);
+}
+
+.admin-motif-chip[hidden] {
+  display: none;
+}
+
 .admin-status {
   min-height: 18px;
   margin-bottom: 12px;
@@ -3334,17 +3362,17 @@ button.admin-member-stat:focus-visible {
   display: none;
 }
 
-.admin-card button {
+.admin-card-actions button {
   border-color: #9f1f1f;
   color: #9f1f1f;
 }
 
-.admin-card button:first-of-type {
+.admin-card-actions button:first-of-type {
   border-color: var(--ink);
   color: var(--ink);
 }
 
-.admin-card button[hidden] {
+.admin-card-actions button[hidden] {
   display: none;
 }
 

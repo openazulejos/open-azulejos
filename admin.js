@@ -18,6 +18,7 @@ const adminRefreshButton = document.querySelector("#adminRefreshButton");
 const adminStatus = document.querySelector("#adminStatus");
 const adminFilters = document.querySelector("#adminFilters");
 const adminContributorFilter = document.querySelector("#adminContributorFilter");
+const adminSortFilter = document.querySelector("#adminSortFilter");
 const adminNeighborhoodFilter = document.querySelector("#adminNeighborhoodFilter");
 const adminColorFilter = document.querySelector("#adminColorFilter");
 const adminTypeFilter = document.querySelector("#adminTypeFilter");
@@ -94,6 +95,7 @@ let adminRecords = [];
 let renderedRecordCount = 0;
 let adminRecordFilter = "pending";
 let adminContributorFilterValue = "all";
+let adminSortFilterValue = "status-latest";
 let adminNeighborhoodFilterValue = "all";
 let adminColorFilterValue = "all";
 let adminTypeFilterValue = "all";
@@ -349,10 +351,12 @@ function memberStat(label, value, action = null) {
 function showMemberPendingModeration(member) {
   adminRecordFilter = "pending";
   adminContributorFilterValue = String(member.userId || "").trim() || "anonymous";
+  adminSortFilterValue = "status-latest";
   adminNeighborhoodFilterValue = "all";
   adminColorFilterValue = "all";
   adminTypeFilterValue = "all";
   adminMotifFilterValue = "all";
+  if (adminSortFilter) adminSortFilter.value = "status-latest";
   if (adminColorFilter) adminColorFilter.value = "all";
   if (adminTypeFilter) adminTypeFilter.value = "all";
   if (adminMotifFilter) adminMotifFilter.value = "all";
@@ -606,6 +610,39 @@ function updateAdminFilters(records) {
   });
 }
 
+function timestampForRecord(record, field) {
+  const value = record?.[field];
+  const time = value ? new Date(value).getTime() : 0;
+  return Number.isFinite(time) ? time : 0;
+}
+
+function moderationSortTime(record, targetStatus) {
+  if (recordStatus(record) !== targetStatus) return 0;
+  return timestampForRecord(record, "moderation_updated_at") || timestampForRecord(record, "created_at");
+}
+
+function sortAdminRecords(records) {
+  const statusRank = { pending: 0, rejected: 1, approved: 2 };
+  const byLatestCreated = (first, second) => timestampForRecord(second, "created_at") - timestampForRecord(first, "created_at");
+  return records.slice().sort((first, second) => {
+    if (adminSortFilterValue === "latest-published") return byLatestCreated(first, second);
+    if (adminSortFilterValue === "oldest-published") return timestampForRecord(first, "created_at") - timestampForRecord(second, "created_at");
+    if (adminSortFilterValue === "latest-approved") {
+      const statusDelta = (recordStatus(second) === "approved") - (recordStatus(first) === "approved");
+      if (statusDelta) return statusDelta;
+      return moderationSortTime(second, "approved") - moderationSortTime(first, "approved") || byLatestCreated(first, second);
+    }
+    if (adminSortFilterValue === "latest-rejected") {
+      const statusDelta = (recordStatus(second) === "rejected") - (recordStatus(first) === "rejected");
+      if (statusDelta) return statusDelta;
+      return moderationSortTime(second, "rejected") - moderationSortTime(first, "rejected") || byLatestCreated(first, second);
+    }
+    const statusDelta = (statusRank[recordStatus(first)] ?? 3) - (statusRank[recordStatus(second)] ?? 3);
+    if (statusDelta) return statusDelta;
+    return byLatestCreated(first, second);
+  });
+}
+
 function filteredAdminRecords() {
   const byStatus = adminRecordFilter === "all"
     ? adminRecords
@@ -617,7 +654,7 @@ function filteredAdminRecords() {
     if (adminNeighborhoodFilterValue !== "all" && normalizedAdminFilterValue(adminNeighborhoodForRecord(record)) !== adminNeighborhoodFilterValue) return false;
     if (adminColorFilterValue !== "all" && adminColorCache.get(record.id) !== adminColorFilterValue) return false;
     if (adminTypeFilterValue !== "all" && normalizedAdminFilterValue(record.tile_type) !== adminTypeFilterValue) return false;
-    if (adminMotifFilterValue !== "all" && normalizedAdminFilterValue(record.motif_id || record.physical_instance_id) !== adminMotifFilterValue) return false;
+    if (adminMotifFilterValue !== "all" && normalizedAdminFilterValue(record.motif_group_id || record.motif_id || record.physical_instance_id) !== adminMotifFilterValue) return false;
     return true;
   });
 }
@@ -680,8 +717,41 @@ function updateNeighborhoodFilter(records) {
   adminNeighborhoodFilter.value = adminNeighborhoodFilterValue;
 }
 
+function updateMotifFilter(records) {
+  if (!adminMotifFilter) return;
+  const counts = new Map();
+  records.forEach((record) => {
+    const key = normalizedAdminFilterValue(record.motif_group_id || "");
+    if (!key) return;
+    const label = String(record.motif_group_label || "motif").trim() || "motif";
+    const size = Number(record.motif_group_size) || 0;
+    if (!counts.has(key)) counts.set(key, { key, label, count: 0, size });
+    counts.get(key).count += 1;
+    counts.get(key).size = Math.max(counts.get(key).size, size);
+  });
+  const options = [...counts.values()]
+    .filter((option) => option.count > 1 || option.size > 1)
+    .sort((first, second) => second.size - first.size || first.label.localeCompare(second.label, undefined, { sensitivity: "base" }));
+  const available = new Set(["all", ...options.map((option) => option.key)]);
+  if (!available.has(adminMotifFilterValue)) adminMotifFilterValue = "all";
+  adminMotifFilter.textContent = "";
+  const all = document.createElement("option");
+  all.value = "all";
+  all.textContent = options.length ? "all motifs" : "no linked motifs yet";
+  adminMotifFilter.append(all);
+  options.forEach((option) => {
+    const item = document.createElement("option");
+    item.value = option.key;
+    item.textContent = `${option.label} (${option.size || option.count})`;
+    adminMotifFilter.append(item);
+  });
+  adminMotifFilter.disabled = options.length === 0;
+  adminMotifFilter.value = adminMotifFilterValue;
+}
+
 function activeAdvancedFilterLabel() {
   const parts = [];
+  if (adminSortFilterValue !== "status-latest") parts.push(adminSortFilter?.selectedOptions?.[0]?.textContent || adminSortFilterValue);
   if (adminNeighborhoodFilterValue !== "all") parts.push(adminNeighborhoodFilter?.selectedOptions?.[0]?.textContent || adminNeighborhoodFilterValue);
   if (adminColorFilterValue !== "all") parts.push(adminColorFilter?.selectedOptions?.[0]?.textContent || adminColorFilterValue);
   if (adminTypeFilterValue !== "all") parts.push(adminTypeFilter?.selectedOptions?.[0]?.textContent || adminTypeFilterValue);
@@ -756,6 +826,19 @@ function appendRecordCard(record, index) {
     const status = document.createElement("span");
     status.className = "admin-status-pill";
 
+    const motifButton = document.createElement("button");
+    motifButton.type = "button";
+    motifButton.className = "admin-motif-chip";
+    motifButton.hidden = !record.motif_group_id;
+    motifButton.textContent = record.motif_group_label
+      ? `${record.motif_group_label} · ${record.motif_group_size || 2}`
+      : "linked motif";
+    motifButton.addEventListener("click", () => {
+      adminMotifFilterValue = normalizedAdminFilterValue(record.motif_group_id);
+      if (adminMotifFilter) adminMotifFilter.value = adminMotifFilterValue;
+      renderRecords(adminRecords);
+    });
+
     const moderationReason = document.createElement("p");
     moderationReason.className = "admin-moderation-reason";
     moderationReason.hidden = true;
@@ -804,7 +887,7 @@ function appendRecordCard(record, index) {
     deleteButton.addEventListener("click", () => deleteRecord(record, card));
 
     actions.append(editButton, approveButton, rejectButton, deleteButton);
-    card.append(image, title, status, moderationReason, meta, submissionDate, contributor, mapLink, publicLink, id, actions);
+    card.append(image, title, status, motifButton, moderationReason, meta, submissionDate, contributor, mapLink, publicLink, id, actions);
     updateCardStatus(card, record);
     adminGrid.append(card);
 }
@@ -824,18 +907,14 @@ function renderNextRecordBatch(batchSize = ADMIN_BATCH_SIZE) {
 }
 
 function renderRecords(records, note = "") {
-  adminRecords = records.slice().sort((first, second) => {
-    const rank = { pending: 0, rejected: 1, approved: 2 };
-    const statusDelta = (rank[recordStatus(first)] ?? 3) - (rank[recordStatus(second)] ?? 3);
-    if (statusDelta) return statusDelta;
-    return new Date(second.created_at || 0) - new Date(first.created_at || 0);
-  });
+  adminRecords = sortAdminRecords(records);
   const counts = moderationCounts(adminRecords);
   if (!counts[adminRecordFilter] && counts.pending) adminRecordFilter = "pending";
   else if (!counts[adminRecordFilter] && adminRecordFilter !== "all") adminRecordFilter = "all";
   updateAdminFilters(adminRecords);
   updateContributorFilter(adminRecords);
   updateNeighborhoodFilter(adminRecords);
+  updateMotifFilter(adminRecords);
   renderedRecordCount = 0;
   adminGrid.textContent = "";
   adminLoadMore.hidden = true;
@@ -1928,8 +2007,9 @@ adminContributorFilter.addEventListener("change", () => {
   renderRecords(adminRecords);
 });
 
-[adminNeighborhoodFilter, adminColorFilter, adminTypeFilter, adminMotifFilter].forEach((filter) => {
+[adminSortFilter, adminNeighborhoodFilter, adminColorFilter, adminTypeFilter, adminMotifFilter].forEach((filter) => {
   filter?.addEventListener("change", () => {
+    adminSortFilterValue = adminSortFilter?.value || "status-latest";
     adminNeighborhoodFilterValue = adminNeighborhoodFilter?.value || "all";
     adminColorFilterValue = adminColorFilter?.value || "all";
     adminTypeFilterValue = adminTypeFilter?.value || "all";
