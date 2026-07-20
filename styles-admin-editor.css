@@ -2183,7 +2183,8 @@ pre {
 }
 
 .admin-sidebar a:hover,
-.admin-sidebar a:focus-visible {
+.admin-sidebar a:focus-visible,
+.admin-sidebar a.is-active {
   border-color: var(--ink);
   color: var(--ink);
   outline: none;
@@ -2191,6 +2192,14 @@ pre {
 
 .admin-main-panel {
   min-width: 0;
+}
+
+.admin-page-section:not(.is-active) {
+  display: none !important;
+}
+
+.admin-account-setup.admin-page-section.is-active {
+  display: grid;
 }
 
 .admin-login input {

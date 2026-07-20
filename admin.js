@@ -11,6 +11,8 @@ const adminSetupRole = document.querySelector("#adminSetupRole");
 const adminSetupButton = document.querySelector("#adminSetupButton");
 const adminSetupStatus = document.querySelector("#adminSetupStatus");
 const adminTools = document.querySelector("#adminTools");
+const adminPageLinks = [...document.querySelectorAll("[data-admin-page-link]")];
+const adminPageSections = [...document.querySelectorAll("[data-admin-page]")];
 const adminForgetKeyButton = document.querySelector("#adminForgetKeyButton");
 const adminRefreshButton = document.querySelector("#adminRefreshButton");
 const adminStatus = document.querySelector("#adminStatus");
@@ -83,6 +85,7 @@ let renderedRecordCount = 0;
 let adminRecordFilter = "pending";
 let adminContributorFilterValue = "all";
 let adminAuthenticated = false;
+let activeAdminPage = "moderation";
 const editorState = {
   record: null,
   card: null,
@@ -176,6 +179,30 @@ async function loadAdminStats() {
 function showAdminTools() {
   adminAccessPanel.hidden = adminAuthenticated;
   adminTools.hidden = !adminAuthenticated;
+  if (adminAuthenticated) setAdminPage(pageFromHash() || activeAdminPage, { replace: true });
+}
+
+function pageFromHash() {
+  const page = window.location.hash.replace(/^#/, "").trim();
+  return ["dashboard", "moderation", "members", "accounts"].includes(page) ? page : "";
+}
+
+function setAdminPage(page, options = {}) {
+  const requestedPage = ["dashboard", "moderation", "members", "accounts"].includes(page) ? page : "moderation";
+  const targetPage = requestedPage === "accounts" && adminAccountSetup.hidden ? "moderation" : requestedPage;
+  activeAdminPage = targetPage;
+  adminPageSections.forEach((section) => {
+    section.classList.toggle("is-active", section.dataset.adminPage === targetPage);
+  });
+  adminPageLinks.forEach((link) => {
+    const active = link.dataset.adminPageLink === targetPage;
+    link.classList.toggle("is-active", active);
+    link.setAttribute("aria-current", active ? "page" : "false");
+  });
+  if (options.hash !== false && window.location.hash.replace(/^#/, "") !== targetPage) {
+    const method = options.replace ? "replaceState" : "pushState";
+    window.history[method](null, "", `#${targetPage}`);
+  }
 }
 
 function formatMemberDate(value) {
@@ -283,6 +310,7 @@ async function refreshAdminAccountState() {
   const response = await fetch("/api/admin-account", { credentials: "same-origin", cache: "no-store" });
   const data = await response.json().catch(() => ({}));
   adminAccountSetup.hidden = !response.ok || data.role !== "owner";
+  setAdminPage(pageFromHash() || activeAdminPage, { replace: true });
 }
 
 function googleMapsUrl(record) {
@@ -1500,6 +1528,17 @@ adminContributorFilter.addEventListener("change", () => {
 });
 
 adminLoadMore.addEventListener("click", () => renderNextRecordBatch());
+
+adminPageLinks.forEach((link) => {
+  link.addEventListener("click", (event) => {
+    event.preventDefault();
+    setAdminPage(link.dataset.adminPageLink);
+  });
+});
+
+window.addEventListener("hashchange", () => {
+  if (adminAuthenticated) setAdminPage(pageFromHash() || "moderation", { hash: false });
+});
 
 localStorage.removeItem("open-azulejos-admin-key");
 showAdminTools();

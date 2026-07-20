@@ -8,7 +8,7 @@
     <link rel="icon" href="./assets/favicon.ico" sizes="any" />
     <link rel="icon" href="./assets/favicon-32.png" type="image/png" />
     <link rel="apple-touch-icon" href="./assets/apple-touch-icon.png" />
-    <link rel="stylesheet" href="./styles-admin-editor.css?v=20260720-admin-sidebar" />
+    <link rel="stylesheet" href="./styles-admin-editor.css?v=20260720-admin-pages" />
   </head>
   <body class="admin-page">
     <header class="admin-header">
@@ -33,14 +33,14 @@
       <section class="admin-tools" id="adminTools" hidden>
         <aside class="admin-sidebar" aria-label="admin navigation">
           <nav>
-            <a href="#adminDashboard">dashboard</a>
-            <a href="#adminModeration">moderation</a>
-            <a href="#adminMembers">members</a>
-            <a href="#adminAccountSetup">admin accounts</a>
+            <a href="#dashboard" data-admin-page-link="dashboard">dashboard</a>
+            <a href="#moderation" data-admin-page-link="moderation">moderation</a>
+            <a href="#members" data-admin-page-link="members">members</a>
+            <a href="#accounts" data-admin-page-link="accounts">admin accounts</a>
           </nav>
         </aside>
         <div class="admin-main-panel">
-          <form class="admin-account-setup" id="adminAccountSetup" hidden>
+          <form class="admin-account-setup admin-page-section" id="adminAccountSetup" data-admin-page="accounts" hidden>
             <strong>add named admin account</strong>
             <label>email<input id="adminSetupEmail" type="email" autocomplete="username" required /></label>
             <label>new password<input id="adminSetupPassword" type="password" autocomplete="new-password" minlength="12" required /></label>
@@ -48,7 +48,7 @@
             <button id="adminSetupButton" type="submit">create account</button>
             <p id="adminSetupStatus" role="status"></p>
           </form>
-          <section class="admin-dashboard" id="adminDashboard" aria-labelledby="adminDashboardTitle">
+          <section class="admin-dashboard admin-page-section" id="adminDashboard" data-admin-page="dashboard" aria-labelledby="adminDashboardTitle">
             <header class="admin-dashboard-header">
               <div>
                 <h1 id="adminDashboardTitle">beta launch</h1>
@@ -72,7 +72,7 @@
             </section>
             <p class="admin-stats-summary" id="adminStatsSummary"></p>
           </section>
-          <section class="admin-members" id="adminMembers" aria-labelledby="adminMembersTitle">
+          <section class="admin-members admin-page-section" id="adminMembers" data-admin-page="members" aria-labelledby="adminMembersTitle">
             <header class="admin-members-header">
               <div>
                 <h2 id="adminMembersTitle">members</h2>
@@ -83,7 +83,7 @@
             <p class="admin-members-status" id="adminMembersStatus" role="status">loading members...</p>
             <div class="admin-members-list" id="adminMembersList"></div>
           </section>
-          <section class="admin-moderation" id="adminModeration" aria-labelledby="adminModerationTitle">
+          <section class="admin-moderation admin-page-section" id="adminModeration" data-admin-page="moderation" aria-labelledby="adminModerationTitle">
             <header class="admin-section-header">
               <h2 id="adminModerationTitle">moderation</h2>
               <div class="admin-toolbar">

@@ -1,6 +1,8 @@
 const {
   authorizeAdminRequest,
+  adminSessionCookie,
   clearedAdminSessionCookie,
+  createAdminSession,
 } = require("./_admin-auth");
 const { authorizeContributorRequest } = require("./_contributor-auth");
 
@@ -47,6 +49,9 @@ module.exports = async function handler(request, response) {
       });
     }
     const contributorAdmin = await contributorAdminAuthorization(request);
+    if (contributorAdmin) {
+      response.setHeader("Set-Cookie", adminSessionCookie(createAdminSession(contributorAdmin)));
+    }
     return respond(response, contributorAdmin ? 200 : 401, {
       authenticated: Boolean(contributorAdmin),
       method: contributorAdmin?.method || null,

@@ -77,6 +77,7 @@ await sessionHandler(contributorCheckRequest, contributorCheckResponse);
 const contributorCheck = JSON.parse(contributorCheckResponse.body);
 assert(contributorCheckResponse.statusCode === 200 && contributorCheck.authenticated, "admin contributor account should authorize beta capture");
 assert(contributorCheck.method === "contributor-admin", "contributor admin authorization should identify its method");
+assert(/open_azulejos_admin=/.test(contributorCheckResponse.headers["set-cookie"]), "admin contributor authorization should create an admin session cookie");
 assert(profileLookupUrl.includes("admin_profiles?"), "contributor admin check should query admin_profiles");
 
 global.fetch = originalFetch;
