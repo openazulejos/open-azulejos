@@ -2141,6 +2141,14 @@ pre {
   max-width: 620px;
 }
 
+.admin-login-shell[hidden] {
+  display: none !important;
+}
+
+.admin-page.is-admin-authenticated .admin-login-shell {
+  display: none !important;
+}
+
 .admin-login {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;

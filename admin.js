@@ -183,6 +183,7 @@ async function loadAdminStats() {
 }
 
 function showAdminTools() {
+  document.body.classList.toggle("is-admin-authenticated", adminAuthChecked && adminAuthenticated);
   if (!adminAuthChecked) {
     adminAccessPanel.hidden = true;
     adminTools.hidden = true;
