@@ -4516,15 +4516,11 @@ button.admin-member-stat:focus-visible {
   }
 
   .azulejo-filter-bar {
-    top: 51px;
-    z-index: 820;
-    width: min(100% - 24px, 560px);
-    padding: 4px 0 12px;
+    top: 52px;
+    z-index: 890;
+    width: 100%;
+    padding: 4px 12px 12px;
     background: var(--paper);
-  }
-
-  body:not(.is-grid-view):not(.is-canva-view) .azulejo-filter-bar {
-    display: none;
   }
 
   .azulejo-filter-bar label,
