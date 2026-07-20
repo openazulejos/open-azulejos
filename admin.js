@@ -18,6 +18,10 @@ const adminRefreshButton = document.querySelector("#adminRefreshButton");
 const adminStatus = document.querySelector("#adminStatus");
 const adminFilters = document.querySelector("#adminFilters");
 const adminContributorFilter = document.querySelector("#adminContributorFilter");
+const adminNeighborhoodFilter = document.querySelector("#adminNeighborhoodFilter");
+const adminColorFilter = document.querySelector("#adminColorFilter");
+const adminTypeFilter = document.querySelector("#adminTypeFilter");
+const adminMotifFilter = document.querySelector("#adminMotifFilter");
 const adminGrid = document.querySelector("#adminGrid");
 const adminLoadMore = document.querySelector("#adminLoadMore");
 const adminStatsPeriod = document.querySelector("#adminStatsPeriod");
@@ -87,9 +91,29 @@ let adminRecords = [];
 let renderedRecordCount = 0;
 let adminRecordFilter = "pending";
 let adminContributorFilterValue = "all";
+let adminNeighborhoodFilterValue = "all";
+let adminColorFilterValue = "all";
+let adminTypeFilterValue = "all";
+let adminMotifFilterValue = "all";
 let adminAuthenticated = false;
 let adminAuthChecked = false;
 let activeAdminPage = "moderation";
+let adminColorAnalysisToken = 0;
+const adminColorCache = new Map();
+const ADMIN_LISBON_NEIGHBORHOODS = [
+  { name: "belém", polygon: [[38.7047, -9.2298], [38.7111, -9.2053], [38.7019, -9.1859], [38.6902, -9.1912], [38.6881, -9.2195]] },
+  { name: "ajuda", polygon: [[38.7194, -9.2181], [38.7241, -9.1965], [38.7106, -9.1833], [38.7003, -9.1897], [38.7047, -9.2104]] },
+  { name: "estrela", polygon: [[38.7242, -9.1811], [38.7259, -9.1587], [38.7147, -9.1472], [38.7032, -9.1541], [38.7056, -9.1749]] },
+  { name: "campo de ourique", polygon: [[38.7320, -9.1839], [38.7341, -9.1637], [38.7248, -9.1516], [38.7149, -9.1585], [38.7156, -9.1788]] },
+  { name: "chiado", polygon: [[38.7175, -9.1512], [38.7172, -9.1392], [38.7091, -9.1347], [38.7041, -9.1429], [38.7082, -9.1519]] },
+  { name: "baixa", polygon: [[38.7186, -9.1413], [38.7195, -9.1326], [38.7098, -9.1291], [38.7049, -9.1362], [38.7102, -9.1425]] },
+  { name: "alfama", polygon: [[38.7200, -9.1340], [38.7184, -9.1212], [38.7113, -9.1177], [38.7049, -9.1258], [38.7098, -9.1332]] },
+  { name: "mouraria", polygon: [[38.7246, -9.1403], [38.7227, -9.1290], [38.7166, -9.1259], [38.7118, -9.1324], [38.7173, -9.1415]] },
+  { name: "graça", polygon: [[38.7292, -9.1374], [38.7280, -9.1235], [38.7201, -9.1179], [38.7139, -9.1258], [38.7203, -9.1365]] },
+  { name: "avenidas novas", polygon: [[38.7516, -9.1652], [38.7505, -9.1396], [38.7347, -9.1321], [38.7248, -9.1462], [38.7333, -9.1668]] },
+  { name: "arroios", polygon: [[38.7413, -9.1470], [38.7398, -9.1290], [38.7282, -9.1232], [38.7192, -9.1327], [38.7264, -9.1488]] },
+  { name: "parque das nações", polygon: [[38.7958, -9.1082], [38.7898, -9.0841], [38.7505, -9.0872], [38.7428, -9.1030], [38.7667, -9.1161]] },
+];
 const editorState = {
   record: null,
   card: null,
@@ -321,6 +345,13 @@ function memberStat(label, value, action = null) {
 function showMemberPendingModeration(member) {
   adminRecordFilter = "pending";
   adminContributorFilterValue = String(member.userId || "").trim() || "anonymous";
+  adminNeighborhoodFilterValue = "all";
+  adminColorFilterValue = "all";
+  adminTypeFilterValue = "all";
+  adminMotifFilterValue = "all";
+  if (adminColorFilter) adminColorFilter.value = "all";
+  if (adminTypeFilter) adminTypeFilter.value = "all";
+  if (adminMotifFilter) adminMotifFilter.value = "all";
   renderRecords(adminRecords);
   setAdminPage("moderation");
 }
@@ -439,6 +470,120 @@ function contributorLabel(record) {
   return String(record.contributor_pseudonym || record.photographer_credit || "").trim() || "anonymous";
 }
 
+function normalizedAdminFilterValue(value) {
+  return String(value || "all").trim().toLowerCase();
+}
+
+function pointInsideAdminPolygon(lat, lng, polygon) {
+  if (!Array.isArray(polygon) || polygon.length < 3) return false;
+  let inside = false;
+  for (let index = 0, previous = polygon.length - 1; index < polygon.length; previous = index++) {
+    const currentPoint = polygon[index];
+    const previousPoint = polygon[previous];
+    const currentLat = Number(currentPoint?.[0]);
+    const currentLng = Number(currentPoint?.[1]);
+    const previousLat = Number(previousPoint?.[0]);
+    const previousLng = Number(previousPoint?.[1]);
+    if (![currentLat, currentLng, previousLat, previousLng].every(Number.isFinite)) continue;
+    const intersects = ((currentLng > lng) !== (previousLng > lng))
+      && (lat < ((previousLat - currentLat) * (lng - currentLng)) / (previousLng - currentLng) + currentLat);
+    if (intersects) inside = !inside;
+  }
+  return inside;
+}
+
+function adminNeighborhoodForRecord(record) {
+  if (record.__neighborhood) return record.__neighborhood;
+  const lat = Number(record?.lat);
+  const lng = Number(record?.lng);
+  const neighborhood = Number.isFinite(lat) && Number.isFinite(lng)
+    ? ADMIN_LISBON_NEIGHBORHOODS.find((item) => pointInsideAdminPolygon(lat, lng, item.polygon))
+    : null;
+  record.__neighborhood = neighborhood?.name || "unknown";
+  return record.__neighborhood;
+}
+
+function adminColorFamilyFromRgb(red, green, blue) {
+  const max = Math.max(red, green, blue);
+  const min = Math.min(red, green, blue);
+  const delta = max - min;
+  const lightness = (max + min) / 2;
+  if (max < 48) return "black";
+  if (min > 214 && delta < 36) return "white";
+  if (delta < 22) return lightness < 150 ? "grey" : "white";
+  let hue = 0;
+  if (max === red) hue = ((green - blue) / delta) % 6;
+  else if (max === green) hue = (blue - red) / delta + 2;
+  else hue = (red - green) / delta + 4;
+  hue = (hue * 60 + 360) % 360;
+  if (hue >= 195 && hue <= 258) return "blue";
+  if (hue >= 80 && hue < 175) return "green";
+  if (hue >= 38 && hue < 80) return "yellow";
+  if (hue >= 350 || hue < 16) return "red";
+  if (hue >= 16 && hue < 38) return "brown";
+  return "multicolor";
+}
+
+function dominantAdminColorFamily(data) {
+  const counts = new Map();
+  for (let index = 0; index < data.length; index += 16) {
+    if (data[index + 3] < 180) continue;
+    const family = adminColorFamilyFromRgb(data[index], data[index + 1], data[index + 2]);
+    if (family === "white") continue;
+    counts.set(family, (counts.get(family) || 0) + 1);
+  }
+  if (!counts.size) return "white";
+  const ranked = [...counts.entries()].sort((first, second) => second[1] - first[1]);
+  const total = ranked.reduce((sum, [, count]) => sum + count, 0);
+  if (ranked.length >= 3 && ranked[0][1] / total < 0.45) return "multicolor";
+  return ranked[0][0];
+}
+
+function thumbnailImageUrl(imageUrl, size = 96) {
+  const source = String(imageUrl || "");
+  const marker = "/storage/v1/object/public/";
+  if (!source.startsWith("http") || !source.includes(marker)) return source;
+  const params = new URLSearchParams({
+    src: source,
+    w: String(size),
+    h: String(size),
+    q: "45",
+  });
+  return `/api/image?${params}`;
+}
+
+function analyzeAdminRecordColor(record, token) {
+  if (!record?.id || adminColorCache.has(record.id) || typeof Image === "undefined") return;
+  const image = new Image();
+  image.crossOrigin = "anonymous";
+  image.onload = () => {
+    if (token !== adminColorAnalysisToken) return;
+    try {
+      const canvas = document.createElement("canvas");
+      canvas.width = 24;
+      canvas.height = 24;
+      const context = canvas.getContext("2d", { willReadFrequently: true });
+      if (!context) return;
+      context.drawImage(image, 0, 0, 24, 24);
+      adminColorCache.set(record.id, dominantAdminColorFamily(context.getImageData(0, 0, 24, 24).data));
+      if (adminColorFilterValue !== "all") renderRecords(adminRecords);
+    } catch {
+      adminColorCache.set(record.id, "multicolor");
+    }
+  };
+  image.onerror = () => {
+    adminColorCache.set(record.id, "multicolor");
+  };
+  image.src = thumbnailImageUrl(record.image_url, 96);
+}
+
+function scheduleAdminColorAnalysis(records) {
+  const token = ++adminColorAnalysisToken;
+  records.slice(0, 1200).forEach((record, index) => {
+    window.setTimeout(() => analyzeAdminRecordColor(record, token), index * 10);
+  });
+}
+
 function moderationCounts(records) {
   return records.reduce((counts, record) => {
     const status = recordStatus(record);
@@ -462,9 +607,16 @@ function filteredAdminRecords() {
   const byStatus = adminRecordFilter === "all"
     ? adminRecords
     : adminRecords.filter((record) => recordStatus(record) === adminRecordFilter);
-  return adminContributorFilterValue === "all"
+  const byContributor = adminContributorFilterValue === "all"
     ? byStatus
     : byStatus.filter((record) => contributorKey(record) === adminContributorFilterValue);
+  return byContributor.filter((record) => {
+    if (adminNeighborhoodFilterValue !== "all" && normalizedAdminFilterValue(adminNeighborhoodForRecord(record)) !== adminNeighborhoodFilterValue) return false;
+    if (adminColorFilterValue !== "all" && adminColorCache.get(record.id) !== adminColorFilterValue) return false;
+    if (adminTypeFilterValue !== "all" && normalizedAdminFilterValue(record.tile_type) !== adminTypeFilterValue) return false;
+    if (adminMotifFilterValue !== "all" && normalizedAdminFilterValue(record.motif_id || record.physical_instance_id) !== adminMotifFilterValue) return false;
+    return true;
+  });
 }
 
 function contributorFilterOptions(records) {
@@ -498,6 +650,40 @@ function updateContributorFilter(records) {
     adminContributorFilter.append(item);
   });
   adminContributorFilter.value = adminContributorFilterValue;
+}
+
+function updateNeighborhoodFilter(records) {
+  if (!adminNeighborhoodFilter) return;
+  const counts = new Map();
+  records.forEach((record) => {
+    const name = adminNeighborhoodForRecord(record);
+    counts.set(name, (counts.get(name) || 0) + 1);
+  });
+  const available = new Set(["all", ...counts.keys()]);
+  if (!available.has(adminNeighborhoodFilterValue)) adminNeighborhoodFilterValue = "all";
+  adminNeighborhoodFilter.textContent = "";
+  const all = document.createElement("option");
+  all.value = "all";
+  all.textContent = "all neighborhoods";
+  adminNeighborhoodFilter.append(all);
+  [...counts.entries()]
+    .sort((first, second) => first[0].localeCompare(second[0], undefined, { sensitivity: "base" }))
+    .forEach(([name, count]) => {
+      const option = document.createElement("option");
+      option.value = name;
+      option.textContent = `${name} (${count})`;
+      adminNeighborhoodFilter.append(option);
+    });
+  adminNeighborhoodFilter.value = adminNeighborhoodFilterValue;
+}
+
+function activeAdvancedFilterLabel() {
+  const parts = [];
+  if (adminNeighborhoodFilterValue !== "all") parts.push(adminNeighborhoodFilter?.selectedOptions?.[0]?.textContent || adminNeighborhoodFilterValue);
+  if (adminColorFilterValue !== "all") parts.push(adminColorFilter?.selectedOptions?.[0]?.textContent || adminColorFilterValue);
+  if (adminTypeFilterValue !== "all") parts.push(adminTypeFilter?.selectedOptions?.[0]?.textContent || adminTypeFilterValue);
+  if (adminMotifFilterValue !== "all") parts.push(adminMotifFilter?.selectedOptions?.[0]?.textContent || adminMotifFilterValue);
+  return parts.length ? ` · ${parts.join(" · ")}` : "";
 }
 
 function editorRecordIndex() {
@@ -630,7 +816,7 @@ function renderNextRecordBatch(batchSize = ADMIN_BATCH_SIZE) {
   const contributor = adminContributorFilterValue === "all"
     ? ""
     : ` · ${adminContributorFilter.selectedOptions[0]?.textContent || "selected contributor"}`;
-  setAdminStatus(`${renderedRecordCount} / ${records.length} ${adminRecordFilter} contributions loaded${contributor} · ${adminRecords.length} total`);
+  setAdminStatus(`${renderedRecordCount} / ${records.length} ${adminRecordFilter} contributions loaded${contributor}${activeAdvancedFilterLabel()} · ${adminRecords.length} total`);
   adminLoadMore.hidden = renderedRecordCount >= records.length;
 }
 
@@ -646,6 +832,7 @@ function renderRecords(records, note = "") {
   else if (!counts[adminRecordFilter] && adminRecordFilter !== "all") adminRecordFilter = "all";
   updateAdminFilters(adminRecords);
   updateContributorFilter(adminRecords);
+  updateNeighborhoodFilter(adminRecords);
   renderedRecordCount = 0;
   adminGrid.textContent = "";
   adminLoadMore.hidden = true;
@@ -657,11 +844,11 @@ function renderRecords(records, note = "") {
     const contributor = adminContributorFilterValue === "all"
       ? ""
       : ` for ${adminContributorFilter.selectedOptions[0]?.textContent || "selected contributor"}`;
-    setAdminStatus(`no ${adminRecordFilter} records${contributor} · ${adminRecords.length} total`);
+    setAdminStatus(`no ${adminRecordFilter} records${contributor}${activeAdvancedFilterLabel()} · ${adminRecords.length} total`);
     return;
   }
   renderNextRecordBatch(ADMIN_INITIAL_BATCH_SIZE);
-  if (note) setAdminStatus(`${renderedRecordCount} / ${filteredAdminRecords().length} ${adminRecordFilter} contributions loaded · ${note}`);
+  if (note) setAdminStatus(`${renderedRecordCount} / ${filteredAdminRecords().length} ${adminRecordFilter} contributions loaded${activeAdvancedFilterLabel()} · ${note}`);
 }
 
 async function loadRecords() {
@@ -676,6 +863,7 @@ async function loadRecords() {
     throw new Error("database response did not include records");
   }
   if (data.records.length) {
+    scheduleAdminColorAnalysis(data.records);
     renderRecords(data.records);
     return;
   }
@@ -1628,6 +1816,16 @@ adminFilters.addEventListener("click", (event) => {
 adminContributorFilter.addEventListener("change", () => {
   adminContributorFilterValue = adminContributorFilter.value || "all";
   renderRecords(adminRecords);
+});
+
+[adminNeighborhoodFilter, adminColorFilter, adminTypeFilter, adminMotifFilter].forEach((filter) => {
+  filter?.addEventListener("change", () => {
+    adminNeighborhoodFilterValue = adminNeighborhoodFilter?.value || "all";
+    adminColorFilterValue = adminColorFilter?.value || "all";
+    adminTypeFilterValue = adminTypeFilter?.value || "all";
+    adminMotifFilterValue = adminMotifFilter?.value || "all";
+    renderRecords(adminRecords);
+  });
 });
 
 adminLoadMore.addEventListener("click", () => renderNextRecordBatch());

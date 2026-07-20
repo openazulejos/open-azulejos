@@ -8,7 +8,7 @@
     <link rel="icon" href="./assets/favicon.ico" sizes="any" />
     <link rel="icon" href="./assets/favicon-32.png" type="image/png" />
     <link rel="apple-touch-icon" href="./assets/apple-touch-icon.png" />
-    <link rel="stylesheet" href="./styles-admin-editor.css?v=20260720-member-pending-link" />
+    <link rel="stylesheet" href="./styles-admin-editor.css?v=20260720-admin-moderation-filters" />
   </head>
   <body class="admin-page">
     <header class="admin-header">
@@ -103,6 +103,41 @@
                 <option value="all">all contributors</option>
               </select>
             </label>
+            <div class="admin-advanced-filters" aria-label="advanced moderation filters">
+              <label>
+                neighborhood
+                <select id="adminNeighborhoodFilter">
+                  <option value="all">all neighborhoods</option>
+                </select>
+              </label>
+              <label>
+                color
+                <select id="adminColorFilter">
+                  <option value="all">all colors</option>
+                  <option value="blue">blue</option>
+                  <option value="green">green</option>
+                  <option value="yellow">yellow</option>
+                  <option value="red">red</option>
+                  <option value="brown">brown</option>
+                  <option value="black">black</option>
+                  <option value="white">white</option>
+                  <option value="grey">grey</option>
+                  <option value="multicolor">multicolor</option>
+                </select>
+              </label>
+              <label>
+                type
+                <select id="adminTypeFilter" disabled>
+                  <option value="all">all types</option>
+                </select>
+              </label>
+              <label>
+                motif
+                <select id="adminMotifFilter" disabled>
+                  <option value="all">all motifs</option>
+                </select>
+              </label>
+            </div>
             <div class="admin-status" id="adminStatus">loading</div>
             <div class="admin-grid" id="adminGrid"></div>
             <button class="admin-load-more" id="adminLoadMore" type="button" hidden>load more</button>
