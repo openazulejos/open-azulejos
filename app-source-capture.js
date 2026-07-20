@@ -229,6 +229,7 @@ const myContributionsList = document.querySelector("#myContributionsList");
 const contributionsGridView = document.querySelector("#contributionsGridView");
 const contributionsListView = document.querySelector("#contributionsListView");
 const recordHistoryButton = document.querySelector("#recordHistoryButton");
+const recordHelpButton = document.querySelector("#recordHelpButton");
 const recordCameraInput = document.querySelector("#recordCameraInput");
 const recordOnboarding = document.querySelector("#recordOnboarding");
 const recordOnboardingClose = document.querySelector("#recordOnboardingClose");
@@ -328,6 +329,7 @@ let serverViewportTimer = null;
 let accountRecoveryAccessToken = "";
 let contributorStatsLoaded = false;
 let activeViewMode = "map";
+let recordOnboardingMode = "record";
 let gridRecords = [];
 let gridRecordsLoaded = false;
 let gridRecordsLoading = false;
@@ -3501,10 +3503,10 @@ async function beginRecordingFlow() {
   openPermissionCameraShell();
   await new Promise((resolve) => window.setTimeout(resolve, 900));
   recordHistoryButton.disabled = true;
-  recordHistoryButton.textContent = "checking location...";
+  setRecordActionStatus("checking location");
   const result = await requestLocationPermissionForContext({ allowOutsideLisbon });
   recordHistoryButton.disabled = false;
-  recordHistoryButton.textContent = "record azulejos now";
+  setRecordActionStatus("record azulejos now");
   if (result.state === "denied" || result.state === "unsupported" || result.state === "outside-lisbon") {
     setCameraPermissionStep(locationPermissionStep, "denied");
     closeSquareCamera();
@@ -3535,6 +3537,12 @@ function markRecordOnboardingSeen() {
   }
 }
 
+function setRecordActionStatus(label) {
+  if (!recordHistoryButton) return;
+  recordHistoryButton.setAttribute("aria-label", label);
+  recordHistoryButton.title = label;
+}
+
 function renderRecordOnboardingStep() {
   recordOnboardingSteps.forEach((step, index) => {
     const active = index === recordOnboardingStep;
@@ -3544,12 +3552,13 @@ function renderRecordOnboardingStep() {
   if (recordOnboardingBack) recordOnboardingBack.hidden = recordOnboardingStep === 0;
   if (recordOnboardingNext) {
     recordOnboardingNext.textContent = recordOnboardingStep === recordOnboardingSteps.length - 1
-      ? "start recording"
+      ? recordOnboardingMode === "help" ? "close" : "start recording"
       : "next";
   }
 }
 
-function openRecordOnboarding() {
+function openRecordOnboarding(mode = "record") {
+  recordOnboardingMode = mode;
   recordOnboardingStep = 0;
   renderRecordOnboardingStep();
   recordOnboarding?.classList.add("is-open");
@@ -3560,7 +3569,8 @@ function openRecordOnboarding() {
 function closeRecordOnboarding() {
   recordOnboarding?.classList.remove("is-open");
   recordOnboarding?.setAttribute("aria-hidden", "true");
-  recordHistoryButton?.focus();
+  if (recordOnboardingMode === "help") recordHelpButton?.focus();
+  else recordHistoryButton?.focus();
 }
 
 function requestRecording() {
@@ -3568,13 +3578,17 @@ function requestRecording() {
     beginRecordingFlow();
     return;
   }
-  openRecordOnboarding();
+  openRecordOnboarding("record");
 }
 
 function advanceRecordOnboarding() {
   if (recordOnboardingStep < recordOnboardingSteps.length - 1) {
     recordOnboardingStep += 1;
     renderRecordOnboardingStep();
+    return;
+  }
+  if (recordOnboardingMode === "help") {
+    closeRecordOnboarding();
     return;
   }
   markRecordOnboardingSeen();
@@ -3956,14 +3970,14 @@ function scheduleRecordedAzulejoLoad(delay = 160) {
 async function recordAzulejoFromCameraFile(file) {
   if (!file) return;
   recordHistoryButton.disabled = true;
-  recordHistoryButton.textContent = "preparing...";
+  setRecordActionStatus("preparing");
   try {
     const image = await loadImageFromFile(file);
     const gps = await readGpsFromExif(file);
     await openCapturePreview(image, gps);
   } finally {
     recordHistoryButton.disabled = false;
-    recordHistoryButton.textContent = "record azulejos now";
+    setRecordActionStatus("record azulejos now");
   }
 }
 
@@ -4073,7 +4087,7 @@ async function sendPendingCapture() {
     }
     captureSendButton.textContent = "sending...";
     recordHistoryButton.disabled = true;
-    recordHistoryButton.textContent = "recording...";
+    setRecordActionStatus("recording");
     const rights = {
       photographerCredit,
       photoLicense: "CC-BY-4.0",
@@ -4092,10 +4106,10 @@ async function sendPendingCapture() {
     if (captureRetakeButton) captureRetakeButton.disabled = false;
     if (!keepStatus) captureSendButton.textContent = "send";
     recordHistoryButton.disabled = false;
-    recordHistoryButton.textContent = queuedOffline ? "saved offline" : "pending review";
+    setRecordActionStatus(queuedOffline ? "saved offline" : "pending review");
     if (!keepStatus) {
       window.setTimeout(() => {
-        if (recordHistoryButton && !recordHistoryButton.disabled) recordHistoryButton.textContent = "record azulejos now";
+        if (recordHistoryButton && !recordHistoryButton.disabled) setRecordActionStatus("record azulejos now");
       }, 2600);
     }
   }
@@ -4712,6 +4726,7 @@ exportPointGeoJsonButton.addEventListener("click", exportPointGeoJson);
 exportCsvButton.addEventListener("click", exportCsv);
 clearImportsButton.addEventListener("click", clearImportedMosaic);
 recordHistoryButton?.addEventListener("click", requestRecording);
+recordHelpButton?.addEventListener("click", () => openRecordOnboarding("help"));
 recordOnboardingClose?.addEventListener("click", closeRecordOnboarding);
 recordOnboardingBack?.addEventListener("click", () => {
   recordOnboardingStep = Math.max(0, recordOnboardingStep - 1);
@@ -4738,9 +4753,9 @@ recordCameraInput?.addEventListener("change", async () => {
     await recordAzulejoFromCameraFile(file);
   } catch (error) {
     console.error(error);
-    recordHistoryButton.textContent = "try another photo";
+    setRecordActionStatus("try another photo");
     window.setTimeout(() => {
-      if (recordHistoryButton && !recordHistoryButton.disabled) recordHistoryButton.textContent = "record azulejos now";
+      if (recordHistoryButton && !recordHistoryButton.disabled) setRecordActionStatus("record azulejos now");
     }, 2400);
   }
 });

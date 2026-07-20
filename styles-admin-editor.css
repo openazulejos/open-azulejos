@@ -238,21 +238,51 @@ textarea {
   pointer-events: none;
 }
 
-.record-action {
+.record-controls {
   position: fixed;
   left: 50%;
   bottom: max(18px, env(safe-area-inset-bottom));
   z-index: 720;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   transform: translateX(-50%);
-  min-height: 34px;
-  padding: 0 12px;
+}
+
+.record-action,
+.record-help-action {
+  display: grid;
+  place-items: center;
+  padding: 0;
   border: 1px solid var(--ink);
-  border-radius: 0;
-  background: var(--panel);
+  border-radius: 50%;
   color: var(--ink);
-  font-size: 12px;
   font-weight: 300;
   cursor: pointer;
+}
+
+.record-action {
+  width: 46px;
+  height: 46px;
+  background: #d6d6d2;
+}
+
+.record-action svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.record-help-action {
+  width: 29px;
+  height: 29px;
+  background: #fff;
+  font-size: 17px;
+  line-height: 1;
 }
 
 .record-action:disabled {
@@ -387,7 +417,7 @@ textarea {
 }
 
 body.is-grid-view .map-stage,
-body.is-grid-view .record-action {
+body.is-grid-view .record-controls {
   pointer-events: none;
 }
 
@@ -398,7 +428,7 @@ body.is-grid-view .record-action {
   display: none;
   place-items: center;
   padding: max(24px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom));
-  background: #fff;
+  background: var(--paper);
   color: var(--ink);
 }
 
@@ -4419,6 +4449,7 @@ button.admin-member-stat:focus-visible {
   .account-trigger,
   .admin-trigger,
   .record-action,
+  .record-help-action,
   .coordinates,
   .target-coordinates,
   .map-azulejo-count,
@@ -4437,7 +4468,6 @@ button.admin-member-stat:focus-visible {
   }
 
   .view-switch-menu,
-  .record-action,
   .coordinates,
   .panel,
   .location-permission-sheet,
@@ -4447,6 +4477,18 @@ button.admin-member-stat:focus-visible {
   .record-onboarding,
   .capture-preview {
     background: var(--panel-strong);
+    color: var(--ink);
+  }
+
+  .record-action {
+    background: #4a4a46;
+    border-color: rgba(var(--ink-rgb), 0.42);
+    color: var(--ink);
+  }
+
+  .record-help-action {
+    background: var(--paper);
+    border-color: var(--ink);
     color: var(--ink);
   }
 
