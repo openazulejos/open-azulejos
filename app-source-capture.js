@@ -346,6 +346,8 @@ let gridColorAnalysisToken = 0;
 let canvaZoom = 1;
 let canvaRenderTimer = null;
 let canvaRenderSignature = "";
+let canvaPointerDrag = null;
+let canvaSuppressClickUntil = 0;
 let allCityClipPolygons = [];
 const neighborhoodClipPolygons = new Map();
 
@@ -2060,13 +2062,60 @@ function renderAzulejoCanva() {
       image.alt = generated.tile.title || "recorded azulejo";
       image.loading = "lazy";
       image.decoding = "async";
+      image.draggable = false;
       button.append(image);
-      button.addEventListener("click", () => openAzulejoViewer(generated.tile, { origin: "canva" }));
+      button.addEventListener("dragstart", (event) => event.preventDefault());
+      button.addEventListener("click", (event) => {
+        if (Date.now() < canvaSuppressClickUntil) {
+          event.preventDefault();
+          event.stopPropagation();
+          return;
+        }
+        openAzulejoViewer(generated.tile, { origin: "canva" });
+      });
       fragment.append(button);
       rendered += 1;
     }
   }
   azulejoCanvaWorld.replaceChildren(fragment);
+}
+
+function startCanvaMousePan(event) {
+  if (!azulejoCanvaViewport || event.button !== 0 || event.pointerType === "touch") return;
+  if (event.target?.closest?.(".azulejo-canva-controls")) return;
+  canvaPointerDrag = {
+    pointerId: event.pointerId,
+    startX: event.clientX,
+    startY: event.clientY,
+    scrollLeft: azulejoCanvaViewport.scrollLeft,
+    scrollTop: azulejoCanvaViewport.scrollTop,
+    moved: false,
+    preventClick: false,
+  };
+  azulejoCanvaViewport.classList.add("is-dragging");
+  azulejoCanvaViewport.setPointerCapture?.(event.pointerId);
+}
+
+function moveCanvaMousePan(event) {
+  if (!azulejoCanvaViewport || !canvaPointerDrag || canvaPointerDrag.pointerId !== event.pointerId) return;
+  const deltaX = event.clientX - canvaPointerDrag.startX;
+  const deltaY = event.clientY - canvaPointerDrag.startY;
+  if (Math.abs(deltaX) > 3 || Math.abs(deltaY) > 3) {
+    canvaPointerDrag.moved = true;
+    canvaPointerDrag.preventClick = true;
+  }
+  if (!canvaPointerDrag.moved) return;
+  event.preventDefault();
+  azulejoCanvaViewport.scrollLeft = canvaPointerDrag.scrollLeft - deltaX;
+  azulejoCanvaViewport.scrollTop = canvaPointerDrag.scrollTop - deltaY;
+}
+
+function endCanvaMousePan(event) {
+  if (!azulejoCanvaViewport || !canvaPointerDrag || canvaPointerDrag.pointerId !== event.pointerId) return;
+  azulejoCanvaViewport.releasePointerCapture?.(event.pointerId);
+  azulejoCanvaViewport.classList.remove("is-dragging");
+  if (canvaPointerDrag.preventClick) canvaSuppressClickUntil = Date.now() + 250;
+  canvaPointerDrag = null;
 }
 
 function scheduleAzulejoCanvaRender(delay = 40) {
@@ -5013,6 +5062,11 @@ viewSwitchMenu?.querySelectorAll?.("[data-view-mode]")?.forEach((button) => {
   button.addEventListener("click", () => setViewMode(button.dataset.viewMode));
 });
 azulejoCanvaViewport?.addEventListener("scroll", () => scheduleAzulejoCanvaRender());
+azulejoCanvaViewport?.addEventListener("pointerdown", startCanvaMousePan);
+azulejoCanvaViewport?.addEventListener("pointermove", moveCanvaMousePan);
+azulejoCanvaViewport?.addEventListener("pointerup", endCanvaMousePan);
+azulejoCanvaViewport?.addEventListener("pointercancel", endCanvaMousePan);
+azulejoCanvaViewport?.addEventListener("dragstart", (event) => event.preventDefault());
 azulejoCanvaViewport?.addEventListener("wheel", (event) => {
   if (!event.ctrlKey && !event.metaKey) return;
   event.preventDefault();

@@ -330,8 +330,14 @@ textarea {
   overflow: auto;
   overscroll-behavior: contain;
   background: var(--paper);
+  cursor: grab;
   outline: none;
   touch-action: pan-x pan-y pinch-zoom;
+  user-select: none;
+}
+
+.azulejo-canva-viewport.is-dragging {
+  cursor: grabbing;
 }
 
 .azulejo-canva-world {
@@ -352,6 +358,7 @@ textarea {
   color: transparent;
   overflow: hidden;
   cursor: pointer;
+  user-select: none;
 }
 
 .azulejo-canva-tile img {
@@ -362,6 +369,8 @@ textarea {
   transform: rotate(var(--canva-rotation, 0deg)) scale(var(--canva-image-scale, 1.01));
   transform-origin: center;
   background: var(--tile-empty);
+  -webkit-user-drag: none;
+  user-select: none;
 }
 
 .azulejo-canva-status {
