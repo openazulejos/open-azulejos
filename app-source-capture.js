@@ -35,6 +35,15 @@ const RELIABLE_GPS_TIMEOUT_MS = 25_000;
 const lqipStageCache = new Map();
 const loadedImageUrls = new Map();
 const FREGUESIAS_LAYER_URL = "./assets/lisbon-freguesias.geojson";
+
+function updateAppViewportHeight() {
+  const height = window.visualViewport?.height || window.innerHeight || document.documentElement?.clientHeight;
+  if (!Number.isFinite(height) || height <= 0) return;
+  document.documentElement?.style?.setProperty("--app-viewport-height", `${height}px`);
+}
+
+updateAppViewportHeight();
+
 const LOCAL_WORDS = [
   "azul", "tejo", "alfama", "baixa", "chiado", "graca", "estrela", "belem",
   "azulejo", "calcada", "miradouro", "fado", "rua", "patio", "janela", "fachada",
@@ -5297,8 +5306,19 @@ window.addEventListener?.("online", () => {
   flushOfflineContributions().catch((error) => console.error("Offline contribution sync failed:", error));
 });
 window.addEventListener?.("resize", () => {
+  updateAppViewportHeight();
+  map.invalidateSize({ animate: false });
   canvaRenderSignature = "";
   scheduleAzulejoCanvaRender(0);
+});
+window.visualViewport?.addEventListener?.("resize", () => {
+  updateAppViewportHeight();
+  map.invalidateSize({ animate: false });
+  canvaRenderSignature = "";
+  scheduleAzulejoCanvaRender(0);
+});
+window.visualViewport?.addEventListener?.("scroll", () => {
+  updateAppViewportHeight();
 });
 flushOfflineContributions().catch((error) => console.error("Offline contribution sync failed:", error));
 if (typeof fetch === "function") {
