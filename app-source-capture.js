@@ -2358,10 +2358,11 @@ function setViewMode(mode) {
     azulejoCanvaView.hidden = nextMode !== "canva";
     azulejoCanvaView.setAttribute("aria-hidden", nextMode === "canva" ? "false" : "true");
   }
-  viewSwitchMenu?.querySelectorAll?.("[data-view-mode]")?.forEach((button) => {
+  document.querySelectorAll("[data-view-mode]")?.forEach((button) => {
     button.setAttribute("aria-selected", button.dataset.viewMode === nextMode ? "true" : "false");
   });
   closeViewSwitchMenu();
+  closeMenuSheet();
   if (nextMode === "grid" || nextMode === "canva") {
     loadGridAzulejos();
     if (nextMode === "canva") {
@@ -5113,7 +5114,7 @@ viewSwitchButton?.addEventListener("click", (event) => {
   if (viewSwitchMenu?.hasAttribute("hidden")) openViewSwitchMenu();
   else closeViewSwitchMenu();
 });
-viewSwitchMenu?.querySelectorAll?.("[data-view-mode]")?.forEach((button) => {
+document.querySelectorAll("[data-view-mode]")?.forEach((button) => {
   button.addEventListener("click", () => setViewMode(button.dataset.viewMode));
 });
 azulejoCanvaViewport?.addEventListener("scroll", () => scheduleAzulejoCanvaRender());

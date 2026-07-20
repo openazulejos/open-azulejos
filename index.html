@@ -49,7 +49,7 @@
     <meta name="twitter:image" content="https://openazulejos.com/assets/icon-512.png" />
     <link rel="preconnect" href="https://unpkg.com" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="./styles-admin-editor.css?v=20260720-record-camera-icon" />
+    <link rel="stylesheet" href="./styles-admin-editor.css?v=20260720-mobile-menu-views" />
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
@@ -540,6 +540,11 @@ azulejo-002.jpg,38.71072,-9.13908,Baixa</code></pre>
     <section class="menu-sheet" id="menuSheet" aria-hidden="true" aria-label="menu">
       <button class="menu-close" id="menuCloseButton" type="button" aria-label="close">×</button>
       <nav class="menu-sheet-nav" aria-label="main menu">
+        <div class="menu-view-options" aria-label="view mode">
+          <button type="button" data-view-mode="map" aria-selected="true">map</button>
+          <button type="button" data-view-mode="grid" aria-selected="false">grid</button>
+          <button type="button" data-view-mode="canva" aria-selected="false">canva</button>
+        </div>
         <button class="account-trigger" id="accountOpenButton" type="button">log in</button>
         <button class="about-trigger" id="aboutOpenButton" type="button">about</button>
         <a class="admin-trigger" id="adminOpenButton" href="/admin" hidden>admin</a>
@@ -687,6 +692,6 @@ azulejo-002.jpg,38.71072,-9.13908,Baixa</code></pre>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="./offline-queue.js?v=20260702-contribution-rights"></script>
-    <script src="./app-source-capture.js?v=20260720-sandwich-menu"></script>
+    <script src="./app-source-capture.js?v=20260720-mobile-menu-views"></script>
   </body>
 </html>

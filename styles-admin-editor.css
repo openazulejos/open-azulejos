@@ -143,19 +143,21 @@ textarea {
 
 .menu-trigger {
   display: grid;
-  gap: 5px;
-  width: 34px;
-  height: 30px;
-  padding: 4px 0;
+  align-content: center;
+  justify-items: end;
+  gap: 6px;
+  width: 44px;
+  height: 44px;
+  padding: 0;
   border: 0;
   background: transparent;
-  color: var(--ink);
+  color: #8a8a8a;
   cursor: pointer;
 }
 
 .menu-trigger span {
   display: block;
-  width: 34px;
+  width: 25px;
   height: 1px;
   background: currentColor;
 }
@@ -282,6 +284,10 @@ textarea {
 
 .menu-sheet-nav [hidden] {
   display: none !important;
+}
+
+.menu-view-options {
+  display: none;
 }
 
 .menu-sheet-nav .about-trigger,
@@ -4506,7 +4512,7 @@ button.admin-member-stat:focus-visible {
 @media (max-width: 760px) {
   .topbar {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) auto;
     z-index: 900;
     height: auto;
     min-height: 54px;
@@ -4539,14 +4545,28 @@ button.admin-member-stat:focus-visible {
   }
 
   .view-switch {
-    position: relative;
-    z-index: 980;
-    transform: none;
-    justify-self: center;
+    display: none;
   }
 
-  .view-switch-button {
-    font-size: clamp(20px, 5.5vw, 24px);
+  .menu-view-options {
+    display: grid;
+    gap: 14px;
+    justify-items: center;
+  }
+
+  .menu-view-options button {
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    font: inherit;
+    font-size: clamp(42px, 10vw, 96px);
+    font-weight: 300;
+    line-height: 0.95;
+    cursor: pointer;
+  }
+
+  .menu-view-options button[aria-selected="true"] {
+    color: var(--ink);
   }
 
   .topbar-actions {
