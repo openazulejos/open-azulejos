@@ -229,6 +229,20 @@ function pageFromHash() {
   return ["dashboard", "moderation", "members", "accounts"].includes(page) ? page : "";
 }
 
+function requestedEditRecordId() {
+  const id = new URLSearchParams(window.location.search).get("edit");
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(id || ""))
+    ? id
+    : "";
+}
+
+function clearRequestedEditRecordId() {
+  if (!requestedEditRecordId()) return;
+  const url = new URL(window.location.href);
+  url.searchParams.delete("edit");
+  window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash || "#moderation"}`);
+}
+
 function setAdminPage(page, options = {}) {
   const requestedPage = ["dashboard", "moderation", "members", "accounts"].includes(page) ? page : "moderation";
   const targetPage = requestedPage === "accounts" && adminAccountSetup.hidden ? "moderation" : requestedPage;
@@ -243,7 +257,7 @@ function setAdminPage(page, options = {}) {
   });
   if (options.hash !== false && window.location.hash.replace(/^#/, "") !== targetPage) {
     const method = options.replace ? "replaceState" : "pushState";
-    window.history[method](null, "", `#${targetPage}`);
+    window.history[method](null, "", `${window.location.pathname}${window.location.search}#${targetPage}`);
   }
 }
 
@@ -947,6 +961,17 @@ async function loadRecords() {
   if (data.records.length) {
     scheduleAdminColorAnalysis(data.records);
     renderRecords(data.records);
+    const editId = requestedEditRecordId();
+    if (editId) {
+      const record = adminRecords.find((candidate) => candidate.id === editId);
+      if (record) {
+        setAdminPage("moderation", { replace: true });
+        await openEditor(record, cardForRecord(record));
+        clearRequestedEditRecordId();
+      } else {
+        setAdminStatus(`record ${editId} was not found in moderation`);
+      }
+    }
     return;
   }
   renderRecords([], "admin database returned 0 records");

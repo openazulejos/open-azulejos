@@ -175,6 +175,8 @@ const azulejoViewerMeta = document.querySelector("#azulejoViewerMeta");
 const azulejoViewerCaption = document.querySelector("#azulejoViewerCaption");
 const azulejoViewerCredit = document.querySelector("#azulejoViewerCredit");
 const azulejoViewerDownload = document.querySelector("#azulejoViewerDownload");
+const azulejoViewerEditSeparator = document.querySelector("#azulejoViewerEditSeparator");
+const azulejoViewerEdit = document.querySelector("#azulejoViewerEdit");
 const azulejoViewerMapLink = document.querySelector("#azulejoViewerMapLink");
 const azulejoViewerClose = document.querySelector("#azulejoViewerClose");
 const aboutOpenButton = document.querySelector("#aboutOpenButton");
@@ -309,6 +311,7 @@ let userLocationWatchId = null;
 let latestUserLocation = null;
 let userLocationSearchTimer = null;
 let adminCaptureSession = false;
+let adminSessionChecked = false;
 const CONTRIBUTION_RECEIPTS_KEY = "open-azulejos-contribution-receipts";
 const CONTRIBUTION_VIEW_KEY = "open-azulejos-contribution-view";
 const ACCOUNT_INVITE_COUNT_KEY = "open-azulejos-account-invite-count";
@@ -819,6 +822,19 @@ function imageDownloadName(tile) {
   return `open-azulejos-${id || "image"}.jpg`;
 }
 
+function adminEditUrl(tile) {
+  const id = String(tile?.id || "").trim();
+  return id ? `/admin?edit=${encodeURIComponent(id)}#moderation` : "/admin#moderation";
+}
+
+function syncViewerAdminEdit(tile) {
+  const canEdit = Boolean(adminCaptureSession && tile?.id);
+  if (azulejoViewerEditSeparator) azulejoViewerEditSeparator.hidden = !canEdit;
+  if (!azulejoViewerEdit) return;
+  azulejoViewerEdit.hidden = !canEdit;
+  azulejoViewerEdit.href = canEdit ? adminEditUrl(tile) : "/admin#moderation";
+}
+
 function updateTileOpenData(tile, record) {
   if (!tile || !record) return;
   tile.photographerCredit = record.photographer_credit || record.photographerCredit || record.contributor || tile.photographerCredit || "";
@@ -1102,6 +1118,8 @@ function renderAzulejoViewerTile(tile) {
     azulejoViewerDownload.href = tile.image;
     azulejoViewerDownload.download = imageDownloadName(tile);
   }
+  syncViewerAdminEdit(tile);
+  if (!adminSessionChecked) refreshAdminCaptureSession();
   setViewerMosaicMode(0, tile);
 }
 
@@ -3207,8 +3225,14 @@ async function refreshAdminCaptureSession() {
     });
     const data = response.ok ? await response.json() : null;
     adminCaptureSession = Boolean(data?.authenticated);
+    adminSessionChecked = true;
+    if (adminOpenButton) adminOpenButton.hidden = !adminCaptureSession;
+    if (activeViewerTile) syncViewerAdminEdit(activeViewerTile);
   } catch {
     adminCaptureSession = false;
+    adminSessionChecked = true;
+    if (azulejoViewerEditSeparator) azulejoViewerEditSeparator.hidden = true;
+    if (azulejoViewerEdit) azulejoViewerEdit.hidden = true;
   }
   return adminCaptureSession;
 }
