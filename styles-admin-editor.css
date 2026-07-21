@@ -1155,6 +1155,25 @@ body.is-canva-view .map-zoom-percent {
   pointer-events: none;
 }
 
+.outside-lisbon-notice {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 710;
+  max-width: min(320px, calc(100vw - 48px));
+  color: var(--ink);
+  font-size: 18px;
+  font-weight: 300;
+  line-height: 1.2;
+  text-align: center;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.outside-lisbon-notice[hidden] {
+  display: none;
+}
+
 .leaflet-container {
   font: inherit;
   background: var(--map-paper);

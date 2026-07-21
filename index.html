@@ -49,7 +49,7 @@
     <meta name="twitter:image" content="https://openazulejos.com/assets/icon-512.png" />
     <link rel="preconnect" href="https://unpkg.com" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="./styles-admin-editor.css?v=20260721-menu-bars-black" />
+    <link rel="stylesheet" href="./styles-admin-editor.css?v=20260721-outside-lisbon-location" />
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
@@ -183,6 +183,7 @@
       <section class="map-stage" aria-label="Carte mosaïque de Lisbonne">
         <div id="map"></div>
         <canvas id="gridCanvas" aria-hidden="true"></canvas>
+        <div class="outside-lisbon-notice" id="outsideLisbonNotice" hidden>you are getting too far from lisboa</div>
         <div class="map-azulejo-count" id="mapAzulejoCount" aria-live="polite">0/0</div>
         <div class="map-zoom-percent" id="mapZoomPercent" aria-live="polite">100%</div>
         <button class="map-location-control" id="mapLocationButton" type="button" aria-label="show azulejos near me" title="show azulejos near me">
@@ -696,6 +697,6 @@ azulejo-002.jpg,38.71072,-9.13908,Baixa</code></pre>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="./offline-queue.js?v=20260702-contribution-rights"></script>
-    <script src="./app-source-capture.js?v=20260721-mobile-safe-viewport"></script>
+    <script src="./app-source-capture.js?v=20260721-outside-lisbon-location"></script>
   </body>
 </html>

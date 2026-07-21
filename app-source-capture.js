@@ -159,6 +159,7 @@ const mapAzulejoCount = document.querySelector("#mapAzulejoCount");
 const mapZoomPercent = document.querySelector("#mapZoomPercent");
 const mapLocationButton = document.querySelector("#mapLocationButton");
 const targetCoordinates = document.querySelector("#targetCoordinates");
+const outsideLisbonNotice = document.querySelector("#outsideLisbonNotice");
 const cursorReadout = document.querySelector("#cursorReadout");
 const tileCount = document.querySelector("#tileCount");
 const cellCount = document.querySelector("#cellCount");
@@ -331,6 +332,7 @@ let userLocationMarker = null;
 let userLocationWatchId = null;
 let latestUserLocation = null;
 let userLocationSearchTimer = null;
+let outsideLisbonNoticeTimer = null;
 let adminCaptureSession = false;
 let adminSessionChecked = false;
 const CONTRIBUTION_RECEIPTS_KEY = "open-azulejos-contribution-receipts";
@@ -4083,6 +4085,10 @@ function acceptLivePosition(position) {
   const lat = Number(position?.coords?.latitude);
   const lng = Number(position?.coords?.longitude);
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return false;
+  if (!isInsideLisbonBounds(lat, lng)) {
+    handleOutsideLisbonLocation({ lat, lng, accuracy: Number(position.coords.accuracy) || null });
+    return true;
+  }
   const firstFix = latestUserLocation === null;
   focusUserLocation({ lat, lng, accuracy: Number(position.coords.accuracy) || null }, firstFix);
   if (firstFix) finishLocationSearch(true);
@@ -4094,6 +4100,43 @@ function stopLocationWatch() {
     navigator.geolocation.clearWatch(userLocationWatchId);
   }
   userLocationWatchId = null;
+}
+
+function hideOutsideLisbonNotice() {
+  if (outsideLisbonNoticeTimer !== null) {
+    window.clearTimeout(outsideLisbonNoticeTimer);
+    outsideLisbonNoticeTimer = null;
+  }
+  outsideLisbonNotice?.setAttribute("hidden", "");
+}
+
+function returnToLisbonHomeView() {
+  if (typeof map.flyTo === "function") {
+    map.flyTo(HOME_VIEW.center, HOME_VIEW.zoom, { animate: true, duration: 0.9 });
+  } else {
+    map.setView(HOME_VIEW.center, HOME_VIEW.zoom);
+  }
+}
+
+function handleOutsideLisbonLocation(gps) {
+  stopLocationWatch();
+  latestUserLocation = null;
+  finishLocationSearch(false);
+  mapLocationButton.title = "outside Lisboa";
+  hideOutsideLisbonNotice();
+  const point = [gps.lat, gps.lng];
+  if (typeof map.flyTo === "function") {
+    map.flyTo(point, Math.max(13, map.getZoom()), { animate: true, duration: 0.8 });
+  } else {
+    map.setView(point, Math.max(13, map.getZoom()));
+  }
+  outsideLisbonNotice?.removeAttribute("hidden");
+  outsideLisbonNoticeTimer = window.setTimeout(() => {
+    outsideLisbonNotice?.setAttribute("hidden", "");
+    returnToLisbonHomeView();
+    if (mapLocationButton) mapLocationButton.title = "show azulejos near me";
+    outsideLisbonNoticeTimer = null;
+  }, 3800);
 }
 
 function locateUserOnMap() {
