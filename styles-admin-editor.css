@@ -159,7 +159,7 @@ textarea {
   padding: 0;
   border: 0;
   background: transparent;
-  color: #8a8a8a;
+  color: var(--ink);
   cursor: pointer;
 }
 
