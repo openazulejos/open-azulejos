@@ -153,7 +153,7 @@ textarea {
   display: grid;
   align-content: center;
   justify-items: end;
-  gap: 6px;
+  gap: 5px;
   width: 44px;
   height: 44px;
   padding: 0;
@@ -165,8 +165,8 @@ textarea {
 
 .menu-trigger span {
   display: block;
-  width: 25px;
-  height: 1px;
+  width: 22px;
+  height: 2px;
   background: currentColor;
 }
 
