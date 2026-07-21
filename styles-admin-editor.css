@@ -379,7 +379,7 @@ body.is-filter-menu-open .filter-switch-arrow {
 .record-action {
   width: 68px;
   height: 68px;
-  border: 1px solid #4f5a58;
+  border: 1px solid #7a8583;
   background: #edf4f2;
   color: #66706f;
 }
@@ -4795,7 +4795,7 @@ button.admin-member-stat:focus-visible {
   }
 
   .record-action {
-    border-color: #6f7a78;
+    border-color: #899391;
     background: #25302f;
     color: #c5cecc;
   }
