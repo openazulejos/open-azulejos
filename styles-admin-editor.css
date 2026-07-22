@@ -107,7 +107,7 @@ textarea {
 .topbar {
   position: fixed;
   inset: 0 0 auto 0;
-  z-index: 700;
+  z-index: 930;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -216,6 +216,7 @@ textarea {
   position: absolute;
   left: 50%;
   top: calc(100% + 9px);
+  z-index: 1;
   min-width: 88px;
   padding: 5px 0;
   border: 1px solid rgba(16, 16, 16, 0.18);
