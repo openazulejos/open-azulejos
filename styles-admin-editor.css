@@ -248,7 +248,7 @@ textarea {
 }
 
 .filter-switch {
-  display: inline-flex;
+  display: none;
   grid-column: 3;
   justify-self: start;
   align-items: center;
@@ -594,14 +594,10 @@ body.is-filter-menu-open .filter-switch-arrow {
   pointer-events: auto;
 }
 
-body:not(.is-filter-menu-open) .azulejo-filter-bar {
-  display: none;
-}
-
 @media (min-width: 761px) {
-  body.is-filter-menu-open .map-stage,
-  body.is-filter-menu-open .azulejo-grid-view,
-  body.is-filter-menu-open .azulejo-canva-view {
+  body .map-stage,
+  body .azulejo-grid-view,
+  body .azulejo-canva-view {
     top: 110px;
     height: calc(var(--app-viewport-height) - 110px);
   }
