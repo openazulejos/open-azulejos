@@ -437,6 +437,7 @@ body.is-filter-menu-open .filter-switch-arrow {
   color: var(--ink);
   font-size: 17px;
   line-height: 1;
+  padding-top: 2px;
   transform: translateY(-50%);
 }
 
