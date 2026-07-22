@@ -935,10 +935,13 @@ function syncViewerAdminEdit(tile) {
 
 function updateTileOpenData(tile, record) {
   if (!tile || !record) return;
+  const lat = Number(record.lat ?? tile.lat);
+  const lng = Number(record.lng ?? tile.lng);
   tile.photographerCredit = record.photographer_credit || record.photographerCredit || record.contributor || tile.photographerCredit || "";
   tile.photoLicense = record.photo_license || record.photoLicense || tile.photoLicense || "";
   tile.dominantColor = record.dominant_color || record.color_metadata?.dominant || tile.dominantColor || "";
   tile.colorMetadata = record.color_metadata || tile.colorMetadata || null;
+  tile.neighborhood = record.neighborhood || (Number.isFinite(lat) && Number.isFinite(lng) ? neighborhoodNameForPoint(lat, lng) : tile.neighborhood || "unknown");
   if (tile.dominantColor) gridColorCache.set(tile.id, tile.dominantColor);
 }
 
@@ -1913,7 +1916,11 @@ function renderGridNeighborhoodOptions() {
   const previousValue = gridNeighborhoodFilter.value || "all";
   const counts = new Map();
   gridRecords.forEach((tile) => {
-    const name = tile.neighborhood || "unknown";
+    const lat = Number(tile.lat);
+    const lng = Number(tile.lng);
+    const name = Number.isFinite(lat) && Number.isFinite(lng)
+      ? neighborhoodNameForPoint(lat, lng)
+      : tile.neighborhood || "unknown";
     counts.set(name, (counts.get(name) || 0) + 1);
   });
   gridNeighborhoodFilter.textContent = "";
@@ -1939,6 +1946,8 @@ function renderGridColorOptions() {
   const previousValue = normalizeGridFilterValue(gridColorFilter.value);
   const counts = new Map();
   gridRecords.forEach((tile) => {
+    const selectedNeighborhood = normalizeGridFilterValue(gridNeighborhoodFilter?.value);
+    if (selectedNeighborhood !== "all" && !pointInsideSelectedNeighborhood(tile.lat, tile.lng)) return;
     const color = normalizeGridFilterValue(tile.dominantColor || gridColorCache.get(tile.id));
     if (color === "all") return;
     counts.set(color, (counts.get(color) || 0) + 1);
