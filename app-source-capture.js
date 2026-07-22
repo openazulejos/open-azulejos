@@ -366,24 +366,7 @@ let canvaSuppressClickUntil = 0;
 let allCityClipPolygons = [];
 const neighborhoodClipPolygons = new Map();
 
-const sampleTiles = [
-  {
-    id: "terrain-flower-006",
-    title: "terrain flower",
-    lat: 38.71518,
-    lng: -9.13764,
-    image: "./assets/azulejo-field-flower.jpg",
-    minZoom: 12,
-  },
-  {
-    id: "terrain-bird-007",
-    title: "terrain bird",
-    lat: 38.71692,
-    lng: -9.13200,
-    image: "./assets/azulejo-field-bird.jpg",
-    minZoom: 12,
-  },
-];
+const sampleTiles = [];
 
 function normalizeNeighborhoodKey(value) {
   return normalizeGridFilterValue(value);
@@ -1899,7 +1882,7 @@ function gridTileMatchesFilters(tile) {
 }
 
 function mapTileMatchesFilters(tile) {
-  if (!tile || tile.isSample) return true;
+  if (!tile) return false;
   const neighborhood = normalizeGridFilterValue(gridNeighborhoodFilter?.value);
   const color = normalizeGridFilterValue(gridColorFilter?.value);
   const type = normalizeGridFilterValue(gridTypeFilter?.value);
@@ -5523,6 +5506,7 @@ window.AzulejoAtlas = {
     activeServerTileCount: serverTilesById.size,
     cachedServerTileCount: serverTileCacheById.size,
     loadedImageUrlCount: loadedImageUrls.size,
+    sampleTileCount: displayedTiles.filter((tile) => tile.isSample).length,
   }),
 };
 drawGrid();

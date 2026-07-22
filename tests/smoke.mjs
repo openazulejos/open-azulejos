@@ -227,6 +227,7 @@ function createGpsJpeg() {
 }
 
 const api = bootApp();
+assert(api.getState().sampleTileCount === 0, "the public map should not inject legacy demonstration tiles");
 
 api.locateUserOnMap();
 api.__emitGps(38.7201, -9.1391, 8);
