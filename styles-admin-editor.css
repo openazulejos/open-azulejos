@@ -1267,7 +1267,7 @@ body.is-canva-view .map-zoom-percent {
 .map-zoom-percent {
   position: absolute;
   left: 13px;
-  bottom: calc(max(18px, env(safe-area-inset-bottom)) + 72px);
+  bottom: max(5px, env(safe-area-inset-bottom));
   z-index: 650;
   width: 34px;
   color: var(--ink);
@@ -1283,7 +1283,7 @@ body.is-canva-view .map-zoom-percent {
 .map-location-control {
   position: absolute;
   right: 10px;
-  bottom: max(18px, env(safe-area-inset-bottom));
+  bottom: calc(max(18px, env(safe-area-inset-bottom)) + 17px);
   z-index: 650;
   width: 34px;
   height: 34px;
