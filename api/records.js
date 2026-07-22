@@ -107,6 +107,11 @@ const normalizedColorMetadata = (body) => {
   };
 };
 
+const normalizedNeighborhood = (value) => {
+  const neighborhood = String(value || "").trim().toLowerCase();
+  return neighborhood && neighborhood.length <= 120 ? neighborhood : null;
+};
+
 const normalizedContributionRights = (body, contributor = null) => {
   const photographerCredit = String(body.photographerCredit || contributor?.pseudonym || "anonymous").trim();
   const consentAt = body.contributorConsentAt ? new Date(body.contributorConsentAt) : null;
@@ -440,7 +445,7 @@ module.exports = async function handler(req, res) {
       const lngDelta = radius / Math.max(1, 111320 * Math.cos(nearLat * Math.PI / 180));
       const exclude = String(requestUrl.searchParams.get("exclude") || "").trim();
       const query = new URLSearchParams();
-      query.set("select", "id,title,lat,lng,image_url,created_at,gps_accuracy_m,moderation_status,cell_code,words,image_fingerprint,dominant_color,color_metadata");
+      query.set("select", "id,title,lat,lng,image_url,created_at,gps_accuracy_m,moderation_status,cell_code,words,image_fingerprint,dominant_color,color_metadata,neighborhood");
       query.set("source", "eq.web-camera");
       query.set("title", "neq.api test");
       query.append("lat", `gte.${nearLat - latDelta}`);
@@ -526,7 +531,7 @@ module.exports = async function handler(req, res) {
         return json(res, error.status || 500, { error: "database read failed", detail: error.detail || error.message });
       }
     }
-    const publicSelect = "id,title,lat,lng,image_url,cell_code,words,source,created_at,gps_accuracy_m,gps_timestamp,location_source,photographer_credit,photo_license,dominant_color,color_metadata";
+    const publicSelect = "id,title,lat,lng,image_url,cell_code,words,source,created_at,gps_accuracy_m,gps_timestamp,location_source,photographer_credit,photo_license,dominant_color,color_metadata,neighborhood";
     const requestedPublicLimit = Number.parseInt(requestUrl.searchParams.get("limit") || "500", 10);
     const publicLimit = Math.max(1, Math.min(Number.isFinite(requestedPublicLimit) ? requestedPublicLimit : 500, 2000));
     const response = await fetch(`${supabaseUrl}/rest/v1/azulejos?select=${publicSelect}&source=eq.web-camera&title=neq.api%20test&moderation_status=eq.approved&order=created_at.desc&limit=${publicLimit}`, {
@@ -916,6 +921,7 @@ module.exports = async function handler(req, res) {
     edit_settings: normalizedEditSettings(body.editSettings),
     cell_code: body.cell || null,
     words: body.words || null,
+    neighborhood: normalizedNeighborhood(body.neighborhood),
     source: "web-camera",
     moderation_status: "pending",
     gps_accuracy_m: Number.isFinite(gpsAccuracy) ? gpsAccuracy : null,

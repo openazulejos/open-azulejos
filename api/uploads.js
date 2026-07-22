@@ -80,6 +80,11 @@ const normalizedContributionRights = (body, contributor = null) => {
   };
 };
 
+const normalizedNeighborhood = (value) => {
+  const neighborhood = String(value || "").trim().toLowerCase();
+  return neighborhood && neighborhood.length <= 120 ? neighborhood : null;
+};
+
 const signUpload = async (supabaseUrl, headers, bucket, objectPath) => {
   const response = await fetch(`${supabaseUrl}/storage/v1/object/upload/sign/${bucket}/${objectPath}`, {
     method: "POST",
@@ -178,6 +183,7 @@ module.exports = async function handler(request, response) {
       crop_points: normalizedCropPoints(body.cropPoints),
       cell_code: body.cell || null,
       words: body.words || null,
+      neighborhood: normalizedNeighborhood(body.neighborhood),
       source: "web-camera",
       moderation_status: "pending",
       gps_accuracy_m: Number.isFinite(gpsAccuracy) ? gpsAccuracy : null,

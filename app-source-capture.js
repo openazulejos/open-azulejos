@@ -394,6 +394,14 @@ function selectedNeighborhoodKey() {
   return key && key !== "all" ? key : "";
 }
 
+function pointInsideSelectedNeighborhood(lat, lng) {
+  const selected = selectedNeighborhoodKey();
+  if (!selected) return true;
+  const polygons = neighborhoodClipPolygons.get(selected);
+  if (!polygons) return false;
+  return pointInsideLatLngPolygons(Number(lat), Number(lng), polygons);
+}
+
 function activeClipPolygons() {
   const selected = selectedNeighborhoodKey();
   if (selected && neighborhoodClipPolygons.has(selected)) return neighborhoodClipPolygons.get(selected);
@@ -839,6 +847,13 @@ function gridCellKey(cx, cy) {
   return `${cx}:${cy}`;
 }
 
+function displayCellInsideSelectedNeighborhood(cell) {
+  const selected = selectedNeighborhoodKey();
+  if (!selected) return true;
+  const center = cellCenter(normalizedCellFromCell(cell));
+  return pointInsideSelectedNeighborhood(center.lat, center.lng);
+}
+
 function allocateFineGridDisplayCells(tiles, zoom = map.getZoom(), density = Number(gridDensity.value)) {
   if (gridStepForZoom(zoom, density) !== GRID_METERS) return null;
   const candidates = tiles.filter((tile) => Number.isFinite(tile?.cx) && Number.isFinite(tile?.cy));
@@ -848,15 +863,18 @@ function allocateFineGridDisplayCells(tiles, zoom = map.getZoom(), density = Num
 
   candidates.forEach((tile) => {
     const trueKey = gridCellKey(tile.cx, tile.cy);
-    if (!occupiedDisplayCells.has(trueKey)) {
+    if (!occupiedDisplayCells.has(trueKey) && displayCellInsideSelectedNeighborhood({ cx: tile.cx, cy: tile.cy })) {
       occupiedDisplayCells.add(trueKey);
       layout.set(tile, { cx: tile.cx, cy: tile.cy });
       return;
     }
 
     const offset = FINE_GRID_NEIGHBOR_OFFSETS.find(([dx, dy]) => {
+      const displayCell = { cx: tile.cx + dx, cy: tile.cy + dy };
       const candidateKey = gridCellKey(tile.cx + dx, tile.cy + dy);
-      return !trueCells.has(candidateKey) && !occupiedDisplayCells.has(candidateKey);
+      return !trueCells.has(candidateKey)
+        && !occupiedDisplayCells.has(candidateKey)
+        && displayCellInsideSelectedNeighborhood(displayCell);
     });
     if (!offset) {
       layout.set(tile, null);
@@ -1825,7 +1843,7 @@ function gridRecordToTile(record) {
     photoLicense: record.photo_license || "",
     dominantColor: record.dominant_color || record.color_metadata?.dominant || "",
     colorMetadata: record.color_metadata || null,
-    neighborhood: neighborhoodNameForPoint(lat, lng),
+    neighborhood: record.neighborhood || neighborhoodNameForPoint(lat, lng),
   };
 }
 
@@ -1870,7 +1888,7 @@ function gridTileMatchesFilters(tile) {
   const color = normalizeGridFilterValue(gridColorFilter?.value);
   const type = normalizeGridFilterValue(gridTypeFilter?.value);
   const motif = normalizeGridFilterValue(gridMotifFilter?.value);
-  if (neighborhood !== "all" && normalizeGridFilterValue(tile.neighborhood) !== neighborhood) return false;
+  if (neighborhood !== "all" && !pointInsideSelectedNeighborhood(tile.lat, tile.lng)) return false;
   if (color !== "all" && normalizeGridFilterValue(tile.dominantColor || gridColorCache.get(tile.id)) !== color) return false;
   if (type !== "all" && normalizeGridFilterValue(tile.type) !== type) return false;
   if (motif !== "all" && normalizeGridFilterValue(tile.motif) !== motif) return false;
@@ -1883,7 +1901,7 @@ function mapTileMatchesFilters(tile) {
   const color = normalizeGridFilterValue(gridColorFilter?.value);
   const type = normalizeGridFilterValue(gridTypeFilter?.value);
   const motif = normalizeGridFilterValue(gridMotifFilter?.value);
-  if (neighborhood !== "all" && normalizeGridFilterValue(tile.neighborhood) !== neighborhood) return false;
+  if (neighborhood !== "all" && !pointInsideSelectedNeighborhood(tile.lat, tile.lng)) return false;
   if (color !== "all" && normalizeGridFilterValue(tile.dominantColor || gridColorCache.get(tile.id)) !== color) return false;
   if (type !== "all" && normalizeGridFilterValue(tile.type) !== type) return false;
   if (motif !== "all" && normalizeGridFilterValue(tile.motif) !== motif) return false;
@@ -4205,6 +4223,7 @@ async function placeRecordedAzulejo(squareImage, gps = null, uploadId = null, or
     title: "recorded azulejo",
     cell: cell.code,
     words: cell.words,
+    neighborhood: neighborhoodNameForPoint(lat, lng),
     uploadId,
     gpsAccuracy: gps?.accuracy ?? null,
     gpsTimestamp: gps?.timestamp ?? null,
@@ -4328,6 +4347,7 @@ function synchronizeServerTiles(records) {
         photoLicense: record.photo_license,
         dominantColor: record.dominant_color || record.color_metadata?.dominant || "",
         colorMetadata: record.color_metadata || null,
+        neighborhood: record.neighborhood || neighborhoodNameForPoint(Number(record.lat), Number(record.lng)),
         minZoom: 12,
       }, {
         isServer: true,
