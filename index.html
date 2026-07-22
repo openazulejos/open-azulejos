@@ -49,7 +49,7 @@
     <meta name="twitter:image" content="https://openazulejos.com/assets/icon-512.png" />
     <link rel="preconnect" href="https://unpkg.com" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="./styles-admin-editor.css?v=20260722-remove-samples" />
+    <link rel="stylesheet" href="./styles-admin-editor.css?v=20260722-desktop-filters" />
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
@@ -153,22 +153,27 @@
         <a class="brand" href="./" aria-label="open azulejos">open azulejos</a>
         <span class="beta-label">beta</span>
       </div>
-      <div class="view-switch" id="viewSwitch">
-        <button class="view-switch-button" id="viewSwitchButton" type="button" aria-haspopup="listbox" aria-expanded="false">
-          <span id="viewSwitchLabel">map</span>
-          <span class="view-switch-arrow" aria-hidden="true"></span>
-        </button>
-        <div class="view-switch-menu" id="viewSwitchMenu" role="listbox" hidden>
-          <button type="button" role="option" aria-selected="true" data-view-mode="map">map</button>
-          <button type="button" role="option" aria-selected="false" data-view-mode="grid">grid</button>
-          <button type="button" role="option" aria-selected="false" data-view-mode="canva">canva</button>
+      <div class="topbar-center">
+        <div class="view-switch" id="viewSwitch">
+          <button class="view-switch-button" id="viewSwitchButton" type="button" aria-haspopup="listbox" aria-expanded="false">
+            <span id="viewSwitchLabel">map</span>
+            <span class="view-switch-arrow" aria-hidden="true"></span>
+          </button>
+          <div class="view-switch-menu" id="viewSwitchMenu" role="listbox" hidden>
+            <button type="button" role="option" aria-selected="true" data-view-mode="map">map</button>
+            <button type="button" role="option" aria-selected="false" data-view-mode="grid">grid</button>
+            <button type="button" role="option" aria-selected="false" data-view-mode="canva">canva</button>
+          </div>
         </div>
+        <button class="filter-switch" id="filterSwitchButton" type="button" aria-controls="azulejoFilterBar" aria-expanded="false">
+          <span>filter</span>
+          <span class="filter-switch-arrow" aria-hidden="true"></span>
+        </button>
       </div>
-      <button class="filter-switch" id="filterSwitchButton" type="button" aria-controls="azulejoFilterBar" aria-expanded="false">
-        <span>filter</span>
-        <span class="filter-switch-arrow" aria-hidden="true"></span>
-      </button>
-      <nav class="nav">
+      <nav class="desktop-nav" aria-label="desktop navigation">
+        <button class="account-trigger" id="desktopAccountOpenButton" type="button">log in</button>
+        <button class="about-trigger" id="desktopAboutOpenButton" type="button">about</button>
+        <a class="admin-trigger" id="desktopAdminOpenButton" href="/admin" hidden>admin</a>
       </nav>
       <div class="topbar-actions">
         <button class="menu-trigger" id="menuOpenButton" type="button" aria-label="open menu" aria-haspopup="dialog" aria-expanded="false">
@@ -697,6 +702,6 @@ azulejo-002.jpg,38.71072,-9.13908,Baixa</code></pre>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="./offline-queue.js?v=20260702-contribution-rights"></script>
-    <script src="./app-source-capture.js?v=20260722-remove-samples"></script>
+    <script src="./app-source-capture.js?v=20260722-desktop-filters"></script>
   </body>
 </html>

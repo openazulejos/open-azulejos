@@ -28,6 +28,8 @@ assert(index.includes("\"@type\": \"Dataset\"") && index.includes("https://opena
 assert(index.includes("\"@type\": \"WebApplication\"") && index.includes("\"applicationCategory\": \"MapApplication\""), "public page should describe the map web app");
 assert(index.includes("<noscript>") && index.includes("Mapa de azulejos de Lisboa") && index.includes("Carte des azulejos de Lisbonne"), "public page should provide crawlable multilingual fallback text");
 assert(index.includes("hreflang=\"pt\" href=\"https://openazulejos.com/pt\""), "public page should expose Portuguese alternate route");
+assert(index.includes("id=\"desktopAccountOpenButton\"") && index.includes("id=\"desktopAboutOpenButton\""), "public page should expose direct desktop navigation");
+assert(index.includes("id=\"filterSwitchButton\"") && index.includes("aria-controls=\"azulejoFilterBar\""), "public page should expose a shared filter toggle in the top bar");
 
 assert(admin.includes("noindex,nofollow,noarchive"), "admin page should not be indexed");
 assert(dashboard.includes("noindex,nofollow,noarchive"), "dashboard page should not be indexed");

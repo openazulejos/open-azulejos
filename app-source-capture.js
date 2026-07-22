@@ -194,11 +194,13 @@ const menuSheet = document.querySelector("#menuSheet");
 const menuCloseButton = document.querySelector("#menuCloseButton");
 const filterSwitchButton = document.querySelector("#filterSwitchButton");
 const aboutOpenButton = document.querySelector("#aboutOpenButton");
+const desktopAboutOpenButton = document.querySelector("#desktopAboutOpenButton");
 const aboutSheet = document.querySelector("#aboutSheet");
 const aboutCloseButton = document.querySelector("#aboutCloseButton");
 const aboutContributorsStatus = document.querySelector("#aboutContributorsStatus");
 const aboutContributorsList = document.querySelector("#aboutContributorsList");
 const adminOpenButton = document.querySelector("#adminOpenButton");
+const desktopAdminOpenButton = document.querySelector("#desktopAdminOpenButton");
 const viewSwitchButton = document.querySelector("#viewSwitchButton");
 const viewSwitchLabel = document.querySelector("#viewSwitchLabel");
 const viewSwitchMenu = document.querySelector("#viewSwitchMenu");
@@ -217,6 +219,7 @@ const gridColorFilter = document.querySelector("#gridColorFilter");
 const gridTypeFilter = document.querySelector("#gridTypeFilter");
 const gridMotifFilter = document.querySelector("#gridMotifFilter");
 const accountOpenButton = document.querySelector("#accountOpenButton");
+const desktopAccountOpenButton = document.querySelector("#desktopAccountOpenButton");
 const accountSheet = document.querySelector("#accountSheet");
 const accountCloseButton = document.querySelector("#accountCloseButton");
 const accountGuest = document.querySelector("#accountGuest");
@@ -1324,6 +1327,15 @@ function closeMenuSheet() {
 function setFilterMenuOpen(open) {
   document.body.classList.toggle("is-filter-menu-open", Boolean(open));
   filterSwitchButton?.setAttribute("aria-expanded", String(Boolean(open)));
+  const updateLayout = () => {
+    map.invalidateSize?.({ animate: false });
+    drawGrid();
+    refreshTileVisibility();
+    canvaRenderSignature = "";
+    scheduleAzulejoCanvaRender(0);
+  };
+  if (typeof window.requestAnimationFrame === "function") window.requestAnimationFrame(updateLayout);
+  else updateLayout();
 }
 
 function toggleFilterMenu() {
@@ -3391,13 +3403,15 @@ function applyContributorAccount(data) {
   if (accountMember) accountMember.hidden = !authenticated;
   if (myContributions) myContributions.hidden = !authenticated;
   if (accountOpenButton) accountOpenButton.textContent = authenticated ? "account" : "log in";
+  if (desktopAccountOpenButton) desktopAccountOpenButton.textContent = authenticated ? "account" : "log in";
   if (accountPseudonym) accountPseudonym.textContent = contributorAccount?.profile?.pseudonym || "";
   if (accountProfilePseudonym) accountProfilePseudonym.value = contributorAccount?.profile?.pseudonym || "";
   if (authenticated) {
     const records = contributorAccount.records || [];
     renderContributionRecords(records, "");
-  } else if (adminOpenButton) {
-    adminOpenButton.hidden = true;
+  } else {
+    if (adminOpenButton) adminOpenButton.hidden = true;
+    if (desktopAdminOpenButton) desktopAdminOpenButton.hidden = true;
   }
 }
 
@@ -3728,10 +3742,13 @@ async function refreshAdminCaptureSession() {
     adminCaptureSession = Boolean(data?.authenticated);
     adminSessionChecked = true;
     if (adminOpenButton) adminOpenButton.hidden = !adminCaptureSession;
+    if (desktopAdminOpenButton) desktopAdminOpenButton.hidden = !adminCaptureSession;
     if (activeViewerTile) syncViewerAdminEdit(activeViewerTile);
   } catch {
     adminCaptureSession = false;
     adminSessionChecked = true;
+    if (adminOpenButton) adminOpenButton.hidden = true;
+    if (desktopAdminOpenButton) desktopAdminOpenButton.hidden = true;
     if (azulejoViewerEditSeparator) azulejoViewerEditSeparator.hidden = true;
     if (azulejoViewerEdit) azulejoViewerEdit.hidden = true;
   }
@@ -5208,8 +5225,10 @@ targetCoordinates?.addEventListener("click", copyTargetCoordinates);
 menuOpenButton?.addEventListener("click", openMenuSheet);
 menuCloseButton?.addEventListener("click", closeMenuSheet);
 adminOpenButton?.addEventListener("click", closeMenuSheet);
+desktopAdminOpenButton?.addEventListener("click", closeMenuSheet);
 filterSwitchButton?.addEventListener("click", toggleFilterMenu);
 aboutOpenButton?.addEventListener("click", openAboutSheet);
+desktopAboutOpenButton?.addEventListener("click", openAboutSheet);
 aboutCloseButton?.addEventListener("click", closeAboutSheet);
 viewSwitchButton?.addEventListener("click", (event) => {
   event.stopPropagation();
@@ -5255,6 +5274,7 @@ gridNeighborhoodFilter?.addEventListener("change", () => applyAzulejoFilters({ f
   filter?.addEventListener("change", () => applyAzulejoFilters());
 });
 accountOpenButton?.addEventListener("click", openAccountSheet);
+desktopAccountOpenButton?.addEventListener("click", openAccountSheet);
 accountCloseButton?.addEventListener("click", closeAccountSheet);
 accountLoginMode?.addEventListener("click", () => setAccountMode("log-in"));
 accountSignupMode?.addEventListener("click", () => setAccountMode("sign-up"));
