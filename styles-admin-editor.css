@@ -4950,6 +4950,12 @@ button.admin-member-stat:focus-visible {
     border-color: var(--line);
   }
 
+  .azulejo-filter-bar select,
+  .azulejo-grid-filters select {
+    background: transparent;
+    border-color: transparent;
+  }
+
   .nav-button,
   .template-links a,
   .archive-filter button,
