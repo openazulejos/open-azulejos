@@ -628,6 +628,18 @@ body.is-filter-menu-open .filter-switch-arrow {
   padding: 0 19px 0 0;
   text-align: center;
   text-align-last: center;
+  color-scheme: light;
+}
+
+.azulejo-filter-bar select option,
+.azulejo-grid-filters select option {
+  background: #fff;
+  color: #101010;
+}
+
+.azulejo-filter-bar select option:disabled,
+.azulejo-grid-filters select option:disabled {
+  color: #6f6f6f;
 }
 
 .azulejo-filter-bar select:disabled,
