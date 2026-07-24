@@ -25,6 +25,7 @@ assert(index.includes("rel=\"canonical\" href=\"https://openazulejos.com/\""), "
 assert(index.includes("property=\"og:title\"") && index.includes("name=\"twitter:card\""), "public page should include social preview metadata");
 assert(index.includes("application/ld+json") && index.includes("\"@type\": \"WebSite\""), "public page should include structured data");
 assert(index.includes("\"@type\": \"Dataset\"") && index.includes("https://openazulejos.com/exports/azulejos.geojson"), "public page should describe the open dataset");
+assert(index.includes("\"creator\": {") && index.includes("https://openazulejos.com/#organization"), "public dataset should identify its creator");
 assert(index.includes("\"@type\": \"WebApplication\"") && index.includes("\"applicationCategory\": \"MapApplication\""), "public page should describe the map web app");
 assert(index.includes("<noscript>") && index.includes("Mapa de azulejos de Lisboa") && index.includes("Carte des azulejos de Lisbonne"), "public page should provide crawlable multilingual fallback text");
 assert(index.includes("hreflang=\"pt\" href=\"https://openazulejos.com/pt\""), "public page should expose Portuguese alternate route");
