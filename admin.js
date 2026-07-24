@@ -524,40 +524,8 @@ function adminNeighborhoodForRecord(record) {
   return record.__neighborhood;
 }
 
-function adminColorFamilyFromRgb(red, green, blue) {
-  const max = Math.max(red, green, blue);
-  const min = Math.min(red, green, blue);
-  const delta = max - min;
-  const lightness = (max + min) / 2;
-  if (max < 48) return "black";
-  if (min > 214 && delta < 36) return "white";
-  if (delta < 22) return lightness < 150 ? "grey" : "white";
-  let hue = 0;
-  if (max === red) hue = ((green - blue) / delta) % 6;
-  else if (max === green) hue = (blue - red) / delta + 2;
-  else hue = (red - green) / delta + 4;
-  hue = (hue * 60 + 360) % 360;
-  if (hue >= 195 && hue <= 258) return "blue";
-  if (hue >= 80 && hue < 175) return "green";
-  if (hue >= 38 && hue < 80) return "yellow";
-  if (hue >= 350 || hue < 16) return "red";
-  if (hue >= 16 && hue < 38) return "brown";
-  return "multicolor";
-}
-
 function dominantAdminColorFamily(data) {
-  const counts = new Map();
-  for (let index = 0; index < data.length; index += 16) {
-    if (data[index + 3] < 180) continue;
-    const family = adminColorFamilyFromRgb(data[index], data[index + 1], data[index + 2]);
-    if (family === "white") continue;
-    counts.set(family, (counts.get(family) || 0) + 1);
-  }
-  if (!counts.size) return "white";
-  const ranked = [...counts.entries()].sort((first, second) => second[1] - first[1]);
-  const total = ranked.reduce((sum, [, count]) => sum + count, 0);
-  if (ranked.length >= 3 && ranked[0][1] / total < 0.45) return "multicolor";
-  return ranked[0][0];
+  return globalThis.OpenAzulejosColor.dominantFamilyFromPixels(data, 16);
 }
 
 function adminColorMetadataFromCanvas(canvas) {
@@ -568,25 +536,7 @@ function adminColorMetadataFromCanvas(canvas) {
   if (!context) return null;
   context.drawImage(canvas, 0, 0, sample.width, sample.height);
   const pixels = context.getImageData(0, 0, sample.width, sample.height).data;
-  const counts = new Map();
-  for (let index = 0; index < pixels.length; index += 4) {
-    if (pixels[index + 3] < 180) continue;
-    const family = adminColorFamilyFromRgb(pixels[index], pixels[index + 1], pixels[index + 2]);
-    if (family === "white") continue;
-    counts.set(family, (counts.get(family) || 0) + 1);
-  }
-  if (!counts.size) {
-    return {
-      dominant: "white",
-      families: { white: 1 },
-      source: "admin-treatment",
-    };
-  }
-  const ranked = [...counts.entries()].sort((first, second) => second[1] - first[1]);
-  const total = ranked.reduce((sum, [, count]) => sum + count, 0);
-  const dominant = ranked.length >= 3 && ranked[0][1] / total < 0.45 ? "multicolor" : ranked[0][0];
-  const families = Object.fromEntries(ranked.map(([family, count]) => [family, Number((count / total).toFixed(4))]));
-  return { dominant, families, source: "admin-treatment" };
+  return globalThis.OpenAzulejosColor.metadataFromPixels(pixels, "admin-treatment");
 }
 
 function thumbnailImageUrl(imageUrl, size = 96) {
