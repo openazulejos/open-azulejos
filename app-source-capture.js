@@ -1163,7 +1163,7 @@ async function applyEdgeMatchedMosaic(imageUrl, renderToken) {
   }
 }
 
-function setViewerMosaicMode(mode, tile = viewerTiles().find((item) => item.id === activeViewerTileId)) {
+function setViewerMosaicMode(mode, tile = activeViewerTile || viewerTiles().find((item) => item.id === activeViewerTileId)) {
   if (!azulejoViewerVisual || !azulejoViewerMosaic) return;
   const renderToken = ++viewerMosaicRenderToken;
   viewerMosaicMode = ((Number(mode) % 4) + 4) % 4;
