@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { fetchWithRetry } from "./fetch-with-retry.mjs";
 
 const argumentsList = process.argv.slice(2);
 const argument = (name, fallback = "") => {
@@ -16,6 +17,15 @@ const adminKey = process.env.ADMIN_KEY || argument("--admin-key");
 const supabaseUrl = (process.env.SUPABASE_URL || argument("--supabase-url")).replace(/\/$/, "");
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || argument("--service-key");
 
+function backupFetch(url, options = {}) {
+  return fetchWithRetry(url, options, {
+    onRetry: ({ attempt, attempts, delayMs, status, error }) => {
+      const reason = status ? `HTTP ${status}` : error?.message || "network error";
+      console.warn(`Retrying ${new URL(url).pathname} after ${reason} (attempt ${attempt + 1}/${attempts}, ${delayMs} ms)`);
+    },
+  });
+}
+
 async function readRecordsDirect() {
   const records = [];
   const limit = 1000;
@@ -28,7 +38,7 @@ async function readRecordsDirect() {
       limit: String(limit),
       offset: String(offset),
     });
-    const response = await fetch(`${supabaseUrl}/rest/v1/azulejos?${query}`, {
+    const response = await backupFetch(`${supabaseUrl}/rest/v1/azulejos?${query}`, {
       headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` },
       cache: "no-store",
     });
@@ -43,7 +53,7 @@ async function readRecordsDirect() {
 async function readRecords() {
   if (supabaseUrl && serviceKey) return readRecordsDirect();
   if (!adminKey) {
-    const response = await fetch(`${origin}/api/records?backup-public=${Date.now()}`, { cache: "no-store" });
+    const response = await backupFetch(`${origin}/api/records?backup-public=${Date.now()}`, { cache: "no-store" });
     if (!response.ok) throw new Error(`public manifest failed: ${response.status}`);
     const payload = await response.json();
     return { records: payload.records || [], scope: "approved-public-records" };
@@ -51,7 +61,7 @@ async function readRecords() {
   const records = [];
   let offset = 0;
   do {
-    const response = await fetch(`${origin}/api/records?backup=manifest&offset=${offset}`, {
+    const response = await backupFetch(`${origin}/api/records?backup=manifest&offset=${offset}`, {
       headers: { "x-admin-key": adminKey },
       cache: "no-store",
     });
@@ -75,7 +85,7 @@ async function downloadAsset(record, kind, asset) {
   const headers = asset.private && serviceKey
     ? { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` }
     : {};
-  const response = await fetch(asset.url, { headers, cache: "no-store" });
+  const response = await backupFetch(asset.url, { headers, cache: "no-store" });
   if (!response.ok) throw new Error(`${kind} ${record.id}: ${response.status}`);
   const bytes = Buffer.from(await response.arrayBuffer());
   const extension = extensionFor(asset.url, response.headers.get("content-type") || "");
