@@ -35,7 +35,12 @@ const adminStatsApprovalRate = document.querySelector("#adminStatsApprovalRate")
 const adminStatsActiveContributors = document.querySelector("#adminStatsActiveContributors");
 const adminStatsLast24Hours = document.querySelector("#adminStatsLast24Hours");
 const adminStatsGuestSubmissions = document.querySelector("#adminStatsGuestSubmissions");
+const adminStatsPageViews = document.querySelector("#adminStatsPageViews");
+const adminStatsViewsToday = document.querySelector("#adminStatsViewsToday");
+const adminStatsTopSource = document.querySelector("#adminStatsTopSource");
+const adminStatsTrackingStarted = document.querySelector("#adminStatsTrackingStarted");
 const adminActivityChart = document.querySelector("#adminActivityChart");
+const adminTrafficChart = document.querySelector("#adminTrafficChart");
 const adminStatsSummary = document.querySelector("#adminStatsSummary");
 const adminMembersStatus = document.querySelector("#adminMembersStatus");
 const adminMembersList = document.querySelector("#adminMembersList");
@@ -182,6 +187,33 @@ function renderActivityChart(days = []) {
   });
 }
 
+function renderTrafficChart(days = []) {
+  adminTrafficChart.textContent = "";
+  const maximum = Math.max(1, ...days.map((day) => Number(day.views) || 0));
+  days.forEach((day) => {
+    const row = document.createElement("div");
+    row.className = "admin-activity-row";
+    const time = document.createElement("time");
+    time.dateTime = day.date;
+    time.textContent = new Intl.DateTimeFormat("en-GB", {
+      weekday: "short",
+      day: "numeric",
+      timeZone: "Europe/Lisbon",
+    }).format(new Date(`${day.date}T12:00:00Z`));
+    const bars = document.createElement("div");
+    bars.className = "admin-activity-bars";
+    bars.setAttribute("aria-label", `${day.views || 0} page views`);
+    const views = document.createElement("span");
+    views.className = "admin-traffic-views";
+    views.style.width = `${(Number(day.views) / maximum) * 100}%`;
+    const count = document.createElement("strong");
+    count.textContent = String(day.views || 0);
+    bars.append(views);
+    row.append(time, bars, count);
+    adminTrafficChart.append(row);
+  });
+}
+
 async function loadAdminStats() {
   adminStatsStatus.textContent = "loading stats...";
   try {
@@ -192,6 +224,7 @@ async function loadAdminStats() {
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || `stats failed ${response.status}`);
     const metrics = data.metrics || {};
+    const traffic = data.traffic || {};
     adminStatsPeriod.textContent = `since ${formatStatsDate(data.launch?.startedAt) || "beta launch"}`;
     adminStatsNewContributors.textContent = String(metrics.newContributors ?? 0);
     adminStatsPublished.textContent = String(metrics.publishedSinceBeta ?? 0);
@@ -203,7 +236,12 @@ async function loadAdminStats() {
     adminStatsActiveContributors.textContent = String(metrics.activeContributors ?? 0);
     adminStatsLast24Hours.textContent = String(metrics.submissionsLast24Hours ?? 0);
     adminStatsGuestSubmissions.textContent = String(metrics.guestSubmissions ?? 0);
+    adminStatsPageViews.textContent = String(traffic.totalPageViews ?? 0);
+    adminStatsViewsToday.textContent = String(traffic.todayPageViews ?? 0);
+    adminStatsTopSource.textContent = traffic.topSource || "—";
+    adminStatsTrackingStarted.textContent = formatStatsDate(traffic.trackingStartedAt) || "—";
     renderActivityChart(Array.isArray(data.daily) ? data.daily : []);
+    renderTrafficChart(Array.isArray(traffic.daily) ? traffic.daily : []);
     const latest = formatStatsDate(metrics.latestSubmissionAt, { dateStyle: "medium", timeStyle: "short" });
     adminStatsSummary.textContent = `${metrics.totalPublished ?? 0} total published · ${metrics.totalContributors ?? 0} registered accounts${latest ? ` · latest submission ${latest}` : ""}`;
     adminStatsStatus.textContent = `updated ${formatStatsDate(new Date(), { timeStyle: "short" })}`;

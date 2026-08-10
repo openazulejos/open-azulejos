@@ -8,7 +8,7 @@
     <link rel="icon" href="./assets/favicon.ico" sizes="any" />
     <link rel="icon" href="./assets/favicon-32.png" type="image/png" />
     <link rel="apple-touch-icon" href="./assets/apple-touch-icon.png" />
-    <link rel="stylesheet" href="./styles-admin-editor.css?v=20260720-dark-mode" />
+    <link rel="stylesheet" href="./styles-admin-editor.css?v=20260810-admin-traffic" />
   </head>
   <body class="admin-page">
     <header class="admin-header">
@@ -33,7 +33,7 @@
       <section class="admin-tools" id="adminTools" hidden>
         <aside class="admin-sidebar" aria-label="admin navigation">
           <nav>
-            <a href="#dashboard" data-admin-page-link="dashboard">dashboard</a>
+            <a href="#dashboard" data-admin-page-link="dashboard">statistics</a>
             <a href="#moderation" data-admin-page-link="moderation">moderation</a>
             <a href="#members" data-admin-page-link="members">members</a>
             <a href="#accounts" data-admin-page-link="accounts">admin accounts</a>
@@ -51,7 +51,7 @@
           <section class="admin-dashboard admin-page-section" id="adminDashboard" data-admin-page="dashboard" aria-labelledby="adminDashboardTitle">
             <header class="admin-dashboard-header">
               <div>
-                <h1 id="adminDashboardTitle">beta launch</h1>
+                <h1 id="adminDashboardTitle">statistics</h1>
                 <p id="adminStatsPeriod">since 4 July 2026</p>
               </div>
               <span id="adminStatsStatus" role="status">loading stats...</span>
@@ -65,10 +65,18 @@
               <article class="admin-stat"><span>active contributors</span><strong id="adminStatsActiveContributors">—</strong></article>
               <article class="admin-stat"><span>last 24 hours</span><strong id="adminStatsLast24Hours">—</strong></article>
               <article class="admin-stat"><span>guest submissions</span><strong id="adminStatsGuestSubmissions">—</strong></article>
+              <article class="admin-stat is-primary"><span>page views</span><strong id="adminStatsPageViews">—</strong></article>
+              <article class="admin-stat is-primary"><span>views today</span><strong id="adminStatsViewsToday">—</strong></article>
+              <article class="admin-stat"><span>top traffic source</span><strong class="is-text" id="adminStatsTopSource">—</strong></article>
+              <article class="admin-stat"><span>traffic measured since</span><strong class="is-text" id="adminStatsTrackingStarted">—</strong></article>
             </div>
             <section class="admin-activity" aria-labelledby="adminActivityTitle">
-              <h2 id="adminActivityTitle">last 7 days</h2>
+              <h2 id="adminActivityTitle">submissions · last 7 days</h2>
               <div id="adminActivityChart" class="admin-activity-chart"></div>
+            </section>
+            <section class="admin-activity" aria-labelledby="adminTrafficTitle">
+              <h2 id="adminTrafficTitle">site traffic · last 7 days</h2>
+              <div id="adminTrafficChart" class="admin-activity-chart"></div>
             </section>
             <p class="admin-stats-summary" id="adminStatsSummary"></p>
           </section>
@@ -288,6 +296,6 @@
     <script src="./color-classification.js?v=20260724-continuous-hues"></script>
     <script src="./admin-image.js?v=20260630-expand-border"></script>
     <script src="./admin-similarity.js?v=20260708-pattern-similarity"></script>
-    <script src="./admin.js?v=20260724-continuous-hues"></script>
+    <script src="./admin.js?v=20260810-admin-traffic"></script>
   </body>
 </html>
