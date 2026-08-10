@@ -20,8 +20,8 @@ jobs:
       AWS_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_AWS_SECRET_ACCESS_KEY }}
       AWS_DEFAULT_REGION: ${{ secrets.BACKUP_AWS_REGION }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
       - name: Back up records and media
@@ -36,7 +36,7 @@ jobs:
             pg_dump "$SUPABASE_DB_URL" --format=custom --file=/backup/database.backup
       - name: Verify media backup
         run: node scripts/verify-backup.mjs "$(find "$RUNNER_TEMP/openazulejos" -mindepth 1 -maxdepth 1 -type d | sort | tail -1)"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: openazulejos-${{ github.run_id }}
           path: ${{ runner.temp }}/openazulejos
