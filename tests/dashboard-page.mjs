@@ -92,6 +92,13 @@ const context = {
             latestSubmissionAt: "2026-07-04T13:00:00.000Z",
           },
           daily: [{ date: "2026-07-04", submitted: 13, approved: 8 }],
+          traffic: {
+            trackingStartedAt: "2026-08-10",
+            totalPageViews: 42,
+            todayPageViews: 9,
+            topSource: "search",
+            daily: [{ date: "2026-08-10", views: 9 }],
+          },
         }),
       };
     }
@@ -107,6 +114,9 @@ assert(element("#dashboardLoginPanel").hidden === true, "dashboard login should 
 assert(element("#dashboardContent").hidden === false, "dashboard content should show after successful admin login");
 assert(element("#dashboardNewContributors").textContent === "3", "dashboard should render contributor count");
 assert(element("#dashboardPublished").textContent === "8", "dashboard should render published count");
+assert(element("#dashboardPageViews").textContent === "42", "dashboard should render aggregate page views");
+assert(element("#dashboardViewsToday").textContent === "9", "dashboard should render today's page views");
+assert(element("#dashboardTopSource").textContent === "search", "dashboard should render the broad top source");
 assert(fetchCalls.some((call) => call.url.startsWith("/api/admin-stats")), "dashboard should request admin stats");
 
 console.log("dashboard page tests passed");

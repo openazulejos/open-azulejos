@@ -3,11 +3,11 @@ const { authorizeAdminRequest } = require("./_admin-auth");
 const { authorizeContributorRequest } = require("./_contributor-auth");
 const { issueContributionReceipt } = require("./_contribution-receipt");
 const { notifyNewSubmission } = require("./_email-notifications");
+const { normalizedColorMetadata } = require("./_color-metadata");
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const FINGERPRINT_PATTERN = /^[01]{64}$/;
 const REVIEWED_RELATIONS = new Set(["duplicate", "same-pattern", "variation", "possibly-related"]);
 const CONDITION_CODES = new Set(["intact", "crazed", "chipped", "missing", "painted-covered", "repaired", "unknown"]);
-const COLOR_FAMILIES = new Set(["blue", "green", "yellow", "red", "brown", "black", "white", "grey", "multicolor"]);
 
 const json = (res, status, payload) => {
   res.statusCode = status;
@@ -79,32 +79,6 @@ const normalizedEditSettings = (value) => {
     };
   }
   return settings;
-};
-
-const normalizedColorMetadata = (body) => {
-  const dominant = String(body.dominant_color || body.color_metadata?.dominant || "").trim().toLowerCase();
-  if (!COLOR_FAMILIES.has(dominant)) return null;
-  const sourceFamilies = body.color_metadata?.families;
-  const families = {};
-  if (sourceFamilies && typeof sourceFamilies === "object" && !Array.isArray(sourceFamilies)) {
-    Object.entries(sourceFamilies).forEach(([family, value]) => {
-      const key = String(family || "").trim().toLowerCase();
-      const amount = Number(value);
-      if (COLOR_FAMILIES.has(key) && Number.isFinite(amount) && amount >= 0) {
-        families[key] = Math.min(1, Number(amount.toFixed(4)));
-      }
-    });
-  }
-  if (!Object.keys(families).length) families[dominant] = 1;
-  return {
-    dominant,
-    metadata: {
-      dominant,
-      families,
-      source: "admin-treatment",
-      analyzed_at: new Date().toISOString(),
-    },
-  };
 };
 
 const normalizedNeighborhood = (value) => {
@@ -689,6 +663,7 @@ module.exports = async function handler(req, res) {
     const conditionRequested = Array.isArray(body.condition_codes);
     const conditionCodes = conditionRequested ? [...new Set(body.condition_codes.map(String))] : null;
     const editedImage = decodeDataUrl(body.imageData);
+    const colorMetadata = normalizedColorMetadata(body, editedImage ? "admin-treatment" : "admin-approval");
     if (status && !["pending", "approved", "rejected"].includes(status)) {
       return json(res, 400, { error: "invalid moderation_status" });
     }
@@ -698,7 +673,7 @@ module.exports = async function handler(req, res) {
     if (conditionRequested && conditionCodes.some((code) => !CONDITION_CODES.has(code))) {
       return json(res, 400, { error: "invalid condition code" });
     }
-    if (!status && !editedImage && !conditionRequested) return json(res, 400, { error: "moderation_status, imageData or condition_codes is required" });
+    if (!status && !editedImage && !conditionRequested && !colorMetadata) return json(res, 400, { error: "moderation_status, imageData, color metadata or condition_codes is required" });
     if (editedImage && editedImage.buffer.length > 3_000_000) {
       return json(res, 413, { error: "edited image is too large" });
     }
@@ -722,8 +697,11 @@ module.exports = async function handler(req, res) {
       updatePayload.last_admin_actor_label = adminAuthorization.actor;
     }
     if (conditionRequested) updatePayload.condition_codes = conditionCodes;
+    if (colorMetadata) {
+      updatePayload.dominant_color = colorMetadata.dominant;
+      updatePayload.color_metadata = colorMetadata.metadata;
+    }
     if (editedImage) {
-      const colorMetadata = normalizedColorMetadata(body);
       const editedPath = `captures/${id}-edited.${editedImage.ext}`;
       const upload = await fetch(`${supabaseUrl}/storage/v1/object/${bucket}/${editedPath}`, {
         method: "POST",
@@ -749,10 +727,6 @@ module.exports = async function handler(req, res) {
       }
       updatePayload.edited_at = new Date().toISOString();
       if (FINGERPRINT_PATTERN.test(body.image_fingerprint || "")) updatePayload.image_fingerprint = body.image_fingerprint;
-      if (colorMetadata) {
-        updatePayload.dominant_color = colorMetadata.dominant;
-        updatePayload.color_metadata = colorMetadata.metadata;
-      }
     }
 
     const update = await fetch(`${supabaseUrl}/rest/v1/azulejos?id=eq.${id}`, {
@@ -931,6 +905,11 @@ module.exports = async function handler(req, res) {
     photo_license: rights.photoLicense,
     contributor_consent_at: rights.contributorConsentAt,
   };
+  const colorMetadata = normalizedColorMetadata(body, "capture");
+  if (colorMetadata) {
+    recordPayload.dominant_color = colorMetadata.dominant;
+    recordPayload.color_metadata = colorMetadata.metadata;
+  }
 
   const insert = await fetch(`${supabaseUrl}/rest/v1/azulejos`, {
     method: "POST",

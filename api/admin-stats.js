@@ -93,6 +93,7 @@ module.exports = async function handler(request, response) {
       launchContributions,
       recentSubmissions,
       latestSubmissionRows,
+      analyticsRows,
     ] = await Promise.all([
       countRows("contributor_profiles", {}, "user_id"),
       countRows("contributor_profiles", { created_at: `gte.${betaIso}` }, "user_id"),
@@ -110,6 +111,9 @@ module.exports = async function handler(request, response) {
         created_at: `gte.${recentStart}`,
       }, { order: "created_at.asc", limit: String(MAX_ACTIVITY_ROWS) }),
       readRows("azulejos", "created_at", cameraFilters, { order: "created_at.desc", limit: "1" }),
+      readRows("site_analytics_daily", "day,event,view,source,count", {
+        event: "eq.page_view",
+      }, { order: "day.asc", limit: String(MAX_ACTIVITY_ROWS) }),
     ]);
 
     const activeContributorIds = new Set(launchContributions
@@ -131,6 +135,20 @@ module.exports = async function handler(request, response) {
       if (item.moderation_status === "approved") day.approved += 1;
       if (item.moderation_status === "rejected") day.rejected += 1;
     });
+    const trafficDays = new Map(recentDayKeys(now).map((date) => [date, { date, views: 0 }]));
+    const trafficSources = new Map();
+    let totalPageViews = 0;
+    analyticsRows.forEach((item) => {
+      const count = Math.max(0, Number(item.count) || 0);
+      totalPageViews += count;
+      const day = trafficDays.get(item.day);
+      if (day) day.views += count;
+      trafficSources.set(item.source, (trafficSources.get(item.source) || 0) + count);
+    });
+    const today = lisbonDayKey(now);
+    const sources = [...trafficSources.entries()]
+      .map(([source, count]) => ({ source, count }))
+      .sort((first, second) => second.count - first.count || first.source.localeCompare(second.source));
 
     return json(response, 200, {
       launch: {
@@ -152,6 +170,14 @@ module.exports = async function handler(request, response) {
         latestSubmissionAt: latestSubmissionRows[0]?.created_at || null,
       },
       daily: [...days.values()],
+      traffic: {
+        trackingStartedAt: analyticsRows[0]?.day || null,
+        totalPageViews,
+        todayPageViews: trafficDays.get(today)?.views || 0,
+        topSource: sources[0]?.source || null,
+        daily: [...trafficDays.values()],
+        sources,
+      },
     });
   } catch (error) {
     return json(response, 502, { error: error.message || "statistics query failed" });

@@ -3072,6 +3072,37 @@ function dataUrlToBlob(dataUrl) {
   return new Blob([bytes], { type: mime });
 }
 
+function colorMetadataFromCapturedImage(imageData) {
+  return new Promise((resolve) => {
+    if (!globalThis.OpenAzulejosColor) {
+      resolve(null);
+      return;
+    }
+    const image = new Image();
+    image.onload = () => {
+      try {
+        const sample = document.createElement("canvas");
+        sample.width = 32;
+        sample.height = 32;
+        const context = sample.getContext("2d", { willReadFrequently: true });
+        if (!context) {
+          resolve(null);
+          return;
+        }
+        context.drawImage(image, 0, 0, 32, 32);
+        resolve(globalThis.OpenAzulejosColor.metadataFromPixels(
+          context.getImageData(0, 0, 32, 32).data,
+          "capture",
+        ));
+      } catch {
+        resolve(null);
+      }
+    };
+    image.onerror = () => resolve(null);
+    image.src = imageData;
+  });
+}
+
 async function uploadSignedAsset(asset, blob) {
   if (!asset) return;
   const response = await fetch(asset.signedUrl, {
@@ -4191,6 +4222,7 @@ async function placeRecordedAzulejo(squareImage, gps = null, uploadId = null, or
   const lat = gps?.lat ?? center.lat;
   const lng = gps?.lng ?? center.lng;
   const cell = cellForLatLng(lat, lng);
+  const colorMetadata = await colorMetadataFromCapturedImage(squareImage);
   const payload = {
     imageData: squareImage,
     originalImageData,
@@ -4210,6 +4242,8 @@ async function placeRecordedAzulejo(squareImage, gps = null, uploadId = null, or
     photoLicense: rights?.photoLicense || null,
     contributorConsent: Boolean(rights?.contributorConsent),
     contributorConsentAt: rights?.contributorConsentAt || null,
+    dominant_color: colorMetadata?.dominant || null,
+    color_metadata: colorMetadata,
   };
   let stored;
   if (navigator.onLine === false) {

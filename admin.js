@@ -539,6 +539,21 @@ function adminColorMetadataFromCanvas(canvas) {
   return globalThis.OpenAzulejosColor.metadataFromPixels(pixels, "admin-treatment");
 }
 
+async function adminColorMetadataFromRecord(record) {
+  if (record?.dominant_color || !record?.image_url || !globalThis.OpenAzulejosColor) return null;
+  const image = await loadEditorImage(thumbnailImageUrl(record.image_url, 96));
+  const sample = document.createElement("canvas");
+  sample.width = 32;
+  sample.height = 32;
+  const context = sample.getContext("2d", { willReadFrequently: true });
+  if (!context) return null;
+  context.drawImage(image, 0, 0, 32, 32);
+  return globalThis.OpenAzulejosColor.metadataFromPixels(
+    context.getImageData(0, 0, 32, 32).data,
+    "admin-approval",
+  );
+}
+
 function thumbnailImageUrl(imageUrl, size = 96) {
   const source = String(imageUrl || "");
   const marker = "/storage/v1/object/public/";
@@ -1025,11 +1040,25 @@ async function moderateRecord(record, card, moderationStatus, moderationReason =
     editorButton.disabled = true;
     editorButton.textContent = moderationStatus === "approved" ? "approving..." : "rejecting...";
   }
+  let colorMetadata = null;
+  if (moderationStatus === "approved" && !record.dominant_color) {
+    try {
+      colorMetadata = await adminColorMetadataFromRecord(record);
+    } catch {
+      colorMetadata = null;
+    }
+  }
   const response = await fetch("/api/records", {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     credentials: "same-origin",
-    body: JSON.stringify({ id: record.id, moderation_status: moderationStatus, moderation_reason: moderationReason || null }),
+    body: JSON.stringify({
+      id: record.id,
+      moderation_status: moderationStatus,
+      moderation_reason: moderationReason || null,
+      dominant_color: colorMetadata?.dominant || null,
+      color_metadata: colorMetadata,
+    }),
   });
   const data = await response.json().catch(() => ({}));
   if (button) {

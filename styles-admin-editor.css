@@ -3340,6 +3340,11 @@ pre {
   gap: 10px;
 }
 
+#dashboardTrafficChart {
+  display: grid;
+  gap: 10px;
+}
+
 .dashboard-activity-row {
   display: grid;
   grid-template-columns: 48px minmax(0, 1fr) 34px;
@@ -3377,6 +3382,10 @@ pre {
 
 .dashboard-activity-approved {
   background: var(--azul);
+}
+
+.dashboard-traffic-views {
+  background: var(--ink);
 }
 
 .dashboard-summary {

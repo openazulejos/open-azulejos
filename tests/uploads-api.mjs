@@ -108,6 +108,8 @@ const finalized = await invoke({
   photoLicense: "CC-BY-4.0",
   contributorConsent: true,
   contributorConsentAt: "2026-07-02T10:00:00Z",
+  dominant_color: "blue",
+  color_metadata: { dominant: "blue", families: { blue: 0.9, grey: 0.1 }, source: "capture" },
 }, `open_azulejos_contributor=${contributorSession}`);
 assert(finalized.status === 200, "finalization should succeed after object verification");
 assert(insertedRecord.moderation_status === "pending", "new contribution must be pending");
@@ -115,6 +117,8 @@ assert(insertedRecord.original_image_bucket === "azulejos-originals", "database 
 assert(insertedRecord.original_image_url === null, "private source URL must not be persisted publicly");
 assert(insertedRecord.photographer_credit === "Test contributor", "finalization should retain photographer attribution");
 assert(insertedRecord.photo_license === "CC-BY-4.0", "finalization should retain explicit photo rights");
+assert(insertedRecord.dominant_color === "blue", "finalization should retain capture color classification");
+assert(insertedRecord.color_metadata.source === "capture", "finalization should identify capture analysis provenance");
 assert(/^[A-Za-z0-9_-]{43}$/.test(finalized.body.receiptToken), "finalization should issue a private contribution receipt");
 assert(contributionPatch.contributor_id === contributorId, "signed-in uploads should attach to the contributor account");
 

@@ -66,6 +66,10 @@ const rows = {
     { contributor_id: null, submitted_at: betaSubmissionAt },
     { contributor_id: null, submitted_at: betaSubmissionAt },
   ],
+  site_analytics_daily: [
+    { day: betaSubmissionDay, event: "page_view", view: "map", source: "direct", count: 7 },
+    { day: betaSubmissionDay, event: "page_view", view: "grid", source: "search", count: 3 },
+  ],
 };
 const requestedStatsUrls = [];
 
@@ -105,6 +109,9 @@ assert(stats.body.metrics.activeContributors === 1, "stats should count distinct
 assert(stats.body.metrics.guestSubmissions === 2, "stats should count anonymous submissions");
 assert(stats.body.metrics.approvalRate === 50, "stats should calculate resolved approval rate");
 assert(stats.body.daily.find((day) => day.date === betaSubmissionDay)?.submitted === 3, "daily series should group beta submissions by Lisbon day");
+assert(stats.body.traffic.totalPageViews === 10, "traffic should sum aggregate page views");
+assert(stats.body.traffic.topSource === "direct", "traffic should identify the largest broad source category");
+assert(stats.body.traffic.daily.find((day) => day.date === betaSubmissionDay)?.views === 10, "traffic should group views by day");
 
 assert(handler.countFromRange("0-0/109") === 109, "content range count should parse");
 assert(handler.countFromRange("*/0") === 0, "empty content range should parse");

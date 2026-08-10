@@ -15,6 +15,7 @@ const refreshIndicator = document.querySelector("#dashboardRefreshIndicator");
 const statusText = document.querySelector("#dashboardStatus");
 const periodText = document.querySelector("#dashboardPeriod");
 const activityChart = document.querySelector("#dashboardActivityChart");
+const trafficChart = document.querySelector("#dashboardTrafficChart");
 
 const fields = {
   newContributors: document.querySelector("#dashboardNewContributors"),
@@ -28,6 +29,10 @@ const fields = {
   totalPublished: document.querySelector("#dashboardTotalPublished"),
   totalContributors: document.querySelector("#dashboardTotalContributors"),
   latestSubmissionAt: document.querySelector("#dashboardLatestSubmission"),
+  pageViews: document.querySelector("#dashboardPageViews"),
+  viewsToday: document.querySelector("#dashboardViewsToday"),
+  topSource: document.querySelector("#dashboardTopSource"),
+  trafficStartedAt: document.querySelector("#dashboardTrafficStarted"),
 };
 
 let authenticated = false;
@@ -91,6 +96,29 @@ function renderActivity(days) {
   });
 }
 
+function renderTraffic(days) {
+  if (!trafficChart) return;
+  trafficChart.textContent = "";
+  const maximum = Math.max(1, ...days.map((day) => Number(day.views) || 0));
+  days.forEach((day) => {
+    const row = document.createElement("article");
+    row.className = "dashboard-activity-row";
+    const time = document.createElement("time");
+    time.dateTime = day.date;
+    time.textContent = day.date?.slice(5).replace("-", "/") || "—";
+    const track = document.createElement("div");
+    track.className = "dashboard-activity-track";
+    const views = document.createElement("span");
+    views.className = "dashboard-traffic-views";
+    views.style.width = `${((Number(day.views) || 0) / maximum) * 100}%`;
+    const count = document.createElement("strong");
+    count.textContent = numberText(day.views);
+    track.append(views);
+    row.append(time, track, count);
+    trafficChart.append(row);
+  });
+}
+
 async function loadStats({ pulled = false } = {}) {
   if (!authenticated || refreshInFlight) return false;
   refreshInFlight = true;
@@ -104,6 +132,7 @@ async function loadStats({ pulled = false } = {}) {
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || `stats failed ${response.status}`);
     const metrics = data.metrics || {};
+    const traffic = data.traffic || {};
     setField(periodText, `since ${formatDate(data.launch?.startedAt) || "beta launch"}`);
     setField(fields.newContributors, numberText(metrics.newContributors));
     setField(fields.publishedSinceBeta, numberText(metrics.publishedSinceBeta));
@@ -116,7 +145,12 @@ async function loadStats({ pulled = false } = {}) {
     setField(fields.totalPublished, numberText(metrics.totalPublished));
     setField(fields.totalContributors, numberText(metrics.totalContributors));
     setField(fields.latestSubmissionAt, formatDate(metrics.latestSubmissionAt, { dateStyle: "short", timeStyle: "short" }) || "—");
+    setField(fields.pageViews, numberText(traffic.totalPageViews));
+    setField(fields.viewsToday, numberText(traffic.todayPageViews));
+    setField(fields.topSource, traffic.topSource || "—");
+    setField(fields.trafficStartedAt, traffic.trackingStartedAt ? formatDate(traffic.trackingStartedAt) : "—");
     renderActivity(Array.isArray(data.daily) ? data.daily : []);
+    renderTraffic(Array.isArray(traffic.daily) ? traffic.daily : []);
     setField(statusText, `updated ${formatDate(new Date(), { timeStyle: "short" })}`);
     return true;
   } catch (error) {

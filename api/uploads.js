@@ -6,6 +6,7 @@ const ALLOWED_MIME_TYPES = new Map([
 const { issueContributionReceipt } = require("./_contribution-receipt");
 const { authorizeContributorRequest } = require("./_contributor-auth");
 const { notifyNewSubmission } = require("./_email-notifications");
+const { normalizedColorMetadata } = require("./_color-metadata");
 
 const json = (response, status, payload) => {
   response.statusCode = status;
@@ -193,6 +194,11 @@ module.exports = async function handler(request, response) {
       photo_license: rights.photoLicense,
       contributor_consent_at: rights.contributorConsentAt,
     };
+    const colorMetadata = normalizedColorMetadata(body, "capture");
+    if (colorMetadata) {
+      recordPayload.dominant_color = colorMetadata.dominant;
+      recordPayload.color_metadata = colorMetadata.metadata;
+    }
     const insert = await fetch(`${supabaseUrl}/rest/v1/azulejos`, {
       method: "POST",
       headers: { ...headers, "Content-Type": "application/json", Prefer: "resolution=merge-duplicates,return=representation" },
