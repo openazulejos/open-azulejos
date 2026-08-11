@@ -52,10 +52,17 @@ ignored by Git.
 ```sh
 npm run check
 npm test
+npx playwright install chromium
+npm run test:android
 npm run harvest -- --format geojson --output ../openazulejos-harvest
 npx supabase migration list --linked
 npx supabase db push --linked --dry-run
 ```
+
+The Android browser suite runs the public map, grid, canva, dark mode, GPS,
+onboarding, and camera-permission flows against Pixel 8, Galaxy S24, and Galaxy
+Tab S9 profiles. Network and archive responses are mocked, so it does not write
+to production or consume Supabase bandwidth.
 
 ## Architecture and project policy
 

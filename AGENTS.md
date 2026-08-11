@@ -35,6 +35,7 @@ reliability, latency, maintainability, or cost evidence.
 
 - Static checks: `npm run check`
 - Test suite: `npm test`
+- Android browser suite: `npm run test:android`
 - Local static app: `python3 -m http.server 4173`
 - Full Vercel runtime: `npx vercel dev`
 - Verify a backup: `npm run backup:verify -- <backup-directory>`

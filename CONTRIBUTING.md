@@ -9,7 +9,8 @@ quality, translation, and field-recording contributions.
 3. Keep pull requests focused and include tests for changed behavior.
 4. Never commit credentials, production exports, private originals, or personal
    location data.
-5. Run `npm run check && npm test` before requesting review.
+5. Run `npm run check`, `npm test`, and `npm run test:android` before requesting
+   review when changing the public mobile interface.
 
 Schema changes use a new timestamped file in `supabase/migrations`. Existing
 migrations are immutable. Data corrections must target an explicit record ID

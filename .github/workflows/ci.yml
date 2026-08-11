@@ -19,3 +19,14 @@ jobs:
       - run: npm install --ignore-scripts
       - run: npm run check
       - run: npm test
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:android
+      - name: Upload Android test report
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: android-playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
