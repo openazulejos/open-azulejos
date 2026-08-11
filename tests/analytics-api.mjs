@@ -7,6 +7,7 @@ const originalFetch = global.fetch;
 const originalEnv = {
   SUPABASE_URL: process.env.SUPABASE_URL,
   SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+  ANALYTICS_EXCLUDED_IPS: process.env.ANALYTICS_EXCLUDED_IPS,
 };
 process.env.SUPABASE_URL = "https://example.supabase.co";
 process.env.SUPABASE_SERVICE_ROLE_KEY = "service-key";
@@ -15,10 +16,10 @@ const assert = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-function invoke({ method = "POST", origin = "https://openazulejos.com", body = {} } = {}) {
+function invoke({ method = "POST", origin = "https://openazulejos.com", body = {}, headers = {} } = {}) {
   const request = Readable.from([JSON.stringify(body)]);
   request.method = method;
-  request.headers = { origin };
+  request.headers = { origin, ...headers };
   return new Promise((resolve) => {
     const response = {
       headers: {},
@@ -37,8 +38,10 @@ const invalid = await invoke({ body: { event: "page_view", view: "unknown", sour
 assert(invalid.status === 400, "unknown dimensions should be rejected");
 
 let rpcBody = null;
+let rpcCalls = 0;
 global.fetch = async (url, options) => {
   assert(String(url).endsWith("/rest/v1/rpc/record_site_analytics"), "analytics should use the aggregate RPC");
+  rpcCalls += 1;
   rpcBody = JSON.parse(options.body);
   return { ok: true };
 };
@@ -46,6 +49,16 @@ const accepted = await invoke({ body: { event: "page_view", view: "grid", source
 assert(accepted.status === 202 && accepted.body.recorded, "valid aggregate view should be accepted");
 assert(JSON.stringify(rpcBody) === JSON.stringify({ p_event: "page_view", p_view: "grid", p_source: "search" }), "only aggregate dimensions should reach storage");
 assert(handler.allowedOrigin("http://localhost:3000"), "local development should be allowed");
+
+process.env.ANALYTICS_EXCLUDED_IPS = "203.0.113.17, 2001:db8::7";
+const excluded = await invoke({
+  body: { event: "page_view", view: "map", source: "direct" },
+  headers: { "x-forwarded-for": "203.0.113.17, 10.0.0.1" },
+});
+assert(excluded.status === 202 && excluded.body.recorded === false && excluded.body.excluded === true, "configured owner IP should be excluded");
+assert(rpcCalls === 1, "excluded traffic should not call Supabase");
+assert(handler.normalizeIp("::ffff:203.0.113.17") === "203.0.113.17", "IPv4-mapped addresses should compare consistently");
+assert(handler.clientIp({ headers: { "cf-connecting-ip": "2001:db8::7" } }) === "2001:db8::7", "Cloudflare client IP should be supported");
 
 global.fetch = originalFetch;
 Object.entries(originalEnv).forEach(([key, value]) => {

@@ -2,6 +2,40 @@ const ALLOWED_EVENTS = new Set(["page_view"]);
 const ALLOWED_VIEWS = new Set(["map", "grid", "canva"]);
 const ALLOWED_SOURCES = new Set(["direct", "internal", "search", "social", "referral"]);
 
+const normalizeIp = (value) => {
+  let ip = String(value || "").trim().toLowerCase();
+  if (!ip) return "";
+  if (ip.startsWith("[")) {
+    const closingBracket = ip.indexOf("]");
+    if (closingBracket > 0) ip = ip.slice(1, closingBracket);
+  } else if (/^\d{1,3}(?:\.\d{1,3}){3}:\d+$/.test(ip)) {
+    ip = ip.replace(/:\d+$/, "");
+  }
+  return ip.replace(/^::ffff:/, "");
+};
+
+const firstForwardedIp = (value) => normalizeIp(String(value || "").split(",")[0]);
+
+const clientIp = (request) => {
+  const headers = request.headers || {};
+  return firstForwardedIp(
+    headers["cf-connecting-ip"]
+      || headers["x-vercel-forwarded-for"]
+      || headers["x-forwarded-for"]
+      || headers["x-real-ip"],
+  );
+};
+
+const analyticsExcludedIps = () => new Set(String(process.env.ANALYTICS_EXCLUDED_IPS || "")
+  .split(",")
+  .map(normalizeIp)
+  .filter(Boolean));
+
+const isExcludedRequest = (request) => {
+  const ip = clientIp(request);
+  return Boolean(ip && analyticsExcludedIps().has(ip));
+};
+
 const json = (response, status, payload) => {
   response.statusCode = status;
   response.setHeader("Content-Type", "application/json");
@@ -60,6 +94,10 @@ module.exports = async function handler(request, response) {
     return json(response, 400, { error: "invalid analytics dimensions" });
   }
 
+  if (isExcludedRequest(request)) {
+    return json(response, 202, { recorded: false, excluded: true });
+  }
+
   const supabaseUrl = process.env.SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!supabaseUrl || !serviceKey) return json(response, 503, { error: "analytics unavailable" });
@@ -82,3 +120,6 @@ module.exports = async function handler(request, response) {
 };
 
 module.exports.allowedOrigin = allowedOrigin;
+module.exports.clientIp = clientIp;
+module.exports.isExcludedRequest = isExcludedRequest;
+module.exports.normalizeIp = normalizeIp;
