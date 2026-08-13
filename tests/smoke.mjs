@@ -2,6 +2,10 @@ import fs from "node:fs";
 import vm from "node:vm";
 
 const source = fs.readFileSync(new URL("../app-source-capture.js", import.meta.url), "utf8");
+const html = fs.readFileSync(new URL("../index.html", import.meta.url), "utf8");
+
+if (!html.includes('id="campaignRecordButton"')) throw new Error("monthly contribution CTA is missing");
+if (!html.includes("help us reach 1,000 azulejos by the end of the month")) throw new Error("monthly contribution goal is missing");
 
 function createElement(id, registry) {
   if (registry.has(id)) return registry.get(id);
