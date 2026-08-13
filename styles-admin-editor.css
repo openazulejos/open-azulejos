@@ -20,7 +20,7 @@
   --link-blue: #1769e0;
   --campaign-blue: #1769e0;
   --app-viewport-height: 100vh;
-  --campaign-banner-height: 34px;
+  --campaign-banner-height: 40px;
   font-family: "Helvetica Neue", Arial, sans-serif;
   color-scheme: light;
 }
@@ -126,7 +126,7 @@ textarea {
   align-items: baseline;
   gap: 5px;
   margin: 0;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 300;
   line-height: 1.15;
   color: #fff;
@@ -145,7 +145,7 @@ textarea {
   background: transparent;
   color: #fff;
   font: inherit;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 500;
   line-height: 1.15;
   cursor: pointer;
@@ -4721,7 +4721,7 @@ button.admin-member-stat:focus-visible {
     display: grid;
     gap: 1px;
     min-width: 0;
-    font-size: 11px;
+    font-size: 12px;
   }
 
   .contribution-campaign p span {
@@ -4732,7 +4732,7 @@ button.admin-member-stat:focus-visible {
 
   .contribution-campaign button {
     max-width: 78px;
-    font-size: 11px;
+    font-size: 12px;
     line-height: 1.05;
     text-align: center;
   }
