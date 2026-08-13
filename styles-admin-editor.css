@@ -973,6 +973,7 @@ body.is-canva-view .map-zoom-percent {
   width: auto;
   min-width: 0;
   padding: 12px 4px;
+  font-size: 15px !important;
   text-align: center;
 }
 
