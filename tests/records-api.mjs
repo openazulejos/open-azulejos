@@ -98,6 +98,35 @@ assert(viewportRequest.payload.p_limit === 100 && viewportRequest.payload.p_step
 assert(viewportPayload.records.length === 1 && viewportPayload.records[0].id === "approved-record", "viewport should not expose rejected records");
 assert(viewportHeaders["Cache-Control"].includes("max-age=10"), "viewport cache should be short enough for moderation checks");
 
+let facetsRequest = null;
+global.fetch = async (url, options = {}) => {
+  facetsRequest = { url: String(url), method: options.method, body: options.body };
+  return {
+    ok: true,
+    json: async () => ({
+      totalCount: 12,
+      combinations: [{ neighborhood: "arroios", color: "blue", count: 12 }],
+    }),
+  };
+};
+let facetsStatus = 200;
+let facetsBody = "";
+const facetsHeaders = {};
+await handler({
+  method: "GET",
+  headers: { host: "localhost" },
+  url: "/api/records?facets=1",
+}, {
+  setHeader(name, value) { facetsHeaders[name] = value; },
+  end(value) { facetsBody = value; },
+  set statusCode(value) { facetsStatus = value; },
+});
+assert(facetsStatus === 200, "public filter facets should succeed");
+assert(facetsRequest.url.endsWith("/rest/v1/rpc/azulejo_filter_facets"), "facets should use the aggregate database function");
+assert(facetsRequest.method === "POST" && facetsRequest.body === "{}", "facets RPC should use a bounded empty payload");
+assert(JSON.parse(facetsBody).combinations[0].count === 12, "facets should preserve aggregate counts");
+assert(facetsHeaders["Cache-Control"].includes("max-age=300"), "facets should be cached longer than viewport reads");
+
 let historyRequest = null;
 global.fetch = async (url, options = {}) => {
   historyRequest = { url: String(url), payload: JSON.parse(options.body) };

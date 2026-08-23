@@ -374,6 +374,18 @@ module.exports = async function handler(req, res) {
 
   if (req.method === "GET") {
     const adminHeaders = serviceRoleKey ? { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}` } : headers;
+    if (requestUrl.searchParams.get("facets") === "1") {
+      const facetsResponse = await fetch(`${supabaseUrl}/rest/v1/rpc/azulejo_filter_facets`, {
+        method: "POST",
+        headers: { ...headers, "Content-Type": "application/json" },
+        body: "{}",
+      });
+      if (!facetsResponse.ok) {
+        return json(res, facetsResponse.status, { error: "filter facets failed", detail: await facetsResponse.text() });
+      }
+      res.setHeader("Cache-Control", "public, max-age=300, stale-while-revalidate=3600");
+      return json(res, 200, await facetsResponse.json());
+    }
     const historyId = String(requestUrl.searchParams.get("history") || "").trim();
     const hasNearbyQuery = requestUrl.searchParams.has("nearLat") || requestUrl.searchParams.has("nearLng");
     const nearLat = Number(requestUrl.searchParams.get("nearLat"));

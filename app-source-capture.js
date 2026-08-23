@@ -360,6 +360,9 @@ let gridRecords = [];
 let gridRecordsLoaded = false;
 let gridRecordsLoading = false;
 let gridRecordsError = "";
+let gridFacetsLoaded = false;
+let gridFacetsLoading = false;
+let gridFacetCombinations = [];
 const gridColorCache = new Map();
 let gridColorAnalysisToken = 0;
 let canvaZoom = 1;
@@ -1911,14 +1914,20 @@ function renderGridNeighborhoodOptions() {
   if (!gridNeighborhoodFilter) return;
   const previousValue = gridNeighborhoodFilter.value || "all";
   const counts = new Map();
-  gridRecords.forEach((tile) => {
-    const lat = Number(tile.lat);
-    const lng = Number(tile.lng);
-    const name = Number.isFinite(lat) && Number.isFinite(lng)
-      ? neighborhoodNameForPoint(lat, lng)
-      : tile.neighborhood || "unknown";
-    counts.set(name, (counts.get(name) || 0) + 1);
-  });
+  if (gridFacetsLoaded) {
+    gridFacetCombinations.forEach((facet) => {
+      counts.set(facet.neighborhood, (counts.get(facet.neighborhood) || 0) + facet.count);
+    });
+  } else {
+    gridRecords.forEach((tile) => {
+      const lat = Number(tile.lat);
+      const lng = Number(tile.lng);
+      const name = Number.isFinite(lat) && Number.isFinite(lng)
+        ? neighborhoodNameForPoint(lat, lng)
+        : tile.neighborhood || "unknown";
+      counts.set(name, (counts.get(name) || 0) + 1);
+    });
+  }
   gridNeighborhoodFilter.textContent = "";
   const allOption = document.createElement("option");
   allOption.value = "all";
@@ -1941,13 +1950,21 @@ function renderGridColorOptions() {
   if (!gridColorFilter) return;
   const previousValue = normalizeGridFilterValue(gridColorFilter.value);
   const counts = new Map();
-  gridRecords.forEach((tile) => {
-    const selectedNeighborhood = normalizeGridFilterValue(gridNeighborhoodFilter?.value);
-    if (selectedNeighborhood !== "all" && !pointInsideSelectedNeighborhood(tile.lat, tile.lng)) return;
-    const color = normalizeGridFilterValue(tile.dominantColor || gridColorCache.get(tile.id));
-    if (color === "all") return;
-    counts.set(color, (counts.get(color) || 0) + 1);
-  });
+  const selectedNeighborhood = normalizeGridFilterValue(gridNeighborhoodFilter?.value);
+  if (gridFacetsLoaded) {
+    gridFacetCombinations.forEach((facet) => {
+      if (selectedNeighborhood !== "all" && facet.neighborhood !== selectedNeighborhood) return;
+      if (facet.color === "unknown") return;
+      counts.set(facet.color, (counts.get(facet.color) || 0) + facet.count);
+    });
+  } else {
+    gridRecords.forEach((tile) => {
+      if (selectedNeighborhood !== "all" && !pointInsideSelectedNeighborhood(tile.lat, tile.lng)) return;
+      const color = normalizeGridFilterValue(tile.dominantColor || gridColorCache.get(tile.id));
+      if (color === "all") return;
+      counts.set(color, (counts.get(color) || 0) + 1);
+    });
+  }
   const orderedColors = ["blue", "green", "yellow", "red", "brown", "black", "white", "grey", "multicolor"];
   gridColorFilter.textContent = "";
   const allOption = document.createElement("option");
@@ -2318,6 +2335,30 @@ function scheduleGridColorAnalysis() {
   gridRecords.slice(0, 800).forEach((tile, index) => {
     window.setTimeout(() => analyzeGridTileColor(tile, token), index * 12);
   });
+}
+
+async function loadAzulejoFacets() {
+  if (gridFacetsLoaded || gridFacetsLoading || typeof fetch !== "function") return;
+  gridFacetsLoading = true;
+  try {
+    const response = await fetch("/api/records?facets=1");
+    if (!response.ok) throw new Error("azulejo filter facets unavailable");
+    const data = await response.json();
+    gridFacetCombinations = (Array.isArray(data.combinations) ? data.combinations : [])
+      .map((facet) => ({
+        neighborhood: normalizeGridFilterValue(facet.neighborhood || "unknown"),
+        color: normalizeGridFilterValue(facet.color || "unknown"),
+        count: Math.max(0, Number(facet.count) || 0),
+      }))
+      .filter((facet) => facet.count > 0);
+    gridFacetsLoaded = true;
+    renderGridNeighborhoodOptions();
+    renderGridColorOptions();
+  } catch (error) {
+    console.warn(error);
+  } finally {
+    gridFacetsLoading = false;
+  }
 }
 
 async function loadGridAzulejos() {
@@ -5405,7 +5446,7 @@ if (!hashCell) {
 sampleTiles.forEach((tile) => addAzulejoTile(tile, { skipRecord: true }));
 neighborhoodLayerReady.finally(() => {
   loadRecordedAzulejos();
-  loadGridAzulejos();
+  loadAzulejoFacets();
 });
 window.addEventListener?.("online", () => {
   flushOfflineContributions().catch((error) => console.error("Offline contribution sync failed:", error));
