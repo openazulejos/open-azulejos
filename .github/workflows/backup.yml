@@ -19,28 +19,63 @@ jobs:
       AWS_ACCESS_KEY_ID: ${{ secrets.BACKUP_AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_AWS_SECRET_ACCESS_KEY }}
       AWS_DEFAULT_REGION: ${{ secrets.BACKUP_AWS_REGION }}
+      BACKUP_S3_ENDPOINT: ${{ secrets.BACKUP_S3_ENDPOINT }}
+      AWS_EC2_METADATA_DISABLED: "true"
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version: 22
+      - name: Require backup destinations and credentials
+        run: |
+          for name in SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY SUPABASE_DB_URL BACKUP_S3_URI AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_DEFAULT_REGION; do
+            if [ -z "${!name}" ]; then
+              echo "Missing required backup setting: $name" >&2
+              exit 1
+            fi
+          done
+          case "$BACKUP_S3_URI" in
+            s3://?*) ;;
+            *) echo "BACKUP_S3_URI must start with s3:// and name a bucket" >&2; exit 1 ;;
+          esac
       - name: Back up records and media
-        run: node scripts/backup-open-azulejos.mjs --output "$RUNNER_TEMP/openazulejos"
+        run: |
+          node scripts/backup-open-azulejos.mjs --output "$RUNNER_TEMP/openazulejos"
+          mapfile -t directories < <(find "$RUNNER_TEMP/openazulejos" -mindepth 1 -maxdepth 1 -type d)
+          if [ "${#directories[@]}" -ne 1 ]; then
+            echo "Expected exactly one backup directory" >&2
+            exit 1
+          fi
+          echo "BACKUP_DIR=${directories[0]}" >> "$GITHUB_ENV"
       - name: Back up PostgreSQL
-        if: env.SUPABASE_DB_URL != ''
         run: |
           docker run --rm \
             -e SUPABASE_DB_URL \
-            -v "$RUNNER_TEMP/openazulejos:/backup" \
+            -v "$BACKUP_DIR:/backup" \
             postgres:17 \
             pg_dump "$SUPABASE_DB_URL" --format=custom --file=/backup/database.backup
-      - name: Verify media backup
-        run: node scripts/verify-backup.mjs "$(find "$RUNNER_TEMP/openazulejos" -mindepth 1 -maxdepth 1 -type d | sort | tail -1)"
+      - name: Verify complete backup
+        run: |
+          docker run --rm -v "$BACKUP_DIR:/backup:ro" postgres:17 \
+            pg_restore --list /backup/database.backup > /dev/null
+          sha256sum "$BACKUP_DIR/database.backup" | sed "s|$BACKUP_DIR/||" > "$BACKUP_DIR/database.backup.sha256"
+          node scripts/verify-backup.mjs "$BACKUP_DIR" --require-database
       - uses: actions/upload-artifact@v7
         with:
           name: openazulejos-${{ github.run_id }}
-          path: ${{ runner.temp }}/openazulejos
+          path: ${{ env.BACKUP_DIR }}
           retention-days: 30
       - name: Copy to independent object storage
-        if: env.BACKUP_S3_URI != ''
-        run: aws s3 cp "$RUNNER_TEMP/openazulejos" "$BACKUP_S3_URI/${{ github.run_id }}/" --recursive
+        run: |
+          archive="$RUNNER_TEMP/openazulejos-${{ github.run_id }}.tar.gz"
+          tar -C "$(dirname "$BACKUP_DIR")" -czf "$archive" "$(basename "$BACKUP_DIR")"
+          sha256sum "$archive" | awk '{print $1}' > "$archive.sha256"
+          remote="${BACKUP_S3_URI%/}/${{ github.run_id }}"
+          endpoint=()
+          if [ -n "$BACKUP_S3_ENDPOINT" ]; then endpoint=(--endpoint-url "$BACKUP_S3_ENDPOINT"); fi
+          aws "${endpoint[@]}" s3 cp "$archive" "$remote/$(basename "$archive")" --no-progress
+          aws "${endpoint[@]}" s3 cp "$archive.sha256" "$remote/$(basename "$archive.sha256")" --no-progress
+          aws "${endpoint[@]}" s3 cp "$remote/$(basename "$archive")" "$RUNNER_TEMP/readback.tar.gz" --no-progress
+          expected="$(cat "$archive.sha256")"
+          actual="$(sha256sum "$RUNNER_TEMP/readback.tar.gz" | awk '{print $1}')"
+          test "$actual" = "$expected" || { echo "Independent storage readback checksum mismatch" >&2; exit 1; }

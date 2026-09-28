@@ -8,9 +8,13 @@ session secret distinct from the human-entered admin password.
 
 `SUPABASE_DB_URL` is required for native PostgreSQL dumps in GitHub Actions but
 is not needed by the runtime app. The workflow should use the Supabase IPv4
-pooler connection and the PostgreSQL 17 Docker client. Prefer a read-only backup
-role. Do not commit the database URL, publishable key, service role key, or
-downloaded `.env` files.
+session pooler connection and the PostgreSQL 17 Docker client. Prefer a read-only
+backup role. `BACKUP_S3_URI`, `BACKUP_AWS_ACCESS_KEY_ID`,
+`BACKUP_AWS_SECRET_ACCESS_KEY`, and `BACKUP_AWS_REGION` are also required for the
+scheduled backup to succeed. Keep the backup bucket private and independent of
+Supabase and Vercel. Do not commit the database URL, publishable key, service
+role key, backup credentials, or downloaded `.env` files. Set
+`BACKUP_S3_ENDPOINT` for S3-compatible providers with a custom API URL.
 
 `BETA_STARTED_AT` defines the inclusive UTC start used by the private launch
 dashboard. Keep it stable after public communication begins so historical
