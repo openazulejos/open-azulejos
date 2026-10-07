@@ -10,6 +10,7 @@ const LISBON_BOUNDS = {
   east: -8.90,
 };
 const GRID_METERS = 3;
+const MAP_DISPLAY_SCALE = 1.75;
 const FINE_GRID_NEIGHBOR_OFFSETS = [
   [0, 1],
   [1, 0],
@@ -114,7 +115,19 @@ const LISBON_NEIGHBORHOODS = [
   },
 ];
 
+// Scale only the map's projected pixels; keep geographic cells and zoom levels.
+const mapCrs = {
+  ...L.CRS.EPSG3857,
+  scale(zoom) {
+    return L.CRS.EPSG3857.scale(zoom) * MAP_DISPLAY_SCALE;
+  },
+  zoom(scale) {
+    return L.CRS.EPSG3857.zoom(scale / MAP_DISPLAY_SCALE);
+  },
+};
+
 const map = L.map("map", {
+  crs: mapCrs,
   zoomControl: false,
   preferCanvas: true,
   minZoom: 12,
@@ -144,6 +157,7 @@ if (userLocationPane) {
 }
 
 const osmLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  tileSize: 256 * MAP_DISPLAY_SCALE,
   maxZoom: 22,
   maxNativeZoom: 19,
   attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',

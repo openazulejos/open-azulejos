@@ -169,6 +169,49 @@ test("Android navigation switches between grid and generative canva", async ({ p
   expect(pageErrors).toEqual([]);
 });
 
+test("Android map keeps larger squares aligned through zoom and pan", async ({ page }) => {
+  const pageErrors = await openApp(page);
+  const square = page.locator(".azulejo-cell").first();
+  const openingCell = await page.evaluate(() => window.AzulejoAtlas.cellForLatLng(38.719152, -9.134188).code);
+  const openingHeader = await page.locator(".topbar").boundingBox();
+
+  for (const zoom of [16, 17, 18, 19, 20]) {
+    if (zoom > 16) await page.locator(".leaflet-control-zoom-in").click();
+    await expect(page.locator("#mapZoomPercent")).toHaveText(`${100 * (2 ** (zoom - 16))}%`);
+    const box = await square.boundingBox();
+    expect(box.width).toBeGreaterThanOrEqual(34);
+    expect(box.width).toBeLessThanOrEqual(36);
+    expect(box.height).toBeGreaterThanOrEqual(34);
+    expect(box.height).toBeLessThanOrEqual(36);
+    expect(await page.locator(".topbar").boundingBox()).toEqual(openingHeader);
+    expect((await page.locator(".leaflet-control-zoom-in").boundingBox()).width).toBe(34);
+  }
+
+  await square.click();
+  await expect(page.locator("#azulejoViewer")).toHaveClass(/is-open/);
+  await expect(page.locator("#azulejoViewerCaption")).toHaveText(`38.719152, -9.134188 · ${openingCell}`);
+  await page.locator("#azulejoViewerClose").click();
+
+  const movedCenter = await page.evaluate(() => {
+    map.panBy([80, 60], { animate: false });
+    return map.getCenter();
+  });
+  expect(movedCenter.lat).not.toBe(38.719152);
+  expect(movedCenter.lng).not.toBe(-9.134188);
+  const alignment = await page.evaluate(() => {
+    const tile = displayedTiles[0];
+    const point = map.latLngToContainerPoint(tile.displayBounds.getCenter());
+    const roundTrip = map.containerPointToLatLng(point);
+    const center = tile.displayBounds.getCenter();
+    return { latError: Math.abs(roundTrip.lat - center.lat), lngError: Math.abs(roundTrip.lng - center.lng),
+      cell: window.AzulejoAtlas.cellForLatLng(tile.lat, tile.lng).code };
+  });
+  expect(alignment.latError).toBeLessThan(0.000001);
+  expect(alignment.lngError).toBeLessThan(0.000001);
+  expect(alignment.cell).toBe(openingCell);
+  expect(pageErrors).toEqual([]);
+});
+
 test("Android dark mode keeps navigation legible", async ({ page }) => {
   await page.emulateMedia({ colorScheme: "dark" });
   const pageErrors = await openApp(page);
