@@ -178,11 +178,10 @@ test("Android map keeps larger squares aligned through zoom and pan", async ({ p
   for (const zoom of [16, 17, 18, 19, 20]) {
     if (zoom > 16) await page.locator(".leaflet-control-zoom-in").click();
     await expect(page.locator("#mapZoomPercent")).toHaveText(`${100 * (2 ** (zoom - 16))}%`);
-    const box = await square.boundingBox();
-    expect(box.width).toBeGreaterThanOrEqual(34);
-    expect(box.width).toBeLessThanOrEqual(36);
-    expect(box.height).toBeGreaterThanOrEqual(34);
-    expect(box.height).toBeLessThanOrEqual(36);
+    await expect.poll(async () => {
+      const box = await square.boundingBox();
+      return box?.width >= 34 && box.width <= 36 && box.height >= 34 && box.height <= 36;
+    }).toBe(true);
     expect(await page.locator(".topbar").boundingBox()).toEqual(openingHeader);
     expect((await page.locator(".leaflet-control-zoom-in").boundingBox()).width).toBe(34);
   }

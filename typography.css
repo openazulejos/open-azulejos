@@ -1,0 +1,37 @@
+:root {
+  --font-sans: "termina", "Helvetica Neue", Arial, sans-serif;
+  --font-emphasis: var(--font-sans);
+  --font-weight-text: 200;
+  --font-weight-emphasis: 400;
+  font-family: var(--font-sans);
+  font-weight: var(--font-weight-text);
+  font-synthesis: none;
+}
+
+body,
+button,
+input,
+select,
+textarea,
+pre,
+code,
+kbd,
+samp {
+  font-family: inherit;
+  font-weight: inherit;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-weight: var(--font-weight-text);
+}
+
+strong,
+b {
+  font-family: var(--font-emphasis);
+  font-weight: var(--font-weight-emphasis);
+}
