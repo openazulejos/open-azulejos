@@ -399,13 +399,15 @@ function activeClipPolygons() {
 }
 
 function drawBoundaryPolygon(latLngPolygons) {
+  // Leaflet canvas paths do not inherit CSS stroke colors.
+  const isDark = window.matchMedia?.("(prefers-color-scheme: dark)")?.matches;
   L.polygon(latLngPolygons.length === 1 ? latLngPolygons[0] : latLngPolygons, {
     className: "neighborhood-cut",
-    color: "#151515",
+    color: isDark ? "#ffffff" : "#151515",
     weight: 1,
     fillColor: "#ffffff",
     fillOpacity: 0,
-    opacity: 0.72,
+    opacity: isDark ? 1 : 0.72,
     pane: "boundaries",
     interactive: false,
   }).addTo(neighborhoodLayer);
@@ -5407,6 +5409,7 @@ mosaicOpacity.addEventListener("input", setMosaicOpacity);
 const colorSchemeMedia = window.matchMedia?.("(prefers-color-scheme: dark)");
 const handleColorSchemeChange = () => {
   updateThemeColor();
+  renderNeighborhoodLayer();
   drawGrid();
   refreshTileVisibility();
 };

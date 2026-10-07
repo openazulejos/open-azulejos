@@ -106,6 +106,20 @@ function contrastRatio(first, second) {
   return (values[0] + 0.05) / (values[1] + 0.05);
 }
 
+async function boundaryPixels(page) {
+  return page.locator(".leaflet-boundaries-pane canvas").evaluate((canvas) => {
+    const pixels = canvas.getContext("2d").getImageData(0, 0, canvas.width, canvas.height).data;
+    let white = 0;
+    let dark = 0;
+    for (let i = 0; i < pixels.length; i += 4) {
+      if (pixels[i + 3] < 100) continue;
+      if (pixels[i] > 240 && pixels[i + 1] > 240 && pixels[i + 2] > 240) white++;
+      if (pixels[i] < 50 && pixels[i + 1] < 50 && pixels[i + 2] < 50) dark++;
+    }
+    return { white, dark };
+  });
+}
+
 test("Android map fills the viewport without clipping controls", async ({ page }) => {
   const pageErrors = await openApp(page);
   await expect(page.locator("#recordHistoryButton")).toBeVisible();
@@ -158,6 +172,16 @@ test("Android navigation switches between grid and generative canva", async ({ p
 test("Android dark mode keeps navigation legible", async ({ page }) => {
   await page.emulateMedia({ colorScheme: "dark" });
   const pageErrors = await openApp(page);
+  await expect.poll(async () => (await boundaryPixels(page)).white).toBeGreaterThan(0);
+  expect((await boundaryPixels(page)).dark).toBe(0);
+
+  await page.emulateMedia({ colorScheme: "light" });
+  await expect.poll(async () => (await boundaryPixels(page)).dark).toBeGreaterThan(0);
+  expect((await boundaryPixels(page)).white).toBe(0);
+
+  await page.emulateMedia({ colorScheme: "dark" });
+  await expect.poll(async () => (await boundaryPixels(page)).white).toBeGreaterThan(0);
+  expect((await boundaryPixels(page)).dark).toBe(0);
   const colors = await page.locator(".topbar").evaluate((topbar) => {
     const brand = topbar.querySelector(".brand");
     return {

@@ -5019,7 +5019,7 @@ button.admin-member-stat:focus-visible {
 
   .neighborhood-cut,
   .leaflet-overlay-pane .neighborhood-cut {
-    stroke: rgba(var(--ink-rgb), 0.92) !important;
+    stroke: #ffffff !important;
     stroke-opacity: 1 !important;
     filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.7));
   }
