@@ -178,7 +178,7 @@ textarea {
 
 .brand {
   color: var(--ink);
-  font-size: 24px;
+  font-size: 20px;
   font-weight: var(--font-weight-text);
   text-decoration: none;
   letter-spacing: 0;
@@ -255,7 +255,7 @@ textarea {
   border: 0;
   background: transparent;
   color: var(--ink);
-  font-size: 24px;
+  font-size: 20px;
   font-weight: var(--font-weight-text);
   line-height: 1;
   letter-spacing: 0;
@@ -294,7 +294,7 @@ textarea {
   background: transparent;
   color: #8a8a8a;
   font: inherit;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: var(--font-weight-text);
   line-height: 1;
   text-align: left;
@@ -315,7 +315,7 @@ textarea {
   border: 0;
   background: transparent;
   color: var(--ink);
-  font-size: 15px;
+  font-size: 13px;
   font-weight: var(--font-weight-text);
   line-height: 1;
   letter-spacing: 0;
@@ -352,7 +352,7 @@ body.is-filter-menu-open .filter-switch-arrow {
   border: 0;
   background: transparent;
   color: #8a8a8a;
-  font-size: 24px;
+  font-size: 20px;
   font-weight: var(--font-weight-text);
   letter-spacing: 0;
   line-height: 1;
@@ -414,7 +414,7 @@ body.is-filter-menu-open .filter-switch-arrow {
 .menu-sheet-nav .admin-trigger {
   display: block;
   color: var(--ink);
-  font-size: clamp(42px, 10vw, 96px);
+  font-size: clamp(36px, 8.5vw, 82px);
   font-weight: var(--font-weight-text);
   line-height: 0.95;
   text-decoration: none;
@@ -679,7 +679,7 @@ body.is-filter-menu-open .filter-switch-arrow {
   background: transparent;
   color: var(--ink);
   font: inherit;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: var(--font-weight-text);
   outline: none;
   box-shadow: none;
@@ -826,7 +826,7 @@ body.is-canva-view .map-zoom-percent {
 .record-onboarding h2 {
   margin: 0 0 24px;
   font-family: var(--font-sans);
-  font-size: clamp(30px, 8vw, 46px);
+  font-size: clamp(26px, 6.8vw, 40px);
   font-weight: var(--font-weight-text);
   line-height: 1.02;
 }
@@ -834,7 +834,7 @@ body.is-canva-view .map-zoom-percent {
 .record-onboarding-step > p:not(.record-onboarding-index) {
   max-width: 46ch;
   margin: 0 0 14px;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: var(--font-weight-text);
   line-height: 1.48;
 }
@@ -1020,7 +1020,7 @@ body.is-canva-view .map-zoom-percent {
   grid-template-columns: 20px minmax(0, 1fr);
   align-items: center;
   gap: 10px;
-  font-size: 17px;
+  font-size: 15px;
   font-weight: var(--font-weight-text);
   line-height: 1.25;
 }
@@ -1166,7 +1166,7 @@ body.is-canva-view .map-zoom-percent {
 
 .location-permission-content p {
   margin: 0;
-  font-size: 17px;
+  font-size: 15px;
   font-weight: var(--font-weight-text);
   line-height: 1.45;
 }
@@ -1268,7 +1268,7 @@ body.is-canva-view .map-zoom-percent {
   z-index: 710;
   max-width: min(320px, calc(100vw - 48px));
   color: var(--ink);
-  font-size: 18px;
+  font-size: 16px;
   font-weight: var(--font-weight-text);
   line-height: 1.2;
   text-align: center;
@@ -2147,7 +2147,7 @@ pre {
   background: transparent;
   color: var(--ink);
   font-family: var(--font-sans);
-  font-size: 22px;
+  font-size: 19px;
   font-weight: var(--font-weight-text);
   line-height: 1;
   letter-spacing: 0;
@@ -2203,7 +2203,7 @@ pre {
 .about-text h1 {
   margin: 0 0 34px;
   font-family: var(--font-sans);
-  font-size: clamp(34px, 5vw, 64px);
+  font-size: clamp(29px, 4.25vw, 54px);
   font-weight: var(--font-weight-text);
   line-height: 1.02;
   text-transform: lowercase;
@@ -2213,7 +2213,7 @@ pre {
   margin: 0 0 24px;
   color: var(--ink);
   font-family: var(--font-sans);
-  font-size: clamp(19px, 2.1vw, 26px);
+  font-size: clamp(16px, 1.8vw, 22px);
   font-weight: var(--font-weight-text);
   line-height: 1.38;
 }
@@ -2227,7 +2227,7 @@ pre {
 .about-contributors h2 {
   margin: 0 0 16px;
   font-family: var(--font-sans);
-  font-size: clamp(24px, 3vw, 36px);
+  font-size: clamp(20px, 2.55vw, 31px);
   font-weight: var(--font-weight-text);
   line-height: 1.1;
   text-transform: lowercase;
@@ -2257,7 +2257,7 @@ pre {
   padding: 14px 0;
   border-top: 1px solid var(--line);
   font-family: var(--font-sans);
-  font-size: clamp(19px, 2.1vw, 26px);
+  font-size: clamp(16px, 1.8vw, 22px);
   line-height: 1.25;
 }
 
@@ -2293,7 +2293,7 @@ pre {
 .about-contact h2 {
   margin: 0 0 16px;
   font-family: var(--font-sans);
-  font-size: clamp(24px, 3vw, 36px);
+  font-size: clamp(20px, 2.55vw, 31px);
   font-weight: var(--font-weight-text);
   line-height: 1.1;
   text-transform: lowercase;
@@ -2318,7 +2318,7 @@ pre {
 .account-settings h2 {
   margin: 0 0 24px;
   font-family: var(--font-sans);
-  font-size: 20px;
+  font-size: 17px;
   font-weight: var(--font-weight-text);
   line-height: 1;
   text-transform: lowercase;
@@ -2336,7 +2336,7 @@ pre {
 
 .account-content h1 {
   margin: 0 0 34px;
-  font-size: clamp(34px, 5vw, 64px);
+  font-size: clamp(29px, 4.25vw, 54px);
   font-weight: var(--font-weight-text);
   line-height: 1.02;
 }
@@ -2354,7 +2354,7 @@ pre {
   border-bottom: 1px solid transparent;
   background: transparent;
   color: var(--muted);
-  font-size: 16px;
+  font-size: 14px;
   font-weight: var(--font-weight-text);
   cursor: pointer;
 }
@@ -2436,7 +2436,7 @@ pre {
 
 .account-identity strong {
   overflow-wrap: anywhere;
-  font-size: 24px;
+  font-size: 20px;
   font-weight: var(--font-weight-text);
 }
 
@@ -2505,7 +2505,7 @@ pre {
 .my-contributions h2 {
   margin: 0;
   font-family: var(--font-sans);
-  font-size: 20px;
+  font-size: 17px;
   font-weight: var(--font-weight-text);
   text-transform: lowercase;
 }
@@ -2763,7 +2763,7 @@ pre {
 }
 
 .admin-header .brand {
-  font-size: 28px;
+  font-size: 24px;
 }
 
 .admin-header span {
@@ -2951,7 +2951,7 @@ pre {
 .admin-dashboard-header h1,
 .admin-activity h2 {
   margin: 0;
-  font-size: 20px;
+  font-size: 17px;
   font-weight: var(--font-weight-text);
   line-height: 1.1;
 }
@@ -2991,14 +2991,14 @@ pre {
 
 .admin-stat strong {
   color: var(--ink);
-  font-size: 34px;
+  font-size: 29px;
   font-weight: var(--font-weight-text);
   font-variant-numeric: tabular-nums;
   line-height: 1;
 }
 
 .admin-stat strong.is-text {
-  font-size: clamp(17px, 2vw, 26px);
+  font-size: clamp(15px, 1.7vw, 22px);
   overflow-wrap: anywhere;
 }
 
@@ -3142,7 +3142,7 @@ pre {
 .admin-section-header h2 {
   margin: 0;
   color: var(--ink);
-  font-size: 20px;
+  font-size: 17px;
   font-weight: var(--font-weight-text);
   line-height: 1.1;
   text-transform: lowercase;
@@ -3211,7 +3211,7 @@ pre {
 .dashboard-hero h1,
 .dashboard-login h1 {
   color: var(--ink);
-  font-size: 28px;
+  font-size: 24px;
   font-weight: var(--font-weight-text);
   letter-spacing: 0;
   line-height: 1;
@@ -3220,7 +3220,7 @@ pre {
 
 .dashboard-topbar span {
   color: var(--muted);
-  font-size: 15px;
+  font-size: 13px;
 }
 
 .dashboard-login,
@@ -3320,7 +3320,7 @@ pre {
 
 .dashboard-hero h1 {
   margin-top: 4px;
-  font-size: clamp(42px, 12vw, 68px);
+  font-size: clamp(36px, 10.2vw, 58px);
 }
 
 .dashboard-hero button {
@@ -3369,7 +3369,7 @@ pre {
 
 .dashboard-primary-card strong {
   color: var(--azul);
-  font-size: clamp(76px, 24vw, 124px);
+  font-size: clamp(65px, 20.4vw, 105px);
   font-weight: var(--font-weight-text);
   line-height: 0.88;
   font-variant-numeric: tabular-nums;
@@ -3388,7 +3388,7 @@ pre {
 
 .dashboard-metrics strong {
   color: var(--ink);
-  font-size: 34px;
+  font-size: 29px;
   font-weight: var(--font-weight-text);
   line-height: 1;
   font-variant-numeric: tabular-nums;
@@ -3400,7 +3400,7 @@ pre {
 
 .dashboard-activity h2 {
   margin: 0 0 12px;
-  font-size: 17px;
+  font-size: 15px;
   font-weight: var(--font-weight-text);
 }
 
@@ -3479,7 +3479,7 @@ pre {
 }
 
 .dashboard-summary strong {
-  font-size: 17px;
+  font-size: 15px;
   font-weight: var(--font-weight-text);
   text-align: right;
   font-variant-numeric: tabular-nums;
@@ -3508,7 +3508,7 @@ pre {
 
 @media (max-width: 360px) {
   .dashboard-brand {
-    font-size: 24px;
+    font-size: 20px;
   }
 
   .dashboard-topbar span {
@@ -3516,7 +3516,7 @@ pre {
   }
 
   .dashboard-metrics strong {
-    font-size: 30px;
+    font-size: 26px;
   }
 }
 
@@ -3654,7 +3654,7 @@ pre {
 
 .admin-members h2 {
   margin: 0;
-  font-size: 20px;
+  font-size: 17px;
   font-weight: var(--font-weight-text);
   text-transform: lowercase;
 }
@@ -3751,7 +3751,7 @@ button.admin-member-stat:focus-visible {
 
 .admin-member-stats strong {
   color: var(--ink);
-  font-size: 20px;
+  font-size: 17px;
   font-weight: var(--font-weight-text);
   line-height: 1;
   font-variant-numeric: tabular-nums;
@@ -3932,7 +3932,7 @@ button.admin-member-stat:focus-visible {
 }
 
 .admin-editor-header strong {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: var(--font-weight-text);
 }
 
@@ -4484,7 +4484,7 @@ button.admin-member-stat:focus-visible {
   }
 
   .admin-editor-header strong {
-    font-size: 18px;
+    font-size: 16px;
     line-height: 1;
   }
 
@@ -4762,7 +4762,7 @@ button.admin-member-stat:focus-visible {
 
   .brand {
     max-width: none;
-    font-size: clamp(20px, 5.5vw, 24px);
+    font-size: clamp(17px, 4.7vw, 20px);
     line-height: 1.05;
     white-space: nowrap;
   }
@@ -4787,7 +4787,7 @@ button.admin-member-stat:focus-visible {
   .about-trigger,
   .admin-trigger,
   .account-trigger {
-    font-size: clamp(20px, 5.5vw, 24px);
+    font-size: clamp(17px, 4.7vw, 20px);
     line-height: 1.05;
   }
 
@@ -4812,7 +4812,7 @@ button.admin-member-stat:focus-visible {
     background: transparent;
     color: var(--ink);
     font: inherit;
-    font-size: clamp(42px, 10vw, 96px);
+    font-size: clamp(36px, 8.5vw, 82px);
     font-weight: var(--font-weight-text);
     line-height: 0.95;
     cursor: pointer;
