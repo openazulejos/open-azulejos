@@ -4,6 +4,11 @@ Open Azulejos is a static browser application hosted on Vercel. Vercel functions
 validate requests and mediate privileged operations. Supabase provides Postgres,
 PostGIS, Storage, contributor identities, and named administrator identities.
 
+The Leaflet map displays EPSG:3857 projected pixels at 175% of its standard
+scale, with matching 448-pixel OpenStreetMap tiles. Geographic coordinates,
+integer zoom levels, grid steps, and the final 3-metre cells stay unchanged.
+Interface controls and the separate grid and canva views retain their sizing.
+
 ## Data flow
 
 1. The browser captures a square derivative and retains a larger source frame.

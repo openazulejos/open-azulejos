@@ -133,6 +133,12 @@ function bootApp() {
     File,
     Image: function Image() {},
     L: {
+      CRS: {
+        EPSG3857: {
+          scale: (zoom) => 256 * (2 ** zoom),
+          zoom: (scale) => Math.log2(scale / 256),
+        },
+      },
       map: () => map,
       control: { zoom: () => ({ addTo() {} }) },
       tileLayer: () => ({ addTo() {} }),
