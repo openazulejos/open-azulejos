@@ -20,7 +20,7 @@
   --link-blue: #1769e0;
   --campaign-blue: #1769e0;
   --app-viewport-height: 100vh;
-  --campaign-banner-height: 40px;
+  --campaign-banner-height: 0px;
   font-family: "Helvetica Neue", Arial, sans-serif;
   color-scheme: light;
 }
@@ -104,6 +104,10 @@ textarea {
   overflow: hidden;
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
+}
+
+.contribution-campaign[hidden] {
+  display: none;
 }
 
 .contribution-campaign {
@@ -4705,7 +4709,7 @@ button.admin-member-stat:focus-visible {
 
 @media (max-width: 760px) {
   :root {
-    --campaign-banner-height: 48px;
+    --campaign-banner-height: 0px;
   }
 
   .contribution-campaign {
