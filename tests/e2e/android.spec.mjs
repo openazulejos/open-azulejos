@@ -45,7 +45,9 @@ async function installDeterministicRoutes(page) {
   await page.route("**/api/records**", (route) => route.fulfill({
     status: 200,
     contentType: "application/json",
-    body: JSON.stringify({ records, visible: records.length, total: records.length }),
+    body: JSON.stringify(new URL(route.request().url()).searchParams.has("facets")
+      ? { combinations: records.map((record) => ({ neighborhood: record.neighborhood, color: record.dominant_color, count: 1 })) }
+      : { records, visible: records.length, total: records.length }),
   }));
   await page.route("**/api/contributors**", (route) => route.fulfill({
     status: 200,
@@ -93,6 +95,56 @@ function parseRgb(value) {
   const channels = String(value).match(/[\d.]+/g)?.slice(0, 3).map(Number) || [];
   return channels.length === 3 ? channels : [0, 0, 0];
 }
+
+test("Filter menus keep selection, keyboard access and narrow-screen positioning", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  const pageErrors = await openApp(page);
+  await chooseView(page, "grid");
+  await expect(page.locator("#gridColorFilter option[value='blue']")).toHaveCount(1);
+  const color = page.locator("#gridColorFilterButton");
+  const colors = page.locator("#gridColorFilterMenu");
+  await expect(color).toContainText("all colors");
+  await color.focus();
+  await color.press("ArrowDown");
+  await expect(colors).toBeVisible();
+  await page.keyboard.press("ArrowDown");
+  await expect(colors.getByRole("option", { name: /blue/ })).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(colors).toBeHidden();
+  await expect(color).toBeFocused();
+  await expect(page.locator("#gridColorFilter")).toHaveValue("blue");
+  await expect(page.locator(".azulejo-grid-card")).toHaveCount(1);
+
+  await color.click();
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("Escape");
+  await expect(color).toBeFocused();
+  await expect(page.locator("#gridColorFilter")).toHaveValue("blue");
+  await color.click();
+  await colors.getByRole("option", { name: "all colors", exact: true }).click();
+  await expect(page.locator(".azulejo-grid-card")).toHaveCount(records.length);
+  await color.click();
+  await page.keyboard.press("Tab");
+  await expect(colors).toBeHidden();
+  await expect(color).not.toHaveAttribute("aria-expanded", "true");
+  await expect(page.locator("#gridTypeFilterButton")).toBeDisabled();
+  await expect(page.locator("#gridMotifFilterButton")).toBeDisabled();
+
+  await page.setViewportSize({ width: 320, height: 700 });
+  await page.locator("#filterSwitchButton").click();
+  await color.click();
+  await page.locator("#gridNeighborhoodFilterButton").click();
+  const neighborhoods = page.locator("#gridNeighborhoodFilterMenu");
+  await expect(colors).toBeHidden();
+  await expect(neighborhoods).toBeVisible();
+  const box = await neighborhoods.boundingBox();
+  expect(box.x).toBeGreaterThanOrEqual(11);
+  expect(box.x + box.width).toBeLessThanOrEqual(309);
+  expect(box.y + box.height).toBeLessThanOrEqual(700);
+  await page.locator("#filterSwitchButton").click();
+  await expect(neighborhoods).toBeHidden();
+  expect(pageErrors).toEqual([]);
+});
 
 function contrastRatio(first, second) {
   const luminance = (channels) => {

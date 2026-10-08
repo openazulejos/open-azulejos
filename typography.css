@@ -2,6 +2,7 @@
   --font-sans: "termina", "Helvetica Neue", Arial, sans-serif;
   --font-emphasis: var(--font-sans);
   --font-weight-text: 200;
+  --font-weight-ui: 300;
   --font-weight-emphasis: 400;
   font-family: var(--font-sans);
   font-weight: var(--font-weight-text);
