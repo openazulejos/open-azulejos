@@ -69,6 +69,7 @@ to production or consume Supabase bandwidth.
 - [Architecture](docs/ARCHITECTURE.md)
 - [Backup and restore](docs/BACKUP_AND_RESTORE.md)
 - [Operations](docs/OPERATIONS.md)
+- [Branch protection](docs/BRANCH_PROTECTION.md)
 - [Interoperability](docs/INTEROPERABILITY.md)
 - [Strategic specification adoption](docs/decisions/0002-strategic-spec-adoption.md)
 - [Roadmap](ROADMAP.md)
