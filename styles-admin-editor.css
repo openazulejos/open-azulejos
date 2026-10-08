@@ -1,7 +1,7 @@
 :root {
   --ink: #101010;
   --paper: #ffffff;
-  --muted: #5f5f5f;
+  --muted: #444444;
   --line: rgba(16, 16, 16, 0.18);
   --accent: #005c9d;
   --azul: #0e6eae;
@@ -35,7 +35,7 @@
   :root {
     --ink: #f4f4ef;
     --paper: #0d0d0c;
-    --muted: #b9b9b0;
+    --muted: #d1d1cb;
     --line: rgba(244, 244, 239, 0.24);
     --accent: #78bdf3;
     --azul: #5eb4ff;
@@ -292,7 +292,7 @@ textarea {
   padding: 7px 14px;
   border: 0;
   background: transparent;
-  color: #8a8a8a;
+  color: var(--muted);
   font: inherit;
   font-size: 16px;
   font-weight: var(--font-weight-text);
@@ -351,7 +351,7 @@ body.is-filter-menu-open .filter-switch-arrow {
 .admin-trigger {
   border: 0;
   background: transparent;
-  color: #8a8a8a;
+  color: var(--muted);
   font-size: 20px;
   font-weight: var(--font-weight-text);
   letter-spacing: 0;
@@ -662,6 +662,7 @@ body.is-filter-menu-open .filter-switch-arrow {
 }
 
 .azulejo-filter-bar label,
+.azulejo-filter-menu,
 .azulejo-grid-filters label {
   position: relative;
   display: grid;
@@ -4894,6 +4895,7 @@ button.admin-member-stat:focus-visible {
   }
 
   .azulejo-filter-bar label,
+  .azulejo-filter-menu,
   .azulejo-filter-bar select,
   .azulejo-grid-filters label,
   .azulejo-grid-filters select {
@@ -5248,5 +5250,361 @@ button.admin-member-stat:focus-visible {
   .admin-moderation-dialog p {
     border-color: #ff8a8a;
     color: #ff8a8a;
+  }
+}
+
+/* Finishing touches: light glass on floating map controls, hover and press
+   feedback, soft menu entrances. Geometry, palette and type are unchanged. */
+:root {
+  --glass-blur: blur(10px) saturate(1.45);
+  --glass-edge: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  --glass-lift: 0 1px 2px rgba(16, 16, 16, 0.08), 0 8px 22px rgba(16, 16, 16, 0.08);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+a,
+button,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+
+::selection {
+  background: rgba(23, 105, 224, 0.22);
+}
+
+button:focus-visible {
+  outline: 2px solid var(--link-blue);
+  outline-offset: 3px;
+}
+
+.record-action,
+.record-help-action {
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-edge), var(--glass-lift);
+  transition: transform 160ms var(--ease-out), background-color 160ms ease, box-shadow 160ms ease;
+}
+
+.record-action {
+  background: rgba(237, 244, 242, 0.74);
+}
+
+.record-help-action {
+  background: rgba(255, 255, 255, 0.74);
+}
+
+.record-action:disabled {
+  box-shadow: none;
+}
+
+.record-action:not(:disabled):active {
+  transform: scale(0.96);
+}
+
+.record-help-action:active {
+  transform: translateY(-50%) scale(0.94);
+}
+
+.map-location-control {
+  transition: transform 160ms var(--ease-out), opacity 160ms ease;
+}
+
+.map-location-control:not(:disabled):active {
+  transform: scale(0.92);
+}
+
+.view-switch-menu {
+  background: rgba(var(--paper-rgb), 0.84);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  backdrop-filter: blur(14px) saturate(1.4);
+  box-shadow: 0 10px 28px rgba(var(--ink-rgb), 0.1);
+}
+
+.view-switch-menu:not([hidden]) {
+  animation: oa-menu-in 180ms var(--ease-out) both;
+}
+
+.menu-sheet.is-open,
+.about-sheet.is-open,
+.account-sheet.is-open,
+.location-permission-sheet.is-open {
+  animation: oa-fade-in 200ms ease-out both;
+}
+
+@keyframes oa-menu-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-4px);
+  }
+}
+
+@keyframes oa-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.view-switch-button,
+.filter-switch,
+.about-trigger,
+.account-trigger,
+.admin-trigger,
+.menu-close,
+.about-close,
+.account-close,
+.location-permission-close,
+.view-switch-menu button,
+.azulejo-filter-bar select,
+.azulejo-grid-filters select,
+.account-modes button {
+  transition: opacity 160ms ease, color 160ms ease, border-color 160ms ease;
+}
+
+.search-row button,
+.active-cell button,
+.archive-filter button,
+.account-form button,
+.account-identity button,
+.account-profile-form button,
+.record-onboarding-actions button,
+.capture-preview-controls button {
+  transition: opacity 160ms ease, background-color 160ms ease, border-color 160ms ease, transform 120ms var(--ease-out);
+}
+
+.search-row button:not(:disabled):active,
+.active-cell button:not(:disabled):active,
+.archive-filter button:not(:disabled):active,
+.account-form button:not(:disabled):active,
+.account-identity button:not(:disabled):active,
+.account-profile-form button:not(:disabled):active,
+.record-onboarding-actions button:not(:disabled):active,
+.capture-preview-controls button:not(:disabled):active {
+  transform: scale(0.98);
+}
+
+@media (hover: hover) {
+  .record-action:not(:disabled):hover {
+    background: rgba(237, 244, 242, 0.9);
+  }
+
+  .record-help-action:hover {
+    background: rgba(255, 255, 255, 0.9);
+  }
+
+  .view-switch-button:hover,
+  .filter-switch:hover,
+  .about-trigger:hover,
+  .account-trigger:hover,
+  .admin-trigger:hover,
+  .menu-close:hover,
+  .about-close:hover,
+  .account-close:hover,
+  .location-permission-close:hover,
+  .azulejo-filter-bar select:not(:disabled):hover,
+  .azulejo-grid-filters select:not(:disabled):hover {
+    opacity: 1;
+    color: var(--ink);
+  }
+
+  .view-switch-menu button:hover {
+    color: var(--ink);
+  }
+
+  .map-location-control:not(:disabled):hover {
+    opacity: 0.7;
+  }
+
+  .search-row button:not(:disabled):hover,
+  .active-cell button:not(:disabled):hover,
+  .archive-filter button:not(:disabled):hover,
+  .account-form button:not(:disabled):hover,
+  .account-identity button:not(:disabled):hover,
+  .account-profile-form button:not(:disabled):hover,
+  .record-onboarding-actions button:not(:disabled):hover,
+  .capture-preview-controls button:not(:disabled):hover {
+    opacity: 0.86;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --glass-edge: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    --glass-lift: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 22px rgba(0, 0, 0, 0.35);
+  }
+
+  ::selection {
+    background: rgba(120, 189, 243, 0.3);
+  }
+
+  .record-action {
+    background: rgba(37, 48, 47, 0.8);
+  }
+
+  .record-help-action {
+    background: rgba(var(--paper-rgb), 0.78);
+  }
+}
+
+@media (hover: hover) and (prefers-color-scheme: dark) {
+  .record-action:not(:disabled):hover {
+    background: rgba(37, 48, 47, 0.92);
+  }
+
+  .record-help-action:hover {
+    background: rgba(var(--paper-rgb), 0.92);
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .record-action,
+  .record-help-action,
+  .view-switch-menu {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .record-action {
+    background: #edf4f2;
+  }
+
+  .record-help-action {
+    background: #fff;
+  }
+
+  .view-switch-menu {
+    background: var(--panel-strong);
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) and (prefers-color-scheme: dark) {
+  .record-action {
+    background: #25302f;
+  }
+
+  .record-help-action {
+    background: var(--paper);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .view-switch-menu:not([hidden]),
+  .menu-sheet.is-open,
+  .about-sheet.is-open,
+  .account-sheet.is-open,
+  .location-permission-sheet.is-open {
+    animation: none;
+  }
+
+  .record-action,
+  .record-help-action,
+  .map-location-control,
+  .search-row button,
+  .active-cell button,
+  .archive-filter button,
+  .account-form button,
+  .account-identity button,
+  .account-profile-form button,
+  .record-onboarding-actions button,
+  .capture-preview-controls button {
+    transition: none;
+  }
+
+  .record-action:not(:disabled):active,
+  .map-location-control:not(:disabled):active,
+  .search-row button:not(:disabled):active,
+  .active-cell button:not(:disabled):active,
+  .archive-filter button:not(:disabled):active,
+  .account-form button:not(:disabled):active,
+  .account-identity button:not(:disabled):active,
+  .account-profile-form button:not(:disabled):active,
+  .record-onboarding-actions button:not(:disabled):active,
+  .capture-preview-controls button:not(:disabled):active {
+    transform: none;
+  }
+
+  .record-help-action:active {
+    transform: translateY(-50%);
+  }
+}
+
+/* Filter popovers share the map/grid/canva menu's surface and typography. */
+.azulejo-filter-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition: opacity 160ms ease;
+}
+
+.azulejo-filter-trigger span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.azulejo-filter-trigger .view-switch-arrow {
+  flex: 0 0 auto;
+  width: 7px;
+  height: 7px;
+}
+
+.azulejo-filter-trigger:disabled {
+  color: var(--muted);
+  cursor: default;
+}
+
+.azulejo-filter-options {
+  left: calc(50% + var(--filter-menu-offset, 0px));
+  z-index: 2;
+  width: max-content;
+  min-width: 100%;
+  max-width: calc(100vw - 24px);
+  max-height: min(320px, calc(100dvh - var(--filter-menu-top, 150px) - 16px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-color: var(--line);
+}
+
+.azulejo-filter-options button {
+  padding: 10px 14px;
+  color: var(--muted);
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.azulejo-filter-options button:focus-visible {
+  color: var(--ink);
+  outline: 1px solid var(--line);
+  outline-offset: -3px;
+}
+
+.view-switch-button,
+.view-switch-menu button,
+.filter-switch,
+.azulejo-filter-trigger,
+.desktop-nav .about-trigger,
+.desktop-nav .account-trigger {
+  font-weight: var(--font-weight-ui);
+}
+
+@media (hover: hover) {
+  .azulejo-filter-trigger:not(:disabled):hover {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .azulejo-filter-trigger {
+    transition: none;
   }
 }
